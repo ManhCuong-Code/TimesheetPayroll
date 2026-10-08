@@ -1,3 +1,15 @@
+# Documents, reports, presentation slides & diagrams
+*.docx
+*.pdf
+*.png
+*.html
+*.html.bak
+*.bak
+style.css
+script.js
+uml/
+BANG_QUY_DOI_TEN_DU_AN.md
+
 # Build and binary outputs
 [Bb]in/
 [Oo]bj/
