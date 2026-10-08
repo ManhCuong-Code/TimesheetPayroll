@@ -32,7 +32,7 @@ Người dùng có thể đăng nhập tại đường dẫn: **`/login`** (hỗ
 
 ---
 
-## 📖 1. GIỚI THIỆU TỔNG QUAN & BỐI CẢNH DỰ ÁN
+## 📖 1. GIỚI THIỆU TỔNG QUAN & BỐI CẢNH ĐỀ TÀI
 
 Tại các doanh nghiệp vừa và nhỏ (quy mô 20 – 100 nhân sự), việc quản lý ngày công và tính lương thường phụ thuộc vào bảng tính Excel thủ công dẫn đến 3 vấn đề nhức nhối:
 1. **Sai lệch công thức & rủi ro kéo lệch ô tính:** Mất từ 2 đến 3 ngày mỗi kỳ lương để kế toán đối soát thủ công ngày công, phụ cấp và các tỷ lệ bảo hiểm.
@@ -69,11 +69,13 @@ Tại các doanh nghiệp vừa và nhỏ (quy mô 20 – 100 nhân sự), việ
 
 ---
 
-## 📊 3. TOÀN BỘ 13 SƠ ĐỒ UML CHUẨN MERMAID (ĐỒNG BỘ ĐĂNG NHẬP & PHÂN QUYỀN)
+## 📊 3. TOÀN BỘ CÁC SƠ ĐỒ UML HỆ THỐNG KÈM THÔNG TIN ĐẶC TẢ CHI TIẾT
+
+Hệ thống được mô hình hóa toàn diện bằng **13 sơ đồ UML chuẩn học thuật**, biểu diễn trực quan dạng **Mermaid Markdown** tương thích 100% trên GitHub. Dưới mỗi sơ đồ đều có đầy đủ thông tin: **Mục đích thiết kế, Các tác tử tham gia, Luồng xử lý dữ liệu và Quy tắc nghiệp vụ (Business Rules)**.
 
 ---
 
-### SƠ ĐỒ 01: Sơ Đồ Ca Sử Dụng Tổng Quan Hệ Thống & Phân Quyền (System RBAC Overview Use Case Diagram)
+### SƠ ĐỒ 01: Ca Sử Dụng Tổng Quan Hệ Thống & Phân Quyền (System RBAC Overview Use Case Diagram)
 
 ```mermaid
 flowchart TD
@@ -98,7 +100,7 @@ flowchart TD
     end
 
     subgraph HRPortal["Phân Hệ Kế Toán Tiền Lương & Nhân Sự"]
-        UC04(["UC04: Quản lý Hồ sơ Nhân sự & Phòng ban"])
+        UC04(["UC04: Quản lý Cơ cấu Phòng ban & Nhân sự"])
         UC06(["UC06: Quản lý Hợp đồng Lao động & Lương"])
         UC12(["UC12: Xét duyệt Đơn xin Nghỉ phép"])
         UC13(["UC13: Khóa Bảng chấm công Tháng"])
@@ -140,9 +142,21 @@ flowchart TD
     UC16 -.->|trigger| UC17
 ```
 
+#### 📋 Thông Tin Đặc Tả Sơ Đồ 01:
+* **Mục đích:** Khái quát hóa toàn bộ ranh giới chức năng của hệ thống, thể hiện cấu trúc phân quyền dựa trên vai trò (Role-Based Access Control - RBAC) và mối liên kết logic giữa các ca sử dụng.
+* **Các tác tử (Actors):**
+  * `Người Dùng (User)`: Tác tử tổng quát thực hiện đăng nhập vào hệ thống.
+  * `ROLE_EMPLOYEE (Nhân viên)`: Người lao động sử dụng cổng thông tin cá nhân.
+  * `ROLE_HR_ACCOUNTANT (Kế toán tiền lương & Nhân sự)`: Chịu trách nhiệm duyệt phép, khóa công, chạy tính lương tự động và chốt sổ tài chính.
+  * `ROLE_ADMIN (Quản trị viên)`: Quản trị tài khoản, phân quyền vai trò và cấu hình tham số hệ thống.
+* **Mối quan hệ chính:**
+  * `UC01 <<include>> UC02`: Quá trình đăng nhập bắt buộc phải đi kèm xác thực mật khẩu mã hóa BCrypt.
+  * `UC14 <<include>> UC15`: Tính toán bảng lương tự động hàng loạt luôn đi kèm bước xuất bảng đối soát tổng hợp.
+  * `UC15 ..> UC16 ..> UC17`: Chuỗi quy trình bắt buộc: Đối soát quỹ lương $\rightarrow$ Chốt kỳ khóa sổ $\rightarrow$ Xuất file chi trả ngân hàng.
+
 ---
 
-### SƠ ĐỒ 02: Sơ Đồ Ca Sử Dụng Chi Tiết - Phân Hệ Nhân Viên (Employee Portal Use Case Diagram)
+### SƠ ĐỒ 02: Ca Sử Dụng Chi Tiết - Phân Hệ Nhân Viên (Employee Portal Use Case Diagram)
 
 ```mermaid
 flowchart LR
@@ -167,9 +181,16 @@ flowchart LR
     VP -.->|extend| DT
 ```
 
+#### 📋 Thông Tin Đặc Tả Sơ Đồ 02:
+* **Mục đích:** Mô hình hóa các chức năng tự phục vụ (Self-Service) dành riêng cho người lao động, đề cao tính tiện lợi và bảo mật quyền sở hữu dữ liệu cá nhân.
+* **Tác tử:** `ROLE_EMPLOYEE` (Người lao động).
+* **Quy tắc nghiệp vụ then chốt:**
+  * **Chấm công 1 lần/ngày:** Nhân viên chỉ được điểm danh Check-In/Check-Out trong ngày làm việc hiện tại, hệ thống tự động ghi nhận giờ server ngăn chặn gian lận thời gian.
+  * **Anti-IDOR:** Nhân viên chỉ có quyền truy vấn phiếu lương (`UC18`) gắn liền với `EmployeeId` của chính mình được trích xuất từ phiên đăng nhập an toàn (`ClaimsPrincipal`), tuyệt đối không được xem lương của đồng nghiệp.
+
 ---
 
-### SƠ ĐỒ 03: Sơ Đồ Ca Sử Dụng Chi Tiết - Phân Hệ Kế Toán & Quản Trị (HR & Admin Payroll Use Case Diagram)
+### SƠ ĐỒ 03: Ca Sử Dụng Chi Tiết - Phân Hệ Kế Toán & Quản Trị (HR & Admin Payroll Use Case Diagram)
 
 ```mermaid
 flowchart LR
@@ -204,6 +225,13 @@ flowchart LR
     UC_Preview -->|Điều kiện tiên quyết| UC_LockPR
     UC_LockPR -->|Kích hoạt| UC_Bank
 ```
+
+#### 📋 Thông Tin Đặc Tả Sơ Đồ 03:
+* **Mục đích:** Mô tả quy trình vận hành quản trị nhân sự, xử lý nghiệp vụ tiền lương định kỳ và quản lý chính sách doanh nghiệp.
+* **Tác tử:** `ROLE_HR_ACCOUNTANT` (Kế toán), `ROLE_ADMIN` (Quản trị viên).
+* **Quy tắc nghiệp vụ:**
+  * Kế toán phải xét duyệt xong đơn nghỉ phép (`UC12`) và khóa bảng công (`UC13`) trước khi chạy tính lương (`UC14`).
+  * Tính lương hàng loạt bắt buộc phải qua đối soát (`UC15`) trước khi có thể bấm nút chốt sổ kỳ lương (`UC16`).
 
 ---
 
@@ -241,6 +269,13 @@ flowchart TD
     GoHR --> finish
 ```
 
+#### 📋 Thông Tin Đặc Tả Sơ Đồ 04:
+* **Mục đích:** Chi tiết hóa quy trình xác thực người dùng từ giao diện Web, xử lý nghiệp vụ so khớp mật khẩu mã hóa và định tuyến động theo quyền hạn.
+* **Các điểm quyết định (Decision Points):**
+  * `UserExist`: Kiểm tra tài khoản có tồn tại trong bảng `user_accounts` và trường `is_active = 1`.
+  * `VerifyPass`: Kiểm tra mật khẩu bằng giải thuật `BCrypt.Verify(password, password_hash)`.
+  * `RouteRole`: Phân luồng điều hướng: Nhân viên vào `/my-timesheet`, Kế toán/Admin vào `/admin/payroll-calculation`.
+
 ---
 
 ### SƠ ĐỒ 05: Sơ Đồ Hoạt Động - Quy Trình Điểm Danh Chấm Công & Nghỉ Phép (Timesheet & Leave Activity Diagram)
@@ -268,6 +303,13 @@ flowchart TD
     MonthEnd --> LockTS[HR bấm Khóa Bảng Công Tháng: is_locked = true]
     LockTS --> finish([Sẵn sàng cho quy trình tính toán lương])
 ```
+
+#### 📋 Thông Tin Đặc Tả Sơ Đồ 05:
+* **Mục đích:** Minh họa quy trình điểm danh hàng ngày của nhân viên và quy trình xét duyệt đơn xin nghỉ phép của bộ phận nhân sự.
+* **Quy tắc tính công:**
+  * Đi làm đủ ca $\geq 8$ giờ: Hệ thống ghi nhận $1.0$ ngày công (`work_units = 1.0`).
+  * Nghỉ phép có hưởng lương (Nghỉ phép năm): Được cộng vào số ngày tính lương cơ bản.
+  * Nghỉ việc riêng không hưởng lương: Bị trừ ngày công tương ứng theo công thức tính lương tỷ lệ.
 
 ---
 
@@ -301,6 +343,10 @@ flowchart TD
     EmpNotify --> EmpLogin[Nhân viên đăng nhập quyền ROLE_EMPLOYEE tra cứu phiếu lương]
     EmpLogin --> finish([Hoàn tất chu kỳ tài chính lương])
 ```
+
+#### 📋 Thông Tin Đặc Tả Sơ Đồ 06:
+* **Mục đích:** Đặc tả chu kỳ quyết toán lương cuối tháng với các trạm kiểm soát dữ liệu nghiêm ngặt.
+* **Tính toàn vẹn dữ liệu (ACID Transaction):** Toàn bộ phép tính lương hàng loạt cho 100% nhân viên chạy trong một Database Transaction. Nếu có bất kỳ lỗi nào xảy ra (thiếu hợp đồng, lỗi chia 0), hệ thống tự động `ROLLBACK` an toàn, ngăn chặn việc tính dở dang gây sai lệch số sách kế toán.
 
 ---
 
@@ -343,6 +389,10 @@ sequenceDiagram
     end
 ```
 
+#### 📋 Thông Tin Đặc Tả Sơ Đồ 07:
+* **Mục đích:** Minh họa trình tự trao đổi thông điệp thời gian thực giữa các lớp khi người dùng đăng nhập hệ thống.
+* **Bảo mật:** Mật khẩu thô không bao giờ được lưu trữ. Hàm `AuthenticateAsync` thực hiện so khớp hàm băm một chiều BCrypt an toàn.
+
 ---
 
 ### SƠ ĐỒ 08: Sơ Đồ Tuần Tự - Điểm Danh Chấm Công Check-In / Check-Out Trực Tuyến (Daily Attendance Sequence Diagram)
@@ -373,6 +423,10 @@ sequenceDiagram
     CheckInUC-->>UI: Trả về bản ghi Timesheet vừa tạo
     UI-->>Emp: Thông báo xanh: "Check-in thành công lúc HH:mm:ss!" & Cập nhật bảng công
 ```
+
+#### 📋 Thông Tin Đặc Tả Sơ Đồ 08:
+* **Mục đích:** Thể hiện luồng gọi hàm từ Blazor Component qua Use Case đến tầng Repository khi nhân viên điểm danh trực tuyến.
+* **Cơ chế Reactive:** Sử dụng `TimesheetStateStore` phát sự kiện cập nhật giao diện ngay lập tức mà không cần F5 tải lại trang.
 
 ---
 
@@ -420,6 +474,12 @@ sequenceDiagram
     UI-->>HR: Giao diện chuyển sang trạng thái ĐÃ KHÓA SỔ (CHỈ ĐỌC - READ ONLY)
 ```
 
+#### 📋 Thông Tin Đặc Tả Sơ Đồ 09:
+* **Mục đích:** Minh họa quy trình xử lý tính lương hàng loạt cho nhiều nhân sự và kỹ thuật khóa sổ bảo vệ dữ liệu tài chính.
+* **Điểm nhấn thiết kế:**
+  * Tách rời tầng tính toán logic (`PayrollCalculationService`) khỏi tầng lưu trữ CSDL.
+  * Lệnh khóa sổ đóng băng cả bảng `payroll_periods` và `timesheets`, ngăn chặn triệt để mọi hành vi chỉnh sửa lén lút dữ liệu quá khứ.
+
 ---
 
 ### SƠ ĐỒ 10: Sơ Đồ Tuần Tự - Tra Cứu Phiếu Lương Cá Nhân Bảo Mật Chống Lộ IDOR (My Payslip Ownership Security Sequence Diagram)
@@ -446,6 +506,10 @@ sequenceDiagram
     ViewPayslipUC-->>UI: Đối tượng Payslip kèm danh sách chi tiết các dòng lương
     UI-->>Emp: Render thẻ đồ họa PayslipDetailCard: Lương ngày công, phụ cấp ăn trưa, trừ bảo hiểm, thực lĩnh
 ```
+
+#### 📋 Thông Tin Đặc Tả Sơ Đồ 10:
+* **Mục đích:** Minh họa cơ chế bảo mật phiếu lương cá nhân.
+* **Nguyên lý Anti-IDOR:** Ứng dụng không cho phép truyền `employeeId` qua URL query string một cách tùy tiện mà tự động trích xuất mã nhân viên từ phiên Claims đã được ký số an toàn trên server.
 
 ---
 
@@ -634,6 +698,12 @@ classDiagram
     Payslip "1" *-- "1..*" PayslipLine : cấu thành từ >
 ```
 
+#### 📋 Thông Tin Đặc Tả Sơ Đồ 11:
+* **Mục đích:** Định nghĩa cấu trúc các lớp thực thể nghiệp vụ cốt lõi (Domain Entities), các kiểu liệt kê (Enums), mối quan hệ kết tập, hợp thành và lực lượng (Cardinality).
+* **Đặc điểm mô hình:**
+  * `Employee 1 <--> 1 UserAccount`: Quan hệ 1-1 chặt chẽ giữa hồ sơ nhân viên và tài khoản đăng nhập hệ thống.
+  * `Payslip 1 *-- 1..* PayslipLine`: Quan hệ hợp thành (Composition) – một phiếu lương bao gồm nhiều dòng chi tiết giải trình các khoản thu nhập và giảm trừ bảo hiểm.
+
 ---
 
 ### SƠ ĐỒ 12: Sơ Đồ Kiến Trúc Thành Phần Hệ Thống Clean Architecture (System Component Diagram)
@@ -690,6 +760,13 @@ flowchart TB
     StateStore --> DomainModels
     DapperRepo --> SQLDB
 ```
+
+#### 📋 Thông Tin Đặc Tả Sơ Đồ 12:
+* **Mục đích:** Thể hiện kiến trúc phần mềm phân tầng sạch (Clean Architecture), đảm bảo nguyên lý đảo ngược phụ thuộc (Dependency Inversion Principle - DIP).
+* **Quy tắc phụ thuộc:**
+  * Tầng `CoreBusiness` nằm ở trung tâm và không phụ thuộc vào bất kỳ framework bên ngoài nào.
+  * Tầng `UseCases` chỉ giao tiếp với tầng CSDL thông qua các abstraction interface (`PluginInterfaces`).
+  * Tầng `Infrastructure` (Dapper) và `Presentation` (Blazor) phụ thuộc hướng vào trong, cho phép dễ dàng thay đổi CSDL hoặc nâng cấp UI mà không ảnh hưởng logic lõi.
 
 ---
 
@@ -824,9 +901,43 @@ erDiagram
     }
 ```
 
+#### 📋 Bảng Từ Điển Dữ Liệu 10 Bảng Nghiệp Vụ CSDL `BangChamCongDB`:
+
+| STT | Tên Bảng SQL | Mục Đích Lưu Trữ | Khóa Chính (PK) | Khóa Ngoại (FK) & Quan Hệ | Ràng Buộc Nghiệp Vụ (Constraints) |
+| :---: | :--- | :--- | :---: | :--- | :--- |
+| **1** | `departments` | Cơ cấu phòng ban công ty | `id` (BIGINT) | Không | `department_code` UNIQUE |
+| **2** | `employees` | Hồ sơ nhân sự, CCCD, tài khoản nhận lương | `id` (BIGINT) | `department_id` $\rightarrow$ `departments(id)` | `employee_code`, `identity_card_number`, `email` UNIQUE |
+| **3** | `user_accounts` | Tài khoản đăng nhập & phân quyền | `id` (BIGINT) | `employee_id` $\rightarrow$ `employees(id)` (1-1) | `username` UNIQUE, `role` CHECK (EMPLOYEE, HR, ADMIN) |
+| **4** | `contracts` | Hợp đồng lao động, mức lương CB, phụ cấp | `id` (BIGINT) | `employee_id` $\rightarrow$ `employees(id)` | `contract_number` UNIQUE, `base_salary >= 0` |
+| **5** | `payroll_periods` | Kỳ lương hàng tháng, trạng thái khóa sổ | `id` (BIGINT) | Không | `(period_month, period_year)` UNIQUE |
+| **6** | `deduction_rates` | Danh mục tỷ lệ bảo hiểm (BHXH, BHYT, BHTN) | `id` (BIGINT) | Không | `rate_code` UNIQUE, `employee_rate >= 0` |
+| **7** | `timesheets` | Nhật ký chấm công hàng ngày | `id` (BIGINT) | `employee_id` $\rightarrow$ `employees(id)`, `period_id` $\rightarrow$ `payroll_periods(id)` | `(employee_id, work_date)` UNIQUE |
+| **8** | `leave_requests` | Đơn xin nghỉ phép trực tuyến | `id` (BIGINT) | `employee_id` $\rightarrow$ `employees(id)` | `approval_status` IN ('PENDING', 'APPROVED', 'REJECTED') |
+| **9** | `payslips` | Phiếu lương tổng hợp của từng nhân sự | `id` (BIGINT) | `period_id` $\rightarrow$ `payroll_periods(id)`, `employee_id` $\rightarrow$ `employees(id)` | `(period_id, employee_id)` UNIQUE |
+| **10** | `payslip_lines` | Chi tiết các dòng lương, phụ cấp & khấu trừ | `id` (BIGINT) | `payslip_id` $\rightarrow$ `payslips(id)` (Cascade Delete) | `amount >= 0`, `is_deduction` BIT |
+
 ---
 
-## 🏗️ 4. CẤU TRÚC THƯ MỤC MÃ NGUỒN CLEAN ARCHITECTURE
+## 📑 4. MA TRẬN TRUY VẾT YÊU CẦU NGHIỆP VỤ (TRACEABILITY MATRIX)
+
+Ma trận truy vết đảm bảo tính đồng bộ $100\%$ giữa các yêu cầu nghiệp vụ doanh nghiệp (Business Requirements), các mã Use Case, các lớp đối tượng Domain Model và các bảng CSDL:
+
+| Mã Yêu Cầu | Tên Nghiệp Vụ Doanh Nghiệp | Mã Use Case | Lớp Đối Tượng (C# Model) | Bảng SQL Server |
+| :---: | :--- | :---: | :--- | :--- |
+| **BR-01** | Quản lý cơ cấu phòng ban công ty | `UC04` | `Department` | `departments` |
+| **BR-02** | Quản lý tài khoản, xác thực mật khẩu BCrypt & phân quyền RBAC | `UC01, UC02, UC03` | `UserAccount` | `user_accounts` |
+| **BR-03** | Quản lý hồ sơ lý lịch nhân sự & tài khoản ngân hàng nhận lương | `UC05` | `Employee` | `employees` |
+| **BR-04** | Quản lý hợp đồng lao động, mức lương cơ bản & phụ cấp cố định | `UC06` | `Contract` | `contracts` |
+| **BR-05** | Cấu hình tỷ lệ trích nộp bảo hiểm bắt buộc theo luật định | `UC08` | `DeductionRate` | `deduction_rates` |
+| **BR-06** | Điểm danh chấm công trực tuyến & theo dõi nhật ký hàng ngày | `UC09, UC10` | `Timesheet` | `timesheets` |
+| **BR-07** | Tạo đơn và xét duyệt đơn xin nghỉ phép trực tuyến | `UC11, UC12` | `LeaveRequest` | `leave_requests` |
+| **BR-08** | Khởi tạo kỳ lương, chạy tính toán bảng lương tự động hàng loạt 1-chạm | `UC13, UC14` | `PayrollPeriod, Payslip` | `payroll_periods, payslips` |
+| **BR-09** | Đối soát quỹ lương tổng hợp, chốt sổ Read-Only & xuất file ngân hàng | `UC15, UC16, UC17` | `PayrollPeriod, Payslip` | `payroll_periods, payslips` |
+| **BR-10** | Bảo mật phiếu lương cá nhân chống xem lén thu nhập (Anti-IDOR) | `UC18` | `Payslip, PayslipLine` | `payslips, payslip_lines` |
+
+---
+
+## 🏗️ 5. CẤU TRÚC THƯ MỤC MÃ NGUỒN CLEAN ARCHITECTURE
 
 ```text
 TimesheetPayroll/
@@ -891,7 +1002,7 @@ TimesheetPayroll/
 
 ---
 
-## 🚀 5. HƯỚNG DẪN CÀI ĐẶT & KHỞI CHẠY HỆ THỐNG
+## 🚀 6. HƯỚNG DẪN CÀI ĐẶT & KHỞI CHẠY HỆ THỐNG
 
 ### Bước 1: Khởi tạo Cơ sở dữ liệu SQL Server
 1. Mở **SQL Server Management Studio (SSMS)** và kết nối tới máy chủ (ví dụ: `.\SQLEXPRESS`).
@@ -948,9 +1059,9 @@ Mở trình duyệt truy cập: `https://localhost:5001` (hoặc `http://localho
 
 ---
 
-## 📋 6. KẾT LUẬN & ĐÁNH GIÁ KẾT QUẢ ĐẠT ĐƯỢC
+## 📋 7. KẾT LUẬN & ĐÁNH GIÁ KẾT QUẢ ĐẠT ĐƯỢC
 
-* ✅ **Đáp ứng 100% chuẩn học thuật môn học Lập trình Ứng dụng Web:** Đầy đủ trọn bộ **13 sơ đồ UML chuẩn hóa**, kết xuất trực quan bằng cú pháp Mermaid Markdown tương thích hoàn hảo trên GitHub.
+* ✅ **Đáp ứng 100% chuẩn học thuật môn học Lập trình Ứng dụng Web:** Đầy đủ trọn bộ **13 sơ đồ UML chuẩn hóa**, kết xuất trực quan bằng cú pháp Mermaid Markdown tương thích hoàn hảo trên GitHub kèm thông tin thuyết minh đặc tả chuyên sâu dưới từng sơ đồ.
 * ✅ **Tách biệt hoàn toàn CSDL:** Cơ sở dữ liệu **`BangChamCongDB`** độc lập 100% với các đồ án khác trên máy chủ SQL Server.
 * ✅ **Bảo mật xác thực & Phân quyền RBAC thực tế:** Tích hợp màn hình đăng nhập `/login`, băm mật khẩu BCrypt, kiểm soát quyền theo vai trò (`ROLE_EMPLOYEE`, `ROLE_HR_ACCOUNTANT`, `ROLE_ADMIN`) và bảo vệ chống xem lén dữ liệu lương (Anti-IDOR).
 * ✅ **Mã nguồn chuẩn Clean Architecture:** Tách lớp độc lập (`CoreBusiness`, `UseCases`, `Plugins`, `Web.Modules`), tuân thủ triệt để các nguyên lý SOLID, sẵn sàng mở rộng quy mô.
