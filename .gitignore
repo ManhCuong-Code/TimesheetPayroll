@@ -1,0 +1,24 @@
+# Build and binary outputs
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio & VS Code
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Word lock files
+~$*
+
+# Temporary backup folders
+project/eShop_backup/
+project/eShop/
+
+# OS generated files
+.DS_Store
+Thumbs.db

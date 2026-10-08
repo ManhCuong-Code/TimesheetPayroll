@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/TimesheetPayroll.Web.Modules/">
+    <Project Path="TimesheetPayroll.Web.Modules/TimesheetPayroll.Web.AdminPortal/TimesheetPayroll.Web.AdminPortal.csproj" />
+    <Project Path="TimesheetPayroll.Web.Modules/TimesheetPayroll.Web.Common/TimesheetPayroll.Web.Common.csproj" />
+    <Project Path="TimesheetPayroll.Web.Modules/TimesheetPayroll.Web.EmployeePortal/TimesheetPayroll.Web.EmployeePortal.csproj" />
+  </Folder>
+  <Folder Name="/Plugins/">
+    <Project Path="Plugins/TimesheetPayroll.DataStore.HandCoded/TimesheetPayroll.DataStore.HandCoded.csproj" />
+    <Project Path="Plugins/TimesheetPayroll.DataStore.SQL.Dapper/TimesheetPayroll.DataStore.SQL.Dapper.csproj" />
+    <Project Path="Plugins/TimesheetPayroll.StateStore.DI/TimesheetPayroll.StateStore.DI.csproj" />
+  </Folder>
+  <Project Path="TimesheetPayroll.CoreBusiness/TimesheetPayroll.CoreBusiness.csproj" />
+  <Project Path="TimesheetPayroll.UseCases/TimesheetPayroll.UseCases.csproj" />
+  <Project Path="TimesheetPayroll.Web/TimesheetPayroll.Web.csproj" />
+</Solution>

@@ -1,0 +1,90 @@
+@startuml 01_usecase_overview
+skinparam dpi 220
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam packageStyle rectangle
+skinparam shadowing true
+skinparam roundCorner 10
+
+' Color Scheme
+skinparam titleFontName "Segoe UI"
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #0F172A
+
+skinparam actor {
+    BackgroundColor #EEF2FF
+    BorderColor #4338CA
+    FontColor #1E1B4B
+    FontSize 12
+    FontStyle bold
+}
+
+skinparam usecase {
+    BackgroundColor #FFFFFF
+    BorderColor #2563EB
+    FontColor #0F172A
+    FontSize 12
+    ArrowColor #475569
+    ArrowThickness 1.2
+}
+
+skinparam package {
+    BackgroundColor #F8FAFC
+    BorderColor #94A3B8
+    FontColor #0F172A
+    FontStyle bold
+}
+
+left to right direction
+
+title **SƠ ĐỒ USE CASE TỔNG QUAN HỆ THỐNG (SYSTEM USE CASE OVERVIEW)**\nDự án: Quản Lý Chấm Công & Tính Lương Tự Động (Timesheet & Payroll)
+
+actor "Nhân Viên\n(Employee)" as Emp
+actor "Kế Toán / HR\n(Accountant / HR)" as HR
+actor "Quản Trị Viên\n(System Admin)" as Admin
+actor "Dịch vụ LLM bên ngoài\n(External LLM Service)" as ExtAI <<External System>>
+
+rectangle "Hệ Thống Quản Lý Chấm Công & Tính Lương Tự Động (Timesheet & Payroll)" {
+
+    package "Phân hệ 1: Xác Thực & Quản Trị Hệ Thống" #F0FDF4 {
+        usecase "UC_SUB_01\nQuản Trị Tài Khoản, Xác Thực JWT\n& Phân Quyền Vai Trò (RBAC)" as UC_SUB_01 #FFFFFF
+    }
+
+    package "Phân hệ 2: Hồ Sơ Nhân Sự, Hợp Đồng & Chế Độ" #EFF6FF {
+        usecase "UC_SUB_02\nQuản Lý Phòng Ban, Hồ Sơ Nhân Viên,\nHợp Đồng & Cấu Hình Tỷ Lệ Trích Nộp" as UC_SUB_02 #FFFFFF
+    }
+
+    package "Phân hệ 3: Quản Lý Chấm Công & Nghỉ Phép" #FEF3C7 {
+        usecase "UC_SUB_03\nChấm Công Hàng Ngày, Đơn Nghỉ Phép\n& Phê Duyệt Khóa Công Tháng" as UC_SUB_03 #FFFFFF
+    }
+
+    package "Phân hệ 4: Động Cơ Tính Lương & Quyết Toán" #FAF5FF {
+        usecase "UC_SUB_04\nTính Lương Tự Động 1-Chạm, Đối Soát,\nKhóa Sổ Read-Only & Tra Cứu Phiếu Lương" as UC_SUB_04 #FFFFFF
+    }
+
+    package "Phân hệ 5: Trợ Lý AI Giải Thích Thu Nhập" #ECFDF5 {
+        usecase "UC_SUB_05\nHỏi Đáp Biến Động Lương,\nGiải Thích Công Thức & Đối Soát với AI" as UC_SUB_05 #FFFFFF
+    }
+}
+
+' Liên kết Nhân Viên
+Emp --> UC_SUB_01 : Đăng nhập & Đổi MK
+Emp --> UC_SUB_03 : Điểm danh & Nghỉ phép
+Emp --> UC_SUB_04 : Tra cứu phiếu lương
+Emp --> UC_SUB_05 : Hỏi đáp lương
+
+' Liên kết Quản Trị Viên
+Admin --> UC_SUB_01 : Quản trị tài khoản & Phân quyền
+
+' Liên kết Kế Toán / HR
+HR --> UC_SUB_01 : Đăng nhập
+HR --> UC_SUB_02 : Quản lý hồ sơ & Tỷ lệ trích nộp
+HR --> UC_SUB_03 : Phê duyệt & Khóa bảng công
+HR --> UC_SUB_04 : Chạy tính lương, chốt kỳ & xuất Excel
+
+' Liên kết Dịch vụ AI bên ngoài
+UC_SUB_05 --> ExtAI : Tích hợp Gemini LLM API
+
+@enduml

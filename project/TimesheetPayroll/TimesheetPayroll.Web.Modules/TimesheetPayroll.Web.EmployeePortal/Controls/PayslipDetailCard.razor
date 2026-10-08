@@ -1,0 +1,90 @@
+@using TimesheetPayroll.CoreBusiness.Models
+
+@if (Payslip == null)
+{
+    <div class="alert alert-light border text-center p-4">
+        <i class="fa-solid fa-file-invoice text-muted fs-1 mb-2"></i>
+        <div class="text-muted">Không tìm thấy thông tin phiếu lương của kỳ này.</div>
+    </div>
+}
+else
+{
+    <div class="card border-0 shadow-sm overflow-hidden">
+        <div class="card-header bg-primary text-white p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge bg-white text-primary mb-2">PHIẾU LƯƠNG CÁ NHÂN</span>
+                    <h3 class="h4 mb-0 fw-bold">@Payslip.EmployeeName</h3>
+                    <div class="small opacity-75">Mã NV: @Payslip.EmployeeCode | @(Payslip.DepartmentName ?? "Nhân viên chính thức")</div>
+                </div>
+                <div class="text-end">
+                    <div class="small opacity-75">THỰC LĨNH CHUYỂN KHOẢN (NET)</div>
+                    <div class="display-6 fw-bold">@Payslip.NetSalary.ToString("N0") <span class="fs-6">VNĐ</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <!-- TỔNG QUAN 3 CHỈ SỐ -->
+            <div class="row g-3 mb-4 text-center">
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="text-muted small">Ngày Công Thực Tế</div>
+                        <div class="fs-4 fw-bold text-dark mt-1">@Payslip.ActualWorkDays công</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="text-muted small">Tổng Thu Nhập Gộp (Gross)</div>
+                        <div class="fs-4 fw-bold text-primary mt-1">+@Payslip.GrossSalary.ToString("N0") đ</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="text-muted small">Tổng Khấu Trừ Bảo Hiểm</div>
+                        <div class="fs-4 fw-bold text-danger mt-1">-@Payslip.TotalDeductions.ToString("N0") đ</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DANH SÁCH CÁC KHOẢN CỘNG / TRỪ CHI TIẾT -->
+            <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">
+                <i class="fa-solid fa-list-ol me-2"></i>Bảng Kê Chi Tiết Từng Khoản Mục
+            </h6>
+            <div class="list-group list-group-flush mb-4">
+                @foreach (var line in Payslip.Lines)
+                {
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                        <div>
+                            @if (line.IsDeduction)
+                            {
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle me-2">Khấu trừ</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success-subtle text-success border border-success-subtle me-2">Thu nhập</span>
+                            }
+                            <span class="text-dark">@line.LineDescription</span>
+                        </div>
+                        <span class="fw-bold @(line.IsDeduction ? "text-danger" : "text-success")">
+                            @(line.IsDeduction ? "-" : "+")@line.Amount.ToString("N0") đ
+                        </span>
+                    </div>
+                }
+            </div>
+
+            <!-- THÔNG TIN NGÂN HÀNG -->
+            <div class="alert alert-light border d-flex align-items-center mb-0">
+                <i class="fa-solid fa-building-columns text-primary fs-4 me-3"></i>
+                <div>
+                    <div class="small text-muted">Số tài khoản nhận lương:</div>
+                    <div class="fw-bold text-dark">@Payslip.BankAccountNumber - @Payslip.BankName</div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Payslip? Payslip { get; set; }
+}

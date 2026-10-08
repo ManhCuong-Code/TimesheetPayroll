@@ -1,0 +1,92 @@
+@startuml usecase_diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 13
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam roundCorner 10
+
+skinparam actor {
+    BackgroundColor #EEF2FF
+    BorderColor #4F46E5
+}
+skinparam usecase {
+    BackgroundColor #F8FAFC
+    BorderColor #3B82F6
+    ArrowColor #64748B
+}
+
+left to right direction
+
+actor "Nhân Viên\n(Employee)" as Emp
+actor "Kế Toán / HR\n(Accountant / HR)" as HR
+actor "Trợ Lý AI\n(AI Assistant)" as AI
+
+rectangle "Hệ Thống Chấm Công & Tính Lương (Timesheet & Payroll)" {
+
+    package "Phân hệ Xác Thực & Tài Khoản" {
+        usecase "Đăng nhập hệ thống" as UC_Login
+        usecase "Đổi mật khẩu" as UC_ChangePwd
+    }
+
+    package "Phân hệ Hồ Sơ Nhân Sự" {
+        usecase "Quản lý Phòng ban" as UC_ManageDept
+        usecase "Quản lý Hồ sơ nhân viên" as UC_ManageEmp
+        usecase "Quản lý Hợp đồng & Lương CB" as UC_ManageContract
+    }
+
+    package "Phân hệ Chấm Công" {
+        usecase "Ghi nhận / Điểm danh ngày" as UC_CheckIn
+        usecase "Xem bảng công cá nhân" as UC_ViewMyTimesheet
+        usecase "Quản lý & Duyệt công tháng" as UC_ApproveTimesheet
+    }
+
+    package "Phân hệ Tính Lương & Kỳ Lương" {
+        usecase "Cấu hình tỷ lệ trích nộp\n(BHXH, BHYT, Thuế)" as UC_ConfigDeduction
+        usecase "Khởi tạo kỳ lương mới" as UC_CreatePeriod
+        usecase "Tính lương tự động (1-Click)" as UC_CalcSalary
+        usecase "Chốt kỳ lương (Khóa sổ an toàn)" as UC_LockPeriod
+        usecase "Xuất file Excel gửi ngân hàng" as UC_ExportExcel
+        usecase "Xem phiếu lương cá nhân" as UC_ViewPayslip
+        usecase "Tải phiếu lương (PDF)" as UC_ExportPayslipPdf
+    }
+
+    package "Phân hệ Trợ Lý AI" {
+        usecase "Hỏi đáp & Giải thích lương" as UC_AskAI
+    }
+}
+
+' Quan hệ Nhân Viên
+Emp --> UC_Login
+Emp --> UC_ChangePwd
+Emp --> UC_CheckIn
+Emp --> UC_ViewMyTimesheet
+Emp --> UC_ViewPayslip
+Emp --> UC_AskAI
+
+' Quan hệ Kế Toán / HR
+HR --> UC_Login
+HR --> UC_ChangePwd
+HR --> UC_ManageDept
+HR --> UC_ManageEmp
+HR --> UC_ManageContract
+HR --> UC_ApproveTimesheet
+HR --> UC_ConfigDeduction
+HR --> UC_CreatePeriod
+HR --> UC_CalcSalary
+HR --> UC_LockPeriod
+HR --> UC_ExportExcel
+HR --> UC_ViewPayslip
+
+' Quan hệ AI
+AI -- UC_AskAI
+
+' Include & Extend
+UC_CalcSalary ..> UC_ApproveTimesheet : <<include>>
+UC_LockPeriod ..> UC_CalcSalary : <<include>>
+UC_ExportExcel ..> UC_LockPeriod : <<include>>
+UC_ViewPayslip <.. UC_ExportPayslipPdf : <<extend>>
+UC_AskAI ..> UC_ViewPayslip : <<include>>
+
+@enduml

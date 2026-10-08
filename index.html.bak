@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Slide thuyết trình tông sáng hiện đại, chi tiết, dễ hiểu về Đề tài Chấm công & Tính lương (Timesheet & Payroll) và kế hoạch làm việc 4 tuần.">
+  <title>Đề Tài 17: Chấm Công & Tính Lương (Giao Diện Tông Sáng)</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <div class="deck-container">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <div class="top-bar-left">
+        <span class="topic-badge"><i class="fa-solid fa-graduation-cap"></i> Đề Tài 17</span>
+        <h1 class="topic-title">Hệ Thống Chấm Công &amp; Tính Lương (Timesheet &amp; Payroll)</h1>
+      </div>
+      <div class="top-bar-right">
+        <!-- Nút đổi tông màu Sáng / Tối -->
+        <button id="themeToggleBtn" class="btn" title="Chuyển đổi giao diện Tông Sáng / Tối">
+          <i class="fa-solid fa-moon"></i> <span>Tông Tối</span>
+        </button>
+        <button id="printBtn" class="btn" title="Xuất tài liệu / In PDF">
+          <i class="fa-solid fa-file-pdf"></i> In / Xuất PDF
+        </button>
+        <button id="notesBtn" class="btn" title="Bật/Tắt gợi ý lời nói khi thuyết trình">
+          <i class="fa-solid fa-microphone-lines"></i> Lời Thuyết Trình
+        </button>
+        <button id="fullscreenBtn" class="btn" title="Xem toàn màn hình (Phím F)">
+          <i class="fa-solid fa-expand"></i>
+        </button>
+        <div class="slide-counter">
+          <span id="currentSlideNum" class="current">1</span> / <span id="totalSlidesNum">5</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Progress Line -->
+    <div class="progress-container">
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
+
+    <!-- Main Slide Stage -->
+    <main class="slide-stage">
+      
+      <!-- ==================== SLIDE 1: GIỚI THIỆU ĐỀ TÀI ==================== -->
+      <section class="slide active" id="slide-1" aria-label="Trang 1: Giới thiệu đề tài">
+        <div class="hero-wrapper">
+          <div class="hero-content">
+            <div class="hero-badge-group">
+              <span class="badge badge-purple"><i class="fa-solid fa-layer-group"></i> Đề tài học phần / Đồ án tốt nghiệp</span>
+              <span class="badge badge-blue"><i class="fa-solid fa-building-user"></i> Doanh nghiệp vừa &amp; nhỏ (20–50 nhân sự)</span>
+              <span class="badge badge-green"><i class="fa-solid fa-star"></i> Độ khó: ★★★</span>
+            </div>
+            <h2 class="hero-main-title">
+              PHẦN MỀM <span class="gradient-text">CHẤM CÔNG &amp; TÍNH LƯƠNG</span> TỰ ĐỘNG
+            </h2>
+            <p class="hero-subtitle">
+              Giải pháp loại bỏ bảng tính Excel thủ công – Tự động ghi nhận công, bấm 1 nút tính lương chính xác 100%, bảo mật thu nhập cá nhân và tích hợp Trợ lý AI giải đáp thắc mắc lương.
+            </p>
+
+            <div class="role-card-grid">
+              <div class="role-card" style="border-left: 4px solid var(--accent-cyan);">
+                <div class="role-badge" style="background: #e0f2fe; color: #0369a1;">
+                  <i class="fa-solid fa-user"></i> Vai trò 1: Nhân Viên Bình Thường
+                </div>
+                <div style="font-size: 0.88rem; color: var(--text-main); line-height: 1.5;">
+                  • Tự xem bảng chấm công hàng ngày của mình.<br>
+                  • Nhận và mở phiếu lương cá nhân (bảo mật tuyệt đối).<br>
+                  • Hỏi Chatbot AI: <em>"Vì sao lương tháng này của em bị trừ?"</em>
+                </div>
+              </div>
+
+              <div class="role-card" style="border-left: 4px solid var(--accent-emerald);">
+                <div class="role-badge" style="background: #dcfce7; color: #15803d;">
+                  <i class="fa-solid fa-user-tie"></i> Vai trò 2: Kế Toán / Nhân Sự (HR)
+                </div>
+                <div style="font-size: 0.88rem; color: var(--text-main); line-height: 1.5;">
+                  • Quản lý hồ sơ nhân viên, chức vụ, hợp đồng và mức lương.<br>
+                  • Duyệt bảng chấm công, bấm 1 nút để máy tự tính toán lương.<br>
+                  • <strong>Chốt kỳ lương:</strong> Khóa sổ an toàn, xuất file Excel gửi ngân hàng.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-visual">
+            <div class="visual-preview-card">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <span style="font-weight:700; font-size:1rem; color:var(--text-title);">
+                  <i class="fa-solid fa-bullseye" style="color:var(--primary); margin-right:8px;"></i>
+                  Tóm tắt mục tiêu trong 1 câu
+                </span>
+                <span class="badge badge-green">Dễ hiểu</span>
+              </div>
+              <p style="font-size:0.92rem; color:var(--text-main); line-height:1.55;">
+                <strong>"Thay vì tính bằng Excel dễ gõ nhầm công thức và lộ bí mật lương, hệ thống này giúp công ty 20-50 người tự động hóa từ khâu điểm danh đến khi nhận tiền lương chỉ với vài cú nhấp chuột."</strong>
+              </p>
+
+              <div class="metric-strip">
+                <div class="metric-item">
+                  <div class="metric-num">4 Tuần</div>
+                  <div class="metric-label">Thời gian hoàn thành</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-num">100%</div>
+                  <div class="metric-label">Chính xác số học</div>
+                </div>
+                <div class="metric-item">
+                  <div class="metric-num">1 Nút</div>
+                  <div class="metric-label">Chốt kỳ tự động</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="padding: 16px 20px; display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-weight:700; color:var(--text-title); font-size:0.92rem;">Xem tiếp: Thực trạng &amp; Cách tính lương</div>
+                <div style="font-size:0.8rem; color:var(--text-muted);">Có ví dụ minh họa bằng số tiền thực tế dễ hiểu.</div>
+              </div>
+              <button class="btn btn-primary" onclick="document.getElementById('nextBtn').click()">
+                Trang tiếp <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 2: NỖI ĐAU EXCEL & VÍ DỤ TÍNH LƯƠNG ==================== -->
+      <section class="slide" id="slide-2" aria-label="Trang 2: Nỗi đau Excel và Ví dụ tính lương thực tế">
+        <div class="slide-header">
+          <div class="slide-subtitle"><i class="fa-solid fa-circle-question"></i> Bối Cảnh Thực Tế &amp; Công Thức Nghiệp Vụ</div>
+          <h2 class="slide-title">Vì Sao Phải Bỏ Excel? &amp; Lương Được Tính Như Thế Nào?</h2>
+          <p class="slide-desc">So sánh trực quan giữa việc làm thủ công bằng Excel và công thức tính lương chuẩn hóa với ví dụ số tiền cụ thể.</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-2col">
+            <!-- Nỗi đau Excel -->
+            <div class="card problem-card">
+              <span class="section-tag tag-danger"><i class="fa-solid fa-xmark"></i> Nỗi đau khi công ty 20–50 người dùng Excel</span>
+              <ul class="list-items">
+                <li class="list-item">
+                  <div class="item-icon icon-danger"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                  <div class="item-text">
+                    <strong>Rất dễ kéo nhầm ô công thức:</strong> Kế toán chỉ cần copy nhầm dòng là nhân viên bị tính thiếu hoặc thừa cả triệu đồng, gây khiếu nại tranh cãi.
+                  </div>
+                </li>
+                <li class="list-item">
+                  <div class="item-icon icon-danger"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                  <div class="item-text">
+                    <strong>Tốn thời gian mệt mỏi:</strong> Cuối tháng kế toán mất 2–3 ngày cộng trừ từng tờ giấy chấm công, mỏi mắt dò tìm sai sót.
+                  </div>
+                </li>
+                <li class="list-item">
+                  <div class="item-icon icon-danger"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                  <div class="item-text">
+                    <strong>Dễ lộ lương của nhau:</strong> Gửi chung file Excel hoặc chuyền tay bảng giấy rất dễ để nhân viên dòm ngó mức lương của đồng nghiệp.
+                  </div>
+                </li>
+              </ul>
+
+              <div class="tab-explain" style="border-left-color: var(--accent-rose); background: #ffe4e6; color: #9f1239;">
+                <i class="fa-solid fa-circle-exclamation" style="color:var(--accent-rose);"></i>
+                <strong>Hệ quả:</strong> Doanh nghiệp vừa tốn công sức, vừa hay bị nhân viên bức xúc thắc mắc vì không hiểu rõ các khoản trừ bảo hiểm và thuế.
+              </div>
+            </div>
+
+            <!-- Giải pháp & Ví dụ tiền thật -->
+            <div class="card solution-card">
+              <span class="section-tag tag-success"><i class="fa-solid fa-check"></i> Công thức nghiệp vụ chuẩn hóa &amp; Ví dụ bằng số tiền</span>
+              
+              <div style="font-size:0.85rem; color:var(--text-title); margin-bottom:6px; font-weight:700;">
+                Công thức quy chuẩn theo Luật Lao Động:
+              </div>
+              <div class="formula-code">
+                Lương = (Lương cơ bản × Công thực tế / Công chuẩn) + Phụ cấp − Các khoản trích
+              </div>
+
+              <!-- Real Example Box with Numbers -->
+              <div class="example-calc-box">
+                <div style="font-size:0.82rem; font-weight:700; color:var(--primary); margin-bottom:8px; text-transform:uppercase;">
+                  <i class="fa-solid fa-calculator"></i> Ví dụ thực tế: Nhân viên Nguyễn Văn A (Tháng 10/2026)
+                </div>
+                <div class="calc-row">
+                  <span>1. Lương cơ bản theo hợp đồng:</span>
+                  <span class="highlight-pill">10.000.000 đ</span>
+                </div>
+                <div class="calc-row">
+                  <span>2. Đi làm thực tế: <strong>20 ngày</strong> (Tháng chuẩn 22 ngày công):</span>
+                  <span>(10tr × 20 / 22) = <strong>9.090.909 đ</strong></span>
+                </div>
+                <div class="calc-row">
+                  <span>3. Tiền phụ cấp ăn trưa &amp; xăng xe:</span>
+                  <span style="color:var(--accent-cyan); font-weight:700;">+ 500.000 đ</span>
+                </div>
+                <div class="calc-row">
+                  <span>4. Trừ BHXH (8%) + BHYT (1.5%) + BHTN (1%) = 10.5%:</span>
+                  <span style="color:var(--accent-rose); font-weight:700;">- 1.050.000 đ</span>
+                </div>
+                <div class="calc-row">
+                  <span>👉 LƯƠNG THỰC LĨNH CHUYỂN KHOẢN:</span>
+                  <span>8.540.909 đ</span>
+                </div>
+              </div>
+
+              <div class="tab-explain">
+                <i class="fa-solid fa-lightbulb" style="color:var(--accent-amber);"></i>
+                <strong>Điểm hay:</strong> Tỷ lệ 10.5% bảo hiểm được lưu trong bảng cấu hình <code>DeductionRate</code> riêng biệt. Nếu sau này Nhà nước đổi luật tăng/giảm tỷ lệ, chỉ cần sửa 1 số trong bảng là xong, không phải sửa code!
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 3: 8 BẢNG DỮ LIỆU & ĐIỂM KỸ THUẬT ==================== -->
+      <section class="slide" id="slide-3" aria-label="Trang 3: Kiến trúc 8 bảng và 2 điểm kỹ thuật">
+        <div class="slide-header">
+          <div class="slide-subtitle"><i class="fa-solid fa-cubes"></i> Cấu Trúc Phần Mềm Dễ Hiểu</div>
+          <h2 class="slide-title">Hệ Thống Gồm Những Gì? &amp; 2 Điểm Kỹ Thuật Đáng Giá Nhất</h2>
+          <p class="slide-desc">Giải thích 8 bảng dữ liệu như 8 ngăn kéo trong văn phòng và 2 kỹ thuật then chốt bảo vệ an toàn cho hệ thống.</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-3col">
+            <!-- Entities Column -->
+            <div class="card">
+              <h3 class="card-title" style="font-size:1.05rem; color:var(--primary);">
+                <i class="fa-solid fa-folder-open"></i> 8 Ngăn Kéo Dữ Liệu (Entities)
+              </h3>
+              <div class="entity-list">
+                <div class="entity-pill">
+                  <div>
+                    <strong style="color:var(--text-title); font-size:0.85rem;">1. Department</strong>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Phòng ban (Kế toán, Kinh doanh...)</div>
+                  </div>
+                </div>
+                <div class="entity-pill">
+                  <div>
+                    <strong style="color:var(--text-title); font-size:0.85rem;">2. Employee</strong>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Lý lịch nhân viên (Tên, SĐT, Số tài khoản)</div>
+                  </div>
+                </div>
+                <div class="entity-pill">
+                  <div>
+                    <strong style="color:var(--text-title); font-size:0.85rem;">3. Contract</strong>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Hợp đồng (Lương cơ bản, các khoản phụ cấp)</div>
+                  </div>
+                </div>
+                <div class="entity-pill">
+                  <div>
+                    <strong style="color:var(--text-title); font-size:0.85rem;">4. Timesheet</strong>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Sổ chấm công (Hôm nay ai đi làm, ai nghỉ)</div>
+                  </div>
+                </div>
+                <div class="entity-pill">
+                  <div>
+                    <strong style="color:var(--text-title); font-size:0.85rem;">5. PayrollPeriod</strong>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Kỳ lương (Ví dụ: "Lương Tháng 10/2026")</div>
+                  </div>
+                </div>
+                <div class="entity-pill">
+                  <div>
+                    <strong style="color:var(--text-title); font-size:0.85rem;">6. Payslip &amp; PayslipLine</strong>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Phiếu lương &amp; từng dòng cộng/trừ tiền</div>
+                  </div>
+                </div>
+                <div class="entity-pill">
+                  <div>
+                    <strong style="color:var(--text-title); font-size:0.85rem;">7. DeductionRate</strong>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Bảng tỷ lệ trích BHXH, BHYT, Thuế TNCN</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mapping Column -->
+            <div class="card">
+              <h3 class="card-title" style="font-size:1.05rem; color:var(--accent-purple);">
+                <i class="fa-solid fa-arrows-split-up-and-left"></i> So Sánh Với Mua Hàng Online
+              </h3>
+              <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">
+                Mô hình chấm công tương tự như một website bán hàng (eShop):
+              </p>
+              <table class="mapping-table">
+                <tbody>
+                  <tr>
+                    <td class="mapping-source">Mặt hàng (Product)</td>
+                    <td class="mapping-arrow">&rarr;</td>
+                    <td class="mapping-dest">Hồ sơ Nhân viên</td>
+                  </tr>
+                  <tr>
+                    <td class="mapping-source">Giỏ hàng nháp</td>
+                    <td class="mapping-arrow">&rarr;</td>
+                    <td class="mapping-dest">Bảng chấm công nháp</td>
+                  </tr>
+                  <tr>
+                    <td class="mapping-source">Đơn đặt hàng (Order)</td>
+                    <td class="mapping-arrow">&rarr;</td>
+                    <td class="mapping-dest">Bảng lương kỳ</td>
+                  </tr>
+                  <tr>
+                    <td class="mapping-source">Dòng chi tiết đơn</td>
+                    <td class="mapping-arrow">&rarr;</td>
+                    <td class="mapping-dest">Chi tiết từng dòng phiếu lương</td>
+                  </tr>
+                  <tr>
+                    <td class="mapping-source">Admin duyệt giao hàng</td>
+                    <td class="mapping-arrow">&rarr;</td>
+                    <td class="mapping-dest">Kế toán duyệt công &amp; chốt kỳ</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="tab-explain" style="margin-top:16px;">
+                <i class="fa-solid fa-check"></i> <strong>Lợi ích:</strong> Kiến trúc chuẩn mực giúp phần mềm chạy ổn định, dễ mở rộng và dễ giải trình khi báo cáo với giáo viên hướng dẫn.
+              </div>
+            </div>
+
+            <!-- Technical Highlights Column -->
+            <div class="card">
+              <h3 class="card-title" style="font-size:1.05rem; color:var(--accent-emerald);">
+                <i class="fa-solid fa-shield-halved"></i> 2 Điểm Kỹ Thuật Đắt Giá
+              </h3>
+              
+              <!-- Point 1 -->
+              <div class="tech-highlight-box">
+                <div class="tech-highlight-title">
+                  <i class="fa-solid fa-lock"></i> 1. Phân quyền cấp dữ liệu (Bảo mật lương)
+                </div>
+                <div class="tech-highlight-desc">
+                  <strong>Hiểu nôm na:</strong> Giống như tủ khóa ngân hàng. Dù bạn có tò mò gõ thử ID của sếp hay đồng nghiệp trên đường link web, máy chủ cũng kiên quyết từ chối. Nhân viên chỉ xem được duy nhất phiếu lương của chính mình!
+                </div>
+              </div>
+
+              <!-- Point 2 -->
+              <div class="tech-highlight-box" style="margin-top:12px; border-color: #c7d2fe; background: linear-gradient(145deg, #eef2ff 0%, #f0fdf4 100%);">
+                <div class="tech-highlight-title" style="color:var(--accent-cyan);">
+                  <i class="fa-solid fa-vault"></i> 2. Giao dịch an toàn (Transaction tài chính)
+                </div>
+                <div class="tech-highlight-desc">
+                  <strong>Hiểu nôm na:</strong> Giống như cây ATM nhả tiền. Khi kế toán bấm "Chốt kỳ lương cho 50 người", máy sẽ tính và lưu trọn vẹn cả 50 người. Nếu giữa chừng mất mạng ở người thứ 25, máy tự động hủy toàn bộ để không bị sai lệch số liệu. Kỳ đã chốt là khóa vĩnh viễn, không ai được sửa lén!
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 4: KẾ HOẠCH 4 TUẦN CHI TIẾT ==================== -->
+      <section class="slide" id="slide-4" aria-label="Trang 4: Kế hoạch 4 tuần chi tiết">
+        <div class="slide-header">
+          <div class="slide-subtitle"><i class="fa-solid fa-calendar-check"></i> Kế Hoạch Làm Việc Từng Bước</div>
+          <h2 class="slide-title">Lộ Trình Triển Khai Trong 4 Tuần (Ai Làm Gì?)</h2>
+          <p class="slide-desc">Phân chia công việc theo từng tuần rõ ràng, có sản phẩm cụ thể để kiểm tra tiến độ mỗi tuần.</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="timeline-container">
+            <!-- Week 1 -->
+            <div class="week-col week-1">
+              <div class="week-header">
+                <span class="week-badge">Tuần 1</span>
+                <div class="week-name">Khảo Sát &amp; Thiết Kế Nền Tảng</div>
+              </div>
+              <ul class="task-list">
+                <li class="task-item">
+                  <strong>Khảo sát thực tế:</strong> Thu thập mẫu bảng chấm công, phiếu lương công ty 20–50 người.
+                </li>
+                <li class="task-item">
+                  <strong>Vẽ giao diện (Figma):</strong> Thiết kế màn hình máy tính và điện thoại chuẩn responsive.
+                </li>
+                <li class="task-item">
+                  <strong>Tạo CSDL &amp; Phân quyền:</strong> Dựng 8 bảng dữ liệu, thiết lập tài khoản Kế toán và Nhân viên.
+                </li>
+              </ul>
+              <div class="milestone-box">
+                <div class="milestone-label"><i class="fa-solid fa-box-archive"></i> Sản phẩm tuần 1:</div>
+                <div class="milestone-val">Bản vẽ Figma + Sơ đồ 8 bảng CSDL &amp; Xác thực người dùng</div>
+              </div>
+            </div>
+
+            <!-- Week 2 -->
+            <div class="week-col week-2">
+              <div class="week-header">
+                <span class="week-badge">Tuần 2</span>
+                <div class="week-name">Quản Lý Nhân Viên &amp; Chấm Công</div>
+              </div>
+              <ul class="task-list">
+                <li class="task-item">
+                  <strong>Hồ sơ nhân sự:</strong> Lập trình tính năng Thêm/Sửa/Xóa Nhân viên, Hợp đồng, Phòng ban.
+                </li>
+                <li class="task-item">
+                  <strong>Bảng chấm công:</strong> Giao diện nhập số ngày đi làm, nghỉ phép, theo dõi đi trễ hàng ngày.
+                </li>
+                <li class="task-item">
+                  <strong>Ràng buộc công nhật:</strong> Tự động tính toán và kiểm tra số ngày công chuẩn trong tháng.
+                </li>
+              </ul>
+              <div class="milestone-box">
+                <div class="milestone-label"><i class="fa-solid fa-box-archive"></i> Sản phẩm tuần 2:</div>
+                <div class="milestone-val">Quản lý nhân viên &amp; nhập/tổng hợp ngày công hoàn thiện</div>
+              </div>
+            </div>
+
+            <!-- Week 3 -->
+            <div class="week-col week-3">
+              <div class="week-header">
+                <span class="week-badge">Tuần 3</span>
+                <div class="week-name">Tự Động Tính Lương &amp; Chốt Kỳ</div>
+              </div>
+              <ul class="task-list">
+                <li class="task-item">
+                  <strong>Bộ tính toán lương:</strong> Viết code áp dụng công thức lương, phụ cấp &amp; trừ 10.5% bảo hiểm tự động.
+                </li>
+                <li class="task-item">
+                  <strong>Nút Chốt Kỳ Lương:</strong> Bấm 1 nút tính xong cho cả công ty và khóa sổ dữ liệu an toàn.
+                </li>
+                <li class="task-item">
+                  <strong>Bảo mật phân quyền:</strong> Khóa quyền xem chéo tuyệt đối, nhân viên chỉ xem được lương của mình.
+                </li>
+              </ul>
+              <div class="milestone-box">
+                <div class="milestone-label"><i class="fa-solid fa-box-archive"></i> Sản phẩm tuần 3:</div>
+                <div class="milestone-val">Bấm nút ra ngay bảng lương chính xác 100%, bảo mật tuyệt đối</div>
+              </div>
+            </div>
+
+            <!-- Week 4 -->
+            <div class="week-col week-4">
+              <div class="week-header">
+                <span class="week-badge">Tuần 4</span>
+                <div class="week-name">Lắp Trợ Lý AI, Xuất File &amp; Bảo Vệ</div>
+              </div>
+              <ul class="task-list">
+                <li class="task-item">
+                  <strong>Trợ lý AI thông minh:</strong> Tích hợp Chatbot giải thích <em>"Vì sao lương tháng này giảm?"</em>
+                </li>
+                <li class="task-item">
+                  <strong>Xuất file Excel &amp; PDF:</strong> Xuất bảng tổng hợp gửi giám đốc/ngân hàng và phiếu lương PDF.
+                </li>
+                <li class="task-item">
+                  <strong>Kiểm thử &amp; Báo cáo:</strong> Thử các ca khó (thai sản, nghỉ ốm), hoàn thiện slide &amp; báo cáo bảo vệ.
+                </li>
+              </ul>
+              <div class="milestone-box">
+                <div class="milestone-label"><i class="fa-solid fa-box-archive"></i> Sản phẩm tuần 4:</div>
+                <div class="milestone-val">Phần mềm hoàn chỉnh 100% kèm AI, sẵn sàng đạt điểm tối đa</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 5: TRỢ LÝ AI & KẾT LUẬN ==================== -->
+      <section class="slide" id="slide-5" aria-label="Trang 5: Điểm cộng AI và Cam kết">
+        <div class="slide-header">
+          <div class="slide-subtitle"><i class="fa-solid fa-wand-magic-sparkles"></i> Điểm Nhấn Sáng Tạo</div>
+          <h2 class="slide-title">Trợ Lý AI Trả Lời Thắc Mắc Lương &amp; Cam Kết Đạt Được</h2>
+          <p class="slide-desc">Ví dụ thực tế cuộc trò chuyện giữa nhân viên và Chatbot AI, kèm theo các cam kết chất lượng khi hoàn thành đề tài.</p>
+        </div>
+
+        <div class="slide-body">
+          <div class="grid-deliverables">
+            <!-- AI Demo Box -->
+            <div class="card ai-feature-card">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 class="card-title" style="margin-bottom:0; color:var(--accent-purple); font-size:1.1rem;">
+                  <i class="fa-solid fa-robot"></i> Ví Dụ Cuộc Trò Chuyện Cùng Trợ Lý AI
+                </h3>
+                <span class="badge badge-purple">Tính năng mở rộng</span>
+              </div>
+              <p style="font-size:0.88rem; color:var(--text-main); margin-top:8px; line-height:1.45;">
+                Mỗi khi nhận lương xong, nhân viên không cần phải nhắn tin hỏi kế toán mà chỉ cần mở khung chat hỏi AI:
+              </p>
+
+              <!-- Realistic Chat Dialogue -->
+              <div class="ai-chat-preview">
+                <div class="chat-bubble chat-user">
+                  <i class="fa-solid fa-user-circle" style="margin-right:6px;"></i>
+                  <strong>Anh Nam (Nhân viên):</strong> "Ủa em ơi, sao tháng này lương thực nhận của anh có 8.540.000đ vậy, tháng trước anh được tận 9.800.000đ lận?"
+                </div>
+                <div class="chat-bubble chat-ai">
+                  <i class="fa-solid fa-robot" style="margin-right:6px; color:var(--accent-cyan);"></i>
+                  <strong>AI Trợ lý giải đáp tự động trong 2 giây:</strong>
+                  <br><em>"Chào anh Nam, em đã đối soát phiếu lương Tháng 10 so với Tháng 9 của anh:</em>
+                  <br>• Tháng này anh có <strong>2 ngày nghỉ không hưởng lương</strong> (-909.000đ).
+                  <br>• Tỷ lệ đóng BHXH kỳ này áp dụng mức đóng mới theo quy định (-300.000đ).
+                  <br>• Tháng này không phát sinh thưởng hoàn thành tiến độ (+500.000đ của tháng trước).
+                  <br>&rArr; <strong>Tổng chênh lệch đúng 1.260.000đ</strong> so với tháng 9 anh nhé!"
+                </div>
+              </div>
+
+              <div style="margin-top:12px; font-size:0.82rem; color:var(--text-muted); display:flex; gap:16px;">
+                <span><i class="fa-solid fa-circle-check" style="color:var(--accent-emerald);"></i> Kế toán nhàn rỗi, không bị quấy rầy</span>
+                <span><i class="fa-solid fa-circle-check" style="color:var(--accent-emerald);"></i> Nhân viên hài lòng, rõ ràng minh bạch</span>
+              </div>
+            </div>
+
+            <!-- Commitments & Summary -->
+            <div class="card" style="display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <h3 class="card-title" style="color:var(--primary); font-size:1.1rem;">
+                  <i class="fa-solid fa-medal"></i> Cam Kết Kết Quả Sau 4 Tuần
+                </h3>
+                
+                <div class="kpi-grid">
+                  <div class="kpi-card">
+                    <div class="kpi-number">0 Sai Sót</div>
+                    <div class="kpi-title">Loại bỏ 100% lỗi kéo nhầm công thức Excel</div>
+                  </div>
+                  <div class="kpi-card">
+                    <div class="kpi-number">15 Phút</div>
+                    <div class="kpi-title">Thời gian chốt lương (trước đây mất 3 ngày)</div>
+                  </div>
+                  <div class="kpi-card">
+                    <div class="kpi-number">Bảo Mật</div>
+                    <div class="kpi-title">Tuyệt đối không ai xem trộm được lương của ai</div>
+                  </div>
+                  <div class="kpi-card">
+                    <div class="kpi-number">Đúng Hạn</div>
+                    <div class="kpi-title">Bàn giao đầy đủ code, slide và báo cáo</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Final Note -->
+              <div style="background:var(--bg-card-subtle); border:1px solid var(--border-subtle); border-radius:12px; padding:14px; margin-top:14px;">
+                <div style="font-weight:700; color:var(--text-title); font-size:0.9rem; margin-bottom:4px;">
+                  <i class="fa-solid fa-comments" style="color:var(--accent-emerald); margin-right:8px;"></i>
+                  Thông Điệp Kết Luận:
+                </div>
+                <p style="font-size:0.83rem; color:var(--text-main); line-height:1.45;">
+                  Đề tài không làm những thứ xa vời mà giải quyết đúng vấn đề nhức nhối của các doanh nghiệp thực tế. Sản phẩm vừa có tính ứng dụng cao, vừa thể hiện đầy đủ kỹ năng lập trình web, cơ sở dữ liệu và tích hợp AI.
+                </p>
+                <div style="margin-top:8px; font-weight:700; color:var(--primary); font-size:0.85rem;">
+                  Cảm ơn Thầy Cô và các bạn đã chú ý lắng nghe!
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Controls -->
+    <footer class="bottom-controls">
+      <div class="nav-buttons">
+        <button id="prevBtn" class="btn" title="Trang trước (Phím mũi tên Trái)">
+          <i class="fa-solid fa-chevron-left"></i> Trang trước
+        </button>
+        <button id="nextBtn" class="btn btn-primary" title="Trang kế (Phím mũi tên Phải hoặc Phím Cách)">
+          Trang sau <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+
+      <!-- Slide Dots -->
+      <div id="slideDots" class="slide-dots"></div>
+
+      <!-- Keyboard shortcuts guide -->
+      <div class="shortcuts-hint">
+        <span><kbd>←</kbd> <kbd>→</kbd> Chuyển trang</span>
+        <span><kbd>1</kbd>–<kbd>5</kbd> Chọn trang</span>
+        <span><kbd>F</kbd> Toàn màn hình</span>
+        <span><kbd>N</kbd> Xem lời thuyết trình mẫu</span>
+      </div>
+    </footer>
+
+    <!-- Presenter Notes Drawer -->
+    <div id="notesDrawer" class="notes-drawer">
+      <div class="notes-header"><i class="fa-solid fa-microphone"></i> Gợi Ý Lời Nói Khi Thuyết Trình Từng Trang (Speaker Notes):</div>
+      <div id="notesContent" class="notes-content">
+        Chào thầy cô và các bạn. Hôm nay nhóm em xin trình bày về đề tài "Hệ thống Chấm công & Tính lương (Timesheet & Payroll System)"...
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

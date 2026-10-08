@@ -1,0 +1,135 @@
+@startuml 05_class_layered_architecture
+skinparam dpi 220
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 11
+skinparam roundCorner 8
+skinparam classAttributeIconSize 0
+skinparam shadowing true
+
+skinparam titleFontName "Segoe UI"
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #0F172A
+
+title **SƠ ĐỒ LỚP THIẾT KẾ PHÂN TẦNG (LAYERED ARCHITECTURE DESIGN CLASS DIAGRAM)**\nKiến trúc phần mềm chuẩn Java Spring Boot 3 & Spring Data JPA
+
+package "1. Presentation Layer (Spring REST Controllers & DTOs)" #FAF5FF {
+    class PayrollController #FFFFFF {
+        - payrollService: PayrollService
+        + calculatePeriod(req: CalculatePayrollDTO): ResponseEntity<PayrollSummaryDTO>
+        + previewSummary(periodId: Long): ResponseEntity<PayrollSummaryDTO>
+        + lockPeriod(periodId: Long, principal: UserDetails): ResponseEntity<ApiResponse>
+        + getMyPayslip(periodId: Long, principal: UserDetails): ResponseEntity<PayslipDTO>
+        + exportBankFile(periodId: Long): ResponseEntity<ByteArrayResource>
+    }
+
+    class CalculatePayrollDTO #FFFFFF {
+        + periodId: Long
+        + allowRecalculation: Boolean
+    }
+
+    class PayrollSummaryDTO #FFFFFF {
+        + periodId: Long
+        + periodCode: String
+        + totalHeadcount: Integer
+        + totalGrossAmount: Double
+        + totalNetAmount: Double
+        + payslips: List<PayslipDTO>
+    }
+
+    class PayslipDTO #FFFFFF {
+        + payslipId: Long
+        + employeeCode: String
+        + employeeName: String
+        + actualWorkDays: Double
+        + grossSalary: Double
+        + totalDeductions: Double
+        + netSalary: Double
+        + lines: List<PayslipLineDTO>
+    }
+}
+
+package "2. Business Logic Layer (Services & Engine)" #F0FDF4 {
+    interface PayrollService <<interface>> #FFFFFF {
+        + calculatePayrollBatch(periodId: Long): PayrollSummaryDTO
+        + getPayrollSummary(periodId: Long): PayrollSummaryDTO
+        + lockAndFinalizePeriod(periodId: Long, adminId: Long): Boolean
+        + getPayslipForEmployee(periodId: Long, employeeId: Long): PayslipDTO
+        + exportBankTransferExcel(periodId: Long): byte[]
+    }
+
+    class PayrollServiceImpl #FFFFFF {
+        - periodRepo: PayrollPeriodRepository
+        - timesheetRepo: TimesheetRepository
+        - contractRepo: ContractRepository
+        - deductionRepo: DeductionRateRepository
+        - payslipRepo: PayslipRepository
+        - formulaEngine: SalaryFormulaEngine
+        + @Transactional calculatePayrollBatch(periodId: Long): PayrollSummaryDTO
+    }
+
+    class SalaryFormulaEngine #FFFFFF {
+        + computeProratedBaseSalary(base: Double, actual: Double, standard: Double): Double
+        + computeGrossSalary(baseProrated: Double, allowances: Double): Double
+        + computeMandatoryInsurance(gross: Double, rates: List<DeductionRate>): Map<String, Double>
+        + computeNetSalary(gross: Double, deductions: Double): Double
+    }
+}
+
+package "3. Data Access Layer (Spring Data JPA Repositories)" #FFFBEB {
+    interface PayrollPeriodRepository <<Repository>> #FFFFFF {
+        + findById(id: Long): Optional<PayrollPeriod>
+        + findByPeriodMonthAndPeriodYear(m: Integer, y: Integer): Optional<PayrollPeriod>
+    }
+
+    interface TimesheetRepository <<Repository>> #FFFFFF {
+        + findByEmployeeAndPeriod(empId: Long, m: Integer, y: Integer): List<Timesheet>
+        + countApprovedWorkDays(empId: Long, m: Integer, y: Integer): Double
+    }
+
+    interface ContractRepository <<Repository>> #FFFFFF {
+        + findActiveContractByEmployeeId(empId: Long): Optional<Contract>
+    }
+
+    interface DeductionRateRepository <<Repository>> #FFFFFF {
+        + findActiveRates(date: LocalDate): List<DeductionRate>
+    }
+
+    interface PayslipRepository <<Repository>> #FFFFFF {
+        + findByPeriodId(periodId: Long): List<Payslip>
+        + findByPeriodIdAndEmployeeId(periodId: Long, empId: Long): Optional<Payslip>
+    }
+}
+
+package "4. Domain Entity Layer (JPA Entities - PostgreSQL 16)" #EFF6FF {
+    class PayrollPeriod <<Entity>> #FFFFFF
+    class Timesheet <<Entity>> #FFFFFF
+    class Contract <<Entity>> #FFFFFF
+    class DeductionRate <<Entity>> #FFFFFF
+    class Payslip <<Entity>> #FFFFFF
+    class PayslipLine <<Entity>> #FFFFFF
+}
+
+' Liên kết giữa các tầng
+PayrollController --> PayrollService : gọi thực thi
+PayrollController ..> CalculatePayrollDTO : nhận request
+PayrollController ..> PayrollSummaryDTO : trả response
+
+PayrollServiceImpl ..|> PayrollService : implements
+PayrollServiceImpl --> SalaryFormulaEngine : ủy quyền tính toán
+
+PayrollServiceImpl --> PayrollPeriodRepository : truy cập
+PayrollServiceImpl --> TimesheetRepository : truy cập
+PayrollServiceImpl --> ContractRepository : truy cập
+PayrollServiceImpl --> DeductionRateRepository : truy cập
+PayrollServiceImpl --> PayslipRepository : truy cập
+
+PayrollPeriodRepository ..> PayrollPeriod : quản lý CSDL
+TimesheetRepository ..> Timesheet : quản lý CSDL
+ContractRepository ..> Contract : quản lý CSDL
+DeductionRateRepository ..> DeductionRate : quản lý CSDL
+PayslipRepository ..> Payslip : quản lý CSDL
+Payslip *-- PayslipLine : Composition
+
+@enduml

@@ -1,0 +1,59 @@
+@using TimesheetPayroll.CoreBusiness.Models
+
+@if (Payslips == null || !Payslips.Any())
+{
+    <div class="alert alert-info d-flex align-items-center" role="alert">
+        <i class="fa-solid fa-circle-info me-2 fs-5"></i>
+        <div>Chưa có dữ liệu tính lương cho kỳ này. Vui lòng nhấn nút <strong>"Chạy tính toán lương"</strong> để bắt đầu.</div>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle border">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Mã NV</th>
+                    <th scope="col">Họ và Tên</th>
+                    <th scope="col">Phòng Ban</th>
+                    <th scope="col" class="text-center">Ngày Công</th>
+                    <th scope="col" class="text-end">Thu Nhập Gộp</th>
+                    <th scope="col" class="text-end">Tổng Khấu Trừ</th>
+                    <th scope="col" class="text-end">Thực Lĩnh (Net)</th>
+                    <th scope="col">Tài Khoản Chi Trả</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Payslips)
+                {
+                    <tr>
+                        <td class="fw-bold text-primary">@p.EmployeeCode</td>
+                        <td>@p.EmployeeName</td>
+                        <td><span class="badge bg-light text-dark border">@(p.DepartmentName ?? "Văn phòng")</span></td>
+                        <td class="text-center fw-semibold">@p.ActualWorkDays</td>
+                        <td class="text-end">@p.GrossSalary.ToString("N0") đ</td>
+                        <td class="text-end text-danger">-@p.TotalDeductions.ToString("N0") đ</td>
+                        <td class="text-end fw-bold text-success fs-6">@p.NetSalary.ToString("N0") đ</td>
+                        <td class="small text-muted">
+                            <div>@p.BankAccountNumber</div>
+                            <div class="text-uppercase fw-semibold">@p.BankName</div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot class="table-group-divider table-light fw-bold">
+                <tr>
+                    <td colspan="4" class="text-end">TỔNG CỘNG:</td>
+                    <td class="text-end text-primary">@Payslips.Sum(p => p.GrossSalary).ToString("N0") đ</td>
+                    <td class="text-end text-danger">-@Payslips.Sum(p => p.TotalDeductions).ToString("N0") đ</td>
+                    <td class="text-end text-success fs-5">@Payslips.Sum(p => p.NetSalary).ToString("N0") đ</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter] public IEnumerable<Payslip>? Payslips { get; set; }
+}

@@ -1,0 +1,23 @@
+<Router AppAssembly="typeof(Program).Assembly"
+        AdditionalAssemblies="new[]
+                                {
+                                    typeof(TimesheetPayroll.Web.EmployeePortal.Pages.MyPayslipComponent).Assembly,
+                                    typeof(TimesheetPayroll.Web.AdminPortal.Pages.PayrollBatchCalculationPage).Assembly
+                                }">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(Layout.MainLayout)">
+            <div class="container p-5 text-center">
+                <div class="alert alert-warning shadow-sm">
+                    <h4 class="alert-heading"><i class="fa-solid fa-triangle-exclamation me-2"></i>Không Tìm Thấy Trang!</h4>
+                    <p>Trang bạn yêu cầu không tồn tại hoặc đã được chuyển hướng.</p>
+                    <hr />
+                    <a href="/" class="btn btn-primary">Về Trang Chủ</a>
+                </div>
+            </div>
+        </LayoutView>
+    </NotFound>
+</Router>

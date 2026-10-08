@@ -1,0 +1,49 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm px-3">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
+            <i class="fa-solid fa-clock-rotate-left text-primary fs-4 me-2"></i>
+            <span>TIMESHEET & PAYROLL</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                        <i class="fa-solid fa-house me-1"></i>Trang Chủ
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="my-timesheet">
+                        <i class="fa-solid fa-calendar-check me-1"></i>Chấm Công Của Tôi
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="my-payslip">
+                        <i class="fa-solid fa-file-invoice-dollar me-1"></i>Phiếu Lương Cá Nhân
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="leave-request">
+                        <i class="fa-solid fa-calendar-plus me-1"></i>Xin Nghỉ Phép
+                    </NavLink>
+                </li>
+                <li class="nav-item dropdown">
+                    <NavLink class="nav-link text-warning fw-semibold" href="admin/payroll-calculation">
+                        <i class="fa-solid fa-calculator me-1"></i>Quản Trị: Tính Lương Hàng Loạt
+                    </NavLink>
+                </li>
+            </ul>
+            <div class="d-flex align-items-center text-white small">
+                <div class="bg-primary rounded-circle p-2 me-2 d-flex align-items-center justify-content-center" style="width:32px; height:32px;">
+                    <i class="fa-solid fa-user text-white"></i>
+                </div>
+                <div>
+                    <div class="fw-bold">Nguyễn Văn A</div>
+                    <div class="text-white-50" style="font-size: 0.75rem;">EMP001 • IT Dept</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

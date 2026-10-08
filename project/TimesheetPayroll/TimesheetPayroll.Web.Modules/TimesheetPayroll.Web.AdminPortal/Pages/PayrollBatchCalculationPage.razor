@@ -1,0 +1,190 @@
+@page "/admin/payroll-calculation"
+@inject ICalculatePayrollBatchUseCase CalculateUseCase
+@inject IViewPayrollSummaryUseCase ViewSummaryUseCase
+@inject ILockPayrollPeriodUseCase LockUseCase
+@using TimesheetPayroll.Web.AdminPortal.Controls
+
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+            <h2 class="h4 mb-1 text-dark fw-bold">
+                <i class="fa-solid fa-calculator text-primary me-2"></i>Tính Toán Bảng Lương Hàng Loạt (Batch Calculation)
+            </h2>
+            <p class="text-muted small mb-0">Tự động hóa tính lương toàn bộ nhân sự theo ngày công thực tế, phụ cấp và khấu trừ bảo hiểm luật định.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" @onclick="LoadDataAsync" disabled="@isLoading">
+                <i class="fa-solid fa-arrows-rotate me-1"></i>Làm mới
+            </button>
+            <button class="btn btn-primary shadow-sm" @onclick="HandleCalculateBatchAsync" disabled="@(isLoading || isLocked)">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    <span>Đang tính toán...</span>
+                }
+                else
+                {
+                    <i class="fa-solid fa-bolt me-1"></i>
+                    <span>Chạy Tính Lương Tự Động</span>
+                }
+            </button>
+            @if (payslips.Any() && !isLocked)
+            {
+                <button class="btn btn-danger shadow-sm" @onclick="HandleLockPeriodAsync">
+                    <i class="fa-solid fa-lock me-1"></i>Chốt Kỳ Lương (Khóa Sổ)
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(alertMessage))
+    {
+        <div class="alert alert-@alertType alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fa-solid fa-circle-check me-2"></i>@alertMessage
+            <button type="button" class="btn-close" @onclick="() => alertMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- THÔNG TIN KỲ LƯƠNG HIỆN TẠI -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-white p-3 border-start border-4 border-primary">
+                <div class="text-muted small fw-semibold">KỲ LƯƠNG ÁP DỤNG</div>
+                <div class="fs-4 fw-bold text-dark mt-1">@(period?.PeriodCode ?? "PR-2026-10")</div>
+                <div class="small text-muted">Tháng @(period?.PeriodMonth ?? 10)/@(period?.PeriodYear ?? 2026) (Chuẩn: @(period?.StandardWorkDays ?? 22) công)</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-white p-3 border-start border-4 border-info">
+                <div class="text-muted small fw-semibold">TRẠNG THÁI KỲ</div>
+                <div class="fs-4 fw-bold mt-1">
+                    @if (isLocked)
+                    {
+                        <span class="badge bg-danger fs-6"><i class="fa-solid fa-lock me-1"></i>ĐÃ KHÓA SỔ (READ-ONLY)</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-success fs-6"><i class="fa-solid fa-unlock me-1"></i>@(period?.Status.ToString() ?? "CALCULATED")</span>
+                    }
+                </div>
+                <div class="small text-muted">@(isLocked ? "Không thể chỉnh sửa" : "Cho phép đối soát & tính lại")</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-white p-3 border-start border-4 border-warning">
+                <div class="text-muted small fw-semibold">TỔNG QUỸ LƯƠNG GỘP (GROSS)</div>
+                <div class="fs-4 fw-bold text-dark mt-1">@totalGross.ToString("N0") đ</div>
+                <div class="small text-muted">Bao gồm lương ngày công & phụ cấp</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-white p-3 border-start border-4 border-success">
+                <div class="text-muted small fw-semibold">TỔNG THỰC LĨNH CHI TRẢ (NET)</div>
+                <div class="fs-4 fw-bold text-success mt-1">@totalNet.ToString("N0") đ</div>
+                <div class="small text-muted">Tổng số tiền chi chuyển khoản</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BẢNG ĐỐI SOÁT TỔNG HỢP CHI TIẾT -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+            <h5 class="card-title h6 mb-0 fw-bold">
+                <i class="fa-solid fa-list-check me-2 text-primary"></i>Danh Sách Phiếu Lương Đối Soát Chi Tiết
+            </h5>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+                Tổng nhân sự: @payslips.Count người
+            </span>
+        </div>
+        <div class="card-body p-0">
+            <PayrollSummaryComponent Payslips="@payslips" />
+        </div>
+    </div>
+</div>
+
+@code {
+    private const long DefaultPeriodId = 10;
+    private PayrollPeriod? period;
+    private List<Payslip> payslips = new();
+    private bool isLoading = false;
+    private bool isLocked = false;
+    private string alertMessage = string.Empty;
+    private string alertType = "success";
+
+    private decimal totalGross => payslips.Sum(p => p.GrossSalary);
+    private decimal totalNet => payslips.Sum(p => p.NetSalary);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var summary = await ViewSummaryUseCase.ExecuteAsync(DefaultPeriodId);
+            period = summary.Period;
+            payslips = summary.Payslips.ToList();
+            isLocked = period?.Status == PeriodStatus.LOCKED;
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Lỗi khi tải dữ liệu: {ex.Message}";
+            alertType = "danger";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleCalculateBatchAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var results = await CalculateUseCase.ExecuteAsync(DefaultPeriodId);
+            payslips = results.ToList();
+            var summary = await ViewSummaryUseCase.ExecuteAsync(DefaultPeriodId);
+            period = summary.Period;
+            alertMessage = $"Đã tính toán thành công toàn bộ {payslips.Count} nhân viên với tổng thực lĩnh {totalNet:N0} đ!";
+            alertType = "success";
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Lỗi khi chạy tính lương: {ex.Message}";
+            alertType = "danger";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleLockPeriodAsync()
+    {
+        isLoading = true;
+        try
+        {
+            bool success = await LockUseCase.ExecuteAsync(DefaultPeriodId, "ketoan.thao");
+            if (success)
+            {
+                isLocked = true;
+                if (period != null) period.Status = PeriodStatus.LOCKED;
+                alertMessage = "Kỳ lương đã được CHỐT KHÓA SỔ thành công! Toàn bộ bảng công và phiếu lương chuyển sang chế độ Chỉ đọc (Read-Only).";
+                alertType = "warning";
+            }
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Lỗi khi chốt kỳ lương: {ex.Message}";
+            alertType = "danger";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

@@ -1,0 +1,83 @@
+@startuml 11_activity_payroll_settlement
+skinparam dpi 220
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam roundCorner 10
+skinparam shadowing true
+
+skinparam titleFontName "Segoe UI"
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #0F172A
+
+skinparam activity {
+    BackgroundColor #EFF6FF
+    BorderColor #2563EB
+    FontColor #1E293B
+    FontSize 12
+    DiamondBackgroundColor #FEF3C7
+    DiamondBorderColor #D97706
+    DiamondFontColor #78350F
+    StartColor #10B981
+    EndColor #EF4444
+    ArrowColor #2563EB
+    ArrowThickness 1.2
+}
+
+title **SƠ ĐỒ HOẠT ĐỘNG 02: QUY TRÌNH TÍNH LƯƠNG, ĐỐI SOÁT & QUYẾT TOÁN CHI TRẢ**\nPhân làn trách nhiệm giữa Kế toán HR, Hệ thống Backend và Nhân viên
+
+|#FEF3C7|Kế Toán / HR (Accountant)|
+|#F0FDF4|Hệ Thống Backend (Spring Boot)|
+|#EFF6FF|Nhân Viên (Employee)|
+
+|Kế Toán / HR (Accountant)|
+start
+:Khởi tạo kỳ lương mới (DRAFT);
+:Bấm nút "Chạy tính toán lương hàng loạt";
+
+|Hệ Thống Backend (Spring Boot)|
+:Mở Database Transaction (@Transactional);
+:Nạp dữ liệu Hợp đồng, Timesheet đã duyệt & Tỷ lệ trích nộp;
+:Thực thi SalaryFormulaEngine tính toán cho 50 nhân sự;
+:Lưu kết quả vào Payslip & PayslipLine;
+:Commit Transaction & Chuyển trạng thái sang CALCULATED;
+
+|Kế Toán / HR (Accountant)|
+:Mở giao diện Bảng lương tổng hợp (Preview Summary);
+:Đối soát tổng quỹ lương, thuế và bảo hiểm trích nộp;
+
+if (Số liệu hoàn toàn chính xác?) then (Đồng ý)
+    :Bấm "Chốt Kỳ Lương (Khóa Sổ)";
+    |Hệ Thống Backend (Spring Boot)|
+    :Chuyển trạng thái sang LOCKED (Read-Only bất biến);
+    :Khóa vĩnh viễn bảng chấm công của kỳ;
+    :Tự động kết xuất file Excel ủy nhiệm chi ngân hàng;
+    
+    |Kế Toán / HR (Accountant)|
+    :Gửi file Excel tới Ngân hàng thực hiện chi lương;
+    :Xác nhận chuyển khoản thành công;
+    
+    |Hệ Thống Backend (Spring Boot)|
+    :Chuyển trạng thái kỳ lương sang PAID;
+    :Phát hành thông báo phiếu lương tới từng nhân viên;
+    
+    |Nhân Viên (Employee)|
+    :Đăng nhập xem chi tiết phiếu lương cá nhân;
+    if (Có thắc mắc chênh lệch thu nhập?) then (Có)
+        :Mở chat với Trợ lý AI để đối soát & giải thích tự động;
+    else (Không)
+        :Xác nhận đã nhận đủ lương;
+    endif
+    stop
+else (Cần chỉnh sửa)
+    |Kế Toán / HR (Accountant)|
+    :Yêu cầu bổ sung dữ liệu ngày công / sửa phụ cấp;
+    |Hệ Thống Backend (Spring Boot)|
+    :Cập nhật dữ liệu đầu vào hợp lệ;
+    |Kế Toán / HR (Accountant)|
+    :Bấm tính toán lại kỳ lương;
+    detach
+endif
+
+@enduml

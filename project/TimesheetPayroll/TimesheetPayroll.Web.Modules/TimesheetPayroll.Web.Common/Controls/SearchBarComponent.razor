@@ -1,0 +1,21 @@
+<div class="input-group">
+    <span class="input-group-text bg-white border-end-0">
+        <i class="fa-solid fa-magnifying-glass text-muted"></i>
+    </span>
+    <input type="text" class="form-control border-start-0" 
+           placeholder="@Placeholder" 
+           value="@SearchTerm" 
+           @oninput="HandleInput" />
+</div>
+
+@code {
+    [Parameter] public string Placeholder { get; set; } = "Tìm kiếm...";
+    [Parameter] public string SearchTerm { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> OnSearch { get; set; }
+
+    private async Task HandleInput(ChangeEventArgs e)
+    {
+        SearchTerm = e.Value?.ToString() ?? string.Empty;
+        await OnSearch.InvokeAsync(SearchTerm);
+    }
+}

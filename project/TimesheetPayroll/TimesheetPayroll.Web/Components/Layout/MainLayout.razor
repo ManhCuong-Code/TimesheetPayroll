@@ -1,0 +1,23 @@
+@inherits LayoutComponentBase
+
+<div class="page d-flex flex-column min-vh-100 bg-light">
+    <TopNavbar />
+
+    <main class="flex-grow-1">
+        <article class="content p-4">
+            @Body
+        </article>
+    </main>
+
+    <footer class="bg-white border-top py-3 text-center text-muted small mt-auto">
+        <div class="container">
+            <span>&copy; 2026 <strong>TimesheetPayroll</strong> - Hệ Thống Chấm Công & Tính Lương Tự Động (Dự án 17).</span>
+        </div>
+    </footer>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Đã xảy ra lỗi không mong muốn.
+    <a href="." class="reload">Tải lại</a>
+    <span class="dismiss">🗙</span>
+</div>

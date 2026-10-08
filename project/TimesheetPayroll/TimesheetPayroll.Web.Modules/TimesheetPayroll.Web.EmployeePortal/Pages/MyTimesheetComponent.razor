@@ -1,0 +1,142 @@
+@page "/my-timesheet"
+@inject IViewMyTimesheetUseCase ViewTimesheetUseCase
+@inject ICheckInCheckOutUseCase CheckInUseCase
+@using TimesheetPayroll.Web.Common.Controls
+
+<div class="container py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h4 mb-1 text-dark fw-bold">
+                <i class="fa-solid fa-calendar-check text-success me-2"></i>Bảng Chấm Công Cá Nhân
+            </h2>
+            <p class="text-muted small mb-0">Theo dõi ngày công hàng ngày và thực hiện điểm danh trực tuyến Check-In / Check-Out.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success shadow-sm" @onclick="HandleCheckInAsync" disabled="@isCheckingIn">
+                <i class="fa-solid fa-right-to-bracket me-1"></i>Check-In (Vào Ca)
+            </button>
+            <button class="btn btn-warning shadow-sm" @onclick="HandleCheckOutAsync" disabled="@isCheckingOut">
+                <i class="fa-solid fa-right-from-bracket me-1"></i>Check-Out (Hết Ca)
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-bell me-2"></i>@statusMessage
+            <button type="button" class="btn-close" @onclick="() => statusMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- THỐNG KÊ CÔNG THÁNG -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3 border-start border-4 border-success">
+                <div class="small text-muted">TỔNG NGÀY CÔNG THỰC TẾ</div>
+                <div class="fs-4 fw-bold text-success mt-1">@totalWorkUnits công</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3 border-start border-4 border-primary">
+                <div class="small text-muted">SỐ NGÀY ĐI LÀM ĐỦ (1.0 CÔNG)</div>
+                <div class="fs-4 fw-bold text-primary mt-1">@timesheets.Count(t => t.WorkUnits == 1.0m) ngày</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm p-3 border-start border-4 border-warning">
+                <div class="small text-muted">SỐ NGÀY NGHỈ PHÉP (0.0 CÔNG)</div>
+                <div class="fs-4 fw-bold text-warning mt-1">@timesheets.Count(t => t.WorkUnits == 0m) ngày</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BẢNG LỊCH SỬ CHẤM CÔNG -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 border-bottom">
+            <h5 class="card-title h6 mb-0 fw-bold">Nhật Ký Điểm Danh Tháng 10/2026</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Ngày</th>
+                        <th scope="col" class="text-center">Giờ Vào (Check-In)</th>
+                        <th scope="col" class="text-center">Giờ Ra (Check-Out)</th>
+                        <th scope="col" class="text-center">Số Giờ Làm</th>
+                        <th scope="col" class="text-center">Đơn Vị Công</th>
+                        <th scope="col">Trạng Thái</th>
+                        <th scope="col">Ghi Chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in timesheets)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@t.WorkDate.ToString("dd/MM/yyyy (ddd)")</td>
+                            <td class="text-center text-primary fw-medium">@(t.CheckInTime?.ToString(@"hh\:mm") ?? "--:--")</td>
+                            <td class="text-center text-primary fw-medium">@(t.CheckOutTime?.ToString(@"hh\:mm") ?? "--:--")</td>
+                            <td class="text-center">@t.ActualHoursWorked giờ</td>
+                            <td class="text-center fw-bold text-success">@t.WorkUnits công</td>
+                            <td>
+                                <StatusBadgeComponent Status="@t.WorkShiftStatus.ToString()" Label="@t.WorkShiftStatus.ToString()" />
+                            </td>
+                            <td class="small text-muted">@(t.Note ?? "-")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const long CurrentEmployeeId = 1;
+    private List<Timesheet> timesheets = new();
+    private bool isCheckingIn = false;
+    private bool isCheckingOut = false;
+    private string statusMessage = string.Empty;
+
+    private decimal totalWorkUnits => timesheets.Sum(t => t.WorkUnits);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTimesheetsAsync();
+    }
+
+    private async Task LoadTimesheetsAsync()
+    {
+        var result = await ViewTimesheetUseCase.ExecuteAsync(CurrentEmployeeId, 10, 2026);
+        timesheets = result.OrderBy(t => t.WorkDate).ToList();
+    }
+
+    private async Task HandleCheckInAsync()
+    {
+        isCheckingIn = true;
+        try
+        {
+            var t = await CheckInUseCase.ExecuteCheckInAsync(CurrentEmployeeId);
+            statusMessage = $"Check-in thành công lúc {DateTime.Now:HH:mm:ss}!";
+            await LoadTimesheetsAsync();
+        }
+        finally
+        {
+            isCheckingIn = false;
+        }
+    }
+
+    private async Task HandleCheckOutAsync()
+    {
+        isCheckingOut = true;
+        try
+        {
+            var t = await CheckInUseCase.ExecuteCheckOutAsync(CurrentEmployeeId);
+            statusMessage = $"Check-out thành công lúc {DateTime.Now:HH:mm:ss}! Tổng giờ làm: {t.ActualHoursWorked} giờ.";
+            await LoadTimesheetsAsync();
+        }
+        finally
+        {
+            isCheckingOut = false;
+        }
+    }
+}

@@ -1,0 +1,72 @@
+@startuml 12_state_payroll_period
+skinparam dpi 220
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam roundCorner 10
+skinparam shadowing true
+
+skinparam titleFontName "Segoe UI"
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #0F172A
+
+skinparam state {
+    BackgroundColor #FFFFFF
+    BorderColor #2563EB
+    FontColor #0F172A
+    FontSize 12
+    ArrowColor #2563EB
+    ArrowThickness 1.2
+    StartColor #10B981
+    EndColor #EF4444
+}
+
+title **SƠ ĐỒ MÁY TRẠNG THÁI (STATE MACHINE DIAGRAM)**\nVòng đời đối tượng Kỳ Lương (PayrollPeriod Lifecycle) - Kiểm soát tính toàn vẹn dữ liệu
+
+[*] --> DRAFT : Khởi tạo kỳ lương mới (VD: Tháng 10/2026)
+
+state DRAFT #F1F5F9 {
+    DRAFT : Thu thập bảng chấm công hàng ngày
+    DRAFT : Tiếp nhận và xử lý đơn xin nghỉ phép
+    DRAFT : Cho phép điều chỉnh thông tin hợp đồng và phụ cấp
+}
+
+DRAFT --> CALCULATING : Kế toán bấm "Tính Lương Tự Động"
+
+state CALCULATING #FEF3C7 {
+    CALCULATING : Khởi tạo Spring @Transactional
+    CALCULATING : Tính lương gộp, phụ cấp & khấu trừ BHXH/Thuế
+    CALCULATING : Khóa tạm thời bảng công (Lock rows)
+}
+
+CALCULATING --> DRAFT : Phát sinh ngoại lệ / Rollback Transaction
+CALCULATING --> CALCULATED : Tính toán 100% thành công cho tất cả nhân viên
+
+state CALCULATED #DBEAFE {
+    CALCULATED : Phiếu lương ở dạng Xem trước (Preview)
+    CALCULATED : Kế toán đối soát tổng quỹ lương trên màn hình tổng hợp
+    CALCULATED : Cho phép chạy lại tính toán khi dữ liệu đầu vào hợp lệ
+}
+
+CALCULATED --> CALCULATING : Chạy lại tính lương khi cần thiết
+CALCULATED --> LOCKED : Kế toán xác nhận và bấm "Chốt Kỳ Lương"
+
+state LOCKED #FEE2E2 {
+    LOCKED : Đã khóa chỉnh sửa, toàn bộ dữ liệu chuyển sang Read-Only
+    LOCKED : Ngăn chặn tuyệt đối mọi hành vi sửa đổi dữ liệu quá khứ
+    LOCKED : Phiếu lương hiển thị công khai tới nhân viên
+    LOCKED : Kích hoạt Trợ lý AI giải đáp thắc mắc lương
+    LOCKED : Xuất file danh sách chuyển khoản cho Ngân hàng
+}
+
+LOCKED --> PAID : Kế toán xác nhận ủy nhiệm chi ngân hàng thành công
+
+state PAID #DCFCE7 {
+    PAID : Đã hoàn tất chi trả tiền lương vào tài khoản nhân viên
+    PAID : Lưu trữ vào kho dữ liệu kế toán lịch sử (Archive)
+}
+
+PAID --> [*] : Kết thúc chu kỳ quyết toán kỳ lương
+
+@enduml

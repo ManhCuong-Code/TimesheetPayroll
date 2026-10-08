@@ -1,0 +1,108 @@
+@page "/leave-request"
+@inject ICreateLeaveRequestUseCase CreateLeaveUseCase
+@using TimesheetPayroll.CoreBusiness.Models
+
+<div class="container py-3">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm p-4">
+                <h4 class="fw-bold mb-3 text-dark">
+                    <i class="fa-solid fa-envelope-open-text text-primary me-2"></i>Tạo Đơn Xin Nghỉ Phép
+                </h4>
+                <p class="text-muted small mb-4">Gửi yêu cầu nghỉ phép tới người quản lý hoặc bộ phận Nhân sự để xét duyệt.</p>
+
+                @if (isSuccess)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fa-solid fa-circle-check me-2"></i>Đơn xin nghỉ phép của bạn đã được gửi thành công!
+                        <button type="button" class="btn-close" @onclick="() => isSuccess = false"></button>
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Loại Nghỉ Phép</label>
+                    <select class="form-select" @bind="request.LeaveType">
+                        <option value="@LeaveType.ANNUAL_LEAVE">Nghỉ phép năm (Có hưởng lương)</option>
+                        <option value="@LeaveType.SICK_LEAVE">Nghỉ ốm đau (Hưởng chế độ BHXH)</option>
+                        <option value="@LeaveType.MATERNITY_LEAVE">Nghỉ thai sản</option>
+                        <option value="@LeaveType.UNPAID_LEAVE">Nghỉ việc riêng (Không hưởng lương)</option>
+                    </select>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Từ Ngày</label>
+                        <input type="date" class="form-control" @bind="request.StartDate" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Đến Ngày</label>
+                        <input type="date" class="form-control" @bind="request.EndDate" />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Số Ngày Nghỉ Dự Kiến</label>
+                    <input type="number" step="0.5" class="form-control" @bind="request.TotalDays" />
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Lý Do Xin Nghỉ</label>
+                    <textarea class="form-control" rows="3" placeholder="Nhập lý do cụ thể..." @bind="request.Reason"></textarea>
+                </div>
+
+                <button class="btn btn-primary px-4 shadow-sm" @onclick="HandleSubmitAsync" disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        <span>Đang gửi đơn...</span>
+                    }
+                    else
+                    {
+                        <i class="fa-solid fa-paper-plane me-1"></i>
+                        <span>Nộp Đơn Nghỉ Phép</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const long CurrentEmployeeId = 1;
+    private LeaveRequest request = new()
+    {
+        EmployeeId = CurrentEmployeeId,
+        StartDate = DateTime.Today,
+        EndDate = DateTime.Today,
+        TotalDays = 1.0m,
+        LeaveType = LeaveType.ANNUAL_LEAVE
+    };
+    private bool isSubmitting = false;
+    private bool isSuccess = false;
+
+    private async Task HandleSubmitAsync()
+    {
+        if (string.IsNullOrWhiteSpace(request.Reason))
+        {
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            await CreateLeaveUseCase.ExecuteAsync(request);
+            isSuccess = true;
+            request = new LeaveRequest
+            {
+                EmployeeId = CurrentEmployeeId,
+                StartDate = DateTime.Today,
+                EndDate = DateTime.Today,
+                TotalDays = 1.0m
+            };
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

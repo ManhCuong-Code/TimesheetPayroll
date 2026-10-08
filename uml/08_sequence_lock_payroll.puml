@@ -1,0 +1,80 @@
+@startuml 08_sequence_lock_payroll
+skinparam dpi 220
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam roundCorner 8
+skinparam shadowing true
+skinparam BoxPadding 10
+autonumber
+
+skinparam titleFontName "Segoe UI"
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #0F172A
+
+title **SƠ ĐỒ TUẦN TỰ 03: ĐỐI SOÁT, CHỐT KỲ LƯƠNG & XUẤT FILE NGÂN HÀNG**\n(Quy trình khóa sổ Read-Only bất biến & Xuất file thanh toán ủy nhiệm chi)
+
+box "Client Tier" #EFF6FF
+    actor "Kế Toán / HR" as HR #EEF2FF
+    boundary "Bảng Điều Khiển Lương\n(Payroll UI)" as UI #FFFFFF
+end box
+
+box "Business Logic Tier (Spring Boot 3.2)" #FAF5FF
+    control "PayrollController" as Ctrl #FFFFFF
+    control "PayrollService" as Svc #FFFFFF
+    control "ExcelExportService" as ExcelSvc #FFFFFF
+end box
+
+box "Data Access & Database Tier" #F0FDF4
+    entity "PayrollPeriodRepository" as PeriodRepo #FFFFFF
+    entity "TimesheetRepository" as TRepo #FFFFFF
+    database "PostgreSQL Database" as DB #FFFFFF
+end box
+
+== Bước 1: Xem Bảng Lương Tổng Hợp & Đối Soát (Preview) ==
+
+HR -> UI: Mở xem "Bảng lương tổng hợp Tháng 10/2026"
+UI -> Ctrl: GET /api/payroll/summary?periodId=10
+Ctrl -> Svc: getPayrollSummary(periodId = 10)
+Svc -> DB: SELECT * FROM payslips WHERE period_id = 10
+DB --> Svc: Danh sách 50 phiếu lương cá nhân
+Svc --> Ctrl: PayrollSummaryDTO (Tổng quỹ lương, tổng bảo hiểm, chi tiết từng nhân viên)
+Ctrl --> UI: Hiển thị giao diện đối soát số liệu đầy đủ
+UI --> HR: Kế toán rà soát kiểm tra tính chính xác
+
+== Bước 2: Chốt Kỳ Lương Khóa Sổ (Immutable Lock - Read-Only) ==
+
+HR -> UI: Nhấn nút "Chốt Kỳ Lương & Xuất File Ngân Hàng"
+UI --> HR: Hiển thị cảnh báo: "Dữ liệu kỳ này sẽ chuyển sang trạng thái ĐÃ KHÓA CHỈNH SỬA (Read-Only). Bạn có chắc chắn?"
+HR -> UI: Chọn "Xác Nhận Chốt Kỳ"
+
+UI -> Ctrl: POST /api/payroll/lock {periodId: 10}
+activate Ctrl
+
+Ctrl -> Svc: lockAndFinalizePeriod(periodId = 10, adminId)
+activate Svc
+
+Svc -> PeriodRepo: findById(10)
+PeriodRepo --> Svc: PayrollPeriod (status = 'CALCULATED')
+
+Svc -> DB: UPDATE payroll_periods SET status = 'LOCKED', locked_at = NOW(), locked_by = ? WHERE id = 10
+Svc -> TRepo: lockTimesheetsByPeriod(10)
+TRepo -> DB: UPDATE timesheets SET is_locked = true WHERE period_id = 10
+note right of DB #FEF3C7: Bảng công và phiếu lương chuyển sang chế độ CHỈ ĐỌC (Read-Only),\nngăn chặn tuyệt đối mọi hành vi sửa lén dữ liệu quá khứ.
+
+Svc -> ExcelSvc: generateBankTransferExcel(periodId = 10)
+activate ExcelSvc
+ExcelSvc -> DB: Lấy Số TK, Tên Ngân Hàng, Họ Tên, Lương Thực Lĩnh của 50 NV
+DB --> ExcelSvc: Dữ liệu tài khoản ngân hàng
+ExcelSvc --> Svc: byte[] ByteArrayResource (File Excel định dạng ủy nhiệm chi)
+deactivate ExcelSvc
+
+Svc --> Ctrl: File Excel chuyển khoản ngân hàng
+deactivate Svc
+
+Ctrl --> UI: 200 OK + Tải xuống tệp Excel 'UyNhiemChi_Luong_T10_2026.xlsx'
+deactivate Ctrl
+
+UI --> HR: Hiển thị trạng thái KỲ LƯƠNG: ĐÃ KHÓA (LOCKED - Read-Only)
+
+@enduml

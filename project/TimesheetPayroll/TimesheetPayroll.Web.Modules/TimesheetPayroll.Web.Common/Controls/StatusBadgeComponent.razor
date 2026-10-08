@@ -1,0 +1,21 @@
+@if (Status.Equals("PRESENT", StringComparison.OrdinalIgnoreCase) || Status.Equals("CALCULATED", StringComparison.OrdinalIgnoreCase) || Status.Equals("APPROVED", StringComparison.OrdinalIgnoreCase))
+{
+    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">@Label</span>
+}
+else if (Status.Equals("LOCKED", StringComparison.OrdinalIgnoreCase) || Status.Equals("HALF_DAY", StringComparison.OrdinalIgnoreCase))
+{
+    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">@Label</span>
+}
+else if (Status.Equals("ABSENT_UNAUTHORIZED", StringComparison.OrdinalIgnoreCase) || Status.Equals("REJECTED", StringComparison.OrdinalIgnoreCase))
+{
+    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">@Label</span>
+}
+else
+{
+    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">@Label</span>
+}
+
+@code {
+    [Parameter] public string Status { get; set; } = string.Empty;
+    [Parameter] public string Label { get; set; } = string.Empty;
+}

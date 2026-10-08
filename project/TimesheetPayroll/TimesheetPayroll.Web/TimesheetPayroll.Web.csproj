@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TimesheetPayroll.CoreBusiness\TimesheetPayroll.CoreBusiness.csproj" />
+    <ProjectReference Include="..\TimesheetPayroll.UseCases\TimesheetPayroll.UseCases.csproj" />
+    <ProjectReference Include="..\TimesheetPayroll.Web.Modules\TimesheetPayroll.Web.Common\TimesheetPayroll.Web.Common.csproj" />
+    <ProjectReference Include="..\TimesheetPayroll.Web.Modules\TimesheetPayroll.Web.EmployeePortal\TimesheetPayroll.Web.EmployeePortal.csproj" />
+    <ProjectReference Include="..\TimesheetPayroll.Web.Modules\TimesheetPayroll.Web.AdminPortal\TimesheetPayroll.Web.AdminPortal.csproj" />
+    <ProjectReference Include="..\Plugins\TimesheetPayroll.DataStore.HandCoded\TimesheetPayroll.DataStore.HandCoded.csproj" />
+    <ProjectReference Include="..\Plugins\TimesheetPayroll.DataStore.SQL.Dapper\TimesheetPayroll.DataStore.SQL.Dapper.csproj" />
+    <ProjectReference Include="..\Plugins\TimesheetPayroll.StateStore.DI\TimesheetPayroll.StateStore.DI.csproj" />
+  </ItemGroup>
+
+</Project>
