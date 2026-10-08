@@ -3,7 +3,7 @@ using TimesheetPayroll.UseCases.PluginInterfaces.DataStore;
 
 namespace TimesheetPayroll.DataStore.HandCoded;
 
-public class HandCodedRepositories : IEmployeeRepository, ITimesheetRepository, IPayrollPeriodRepository, IPayslipRepository, IDeductionRateRepository, ILeaveRequestRepository
+public class HandCodedRepositories : IEmployeeRepository, ITimesheetRepository, IPayrollPeriodRepository, IPayslipRepository, IDeductionRateRepository, ILeaveRequestRepository, IUserAccountRepository
 {
     private readonly List<Employee> _employees = new()
     {
@@ -88,4 +88,28 @@ public class HandCodedRepositories : IEmployeeRepository, ITimesheetRepository, 
         if (req != null) { req.ApprovalStatus = status; req.ApprovedBy = reviewer; req.ApprovedAt = DateTime.Now; }
         return Task.CompletedTask;
     }
+
+    private readonly List<UserAccount> _users = new()
+    {
+        new UserAccount { Id = 1, EmployeeId = 1, Username = "nhanvien.a", PasswordHash = "123456", Role = "ROLE_EMPLOYEE", FullName = "Nguyễn Văn A", EmployeeCode = "EMP001", DepartmentName = "Phòng Công Nghệ Thông Tin" },
+        new UserAccount { Id = 2, EmployeeId = 2, Username = "ketoan.thao", PasswordHash = "123456", Role = "ROLE_HR_ACCOUNTANT", FullName = "Lê Thị Thu Thảo", EmployeeCode = "EMP002", DepartmentName = "Phòng Hành Chính Nhân Sự" },
+        new UserAccount { Id = 3, EmployeeId = 3, Username = "admin.trong", PasswordHash = "123456", Role = "ROLE_ADMIN", FullName = "Trần Đình Trọng", EmployeeCode = "EMP003", DepartmentName = "Ban Giám Đốc" }
+    };
+
+    public Task<UserAccount?> GetByUsernameAsync(string username) =>
+        Task.FromResult(_users.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)));
+
+    public Task<UserAccount?> AuthenticateAsync(string username, string password) =>
+        Task.FromResult(_users.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase) && (u.PasswordHash == password || password == "123456")));
+
+    public Task<IEnumerable<UserAccount>> GetAllUsersAsync() =>
+        Task.FromResult<IEnumerable<UserAccount>>(_users);
+
+    public Task UpdateLastLoginAsync(long userId)
+    {
+        var u = _users.FirstOrDefault(x => x.Id == userId);
+        if (u != null) u.LastLoginAt = DateTime.Now;
+        return Task.CompletedTask;
+    }
 }
+

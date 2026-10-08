@@ -1,69 +1,90 @@
 @page "/"
 
-<PageTitle>Trang Chủ - Hệ Thống Chấm Công & Tính Lương</PageTitle>
+<PageTitle>Trang Chủ - Hệ Thống Chấm Công & Tính Lương Tự Động</PageTitle>
 
 <div class="container py-4">
-    <!-- BANNER CHÀO MỪNG -->
-    <div class="p-5 mb-4 bg-primary text-white rounded-3 shadow-sm position-relative overflow-hidden">
+    <!-- BANNER CHÀO MỪNG & THÔNG TIN ĐỒ ÁN -->
+    <div class="p-5 mb-4 bg-primary text-white rounded-4 shadow position-relative overflow-hidden" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
         <div class="position-relative" style="z-index: 2;">
-            <span class="badge bg-white text-primary mb-2 px-3 py-2 fw-bold">DỰ ÁN 17 - TIMESHEET & PAYROLL</span>
-            <h1 class="display-6 fw-bold mb-2">Hệ Thống Chấm Công & Tính Lương Tự Động</h1>
-            <p class="col-md-9 fs-6 opacity-75">
-                Giải pháp số hóa toàn diện quy trình điểm danh chấm công hàng ngày, tự động hóa tính toán bảng lương theo luật định và minh bạch phiếu lương cá nhân.
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                <span class="badge bg-white text-primary px-3 py-2 fw-bold">ĐỒ ÁN LẬP TRÌNH ỨNG DỤNG WEB</span>
+                <span class="badge bg-warning text-dark px-3 py-2 fw-bold"><i class="fa-solid fa-server me-1"></i>.NET 10 Blazor Server</span>
+                <span class="badge bg-info text-dark px-3 py-2 fw-bold"><i class="fa-solid fa-database me-1"></i>SQL Server: BangChamCongDB</span>
+            </div>
+
+            <h1 class="display-6 fw-bold mb-2">HỆ THỐNG CHẤM CÔNG & TÍNH LƯƠNG TỰ ĐỘNG</h1>
+            <p class="fs-6 opacity-75 mb-3" style="max-width: 800px;">
+                Số hóa toàn diện quy trình điểm danh chấm công hàng ngày, tự động hóa tính toán bảng lương theo luật lao động & bảo hiểm hiện hành, minh bạch phiếu thu nhập cá nhân.
             </p>
-            <div class="d-flex gap-2 mt-4">
+
+            <div class="p-3 bg-white bg-opacity-10 rounded-3 mb-4 d-inline-block border border-white border-opacity-25">
+                <div class="small fw-semibold">
+                    <i class="fa-solid fa-user-graduate me-1"></i> Sinh viên: <strong>Trần Viết Mạnh Cường</strong> &nbsp;|&nbsp;
+                    <i class="fa-solid fa-id-card me-1"></i> MSV: <strong>23K4080003</strong> &nbsp;|&nbsp;
+                    <i class="fa-solid fa-building-columns me-1"></i> Khoa: <strong>Hệ thống Thông tin Kinh tế</strong> (Ngành: <strong>Tin học Kinh tế</strong>)
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <a href="login" class="btn btn-warning fw-bold px-4 py-2 text-dark shadow-sm">
+                    <i class="fa-solid fa-right-to-bracket me-2"></i>Đăng Nhập / Phân Quyền
+                </a>
                 <a href="my-timesheet" class="btn btn-light fw-bold px-4 py-2 text-primary shadow-sm">
                     <i class="fa-solid fa-calendar-check me-2"></i>Chấm Công Của Tôi
                 </a>
                 <a href="my-payslip" class="btn btn-outline-light fw-bold px-4 py-2">
                     <i class="fa-solid fa-file-invoice-dollar me-2"></i>Xem Phiếu Lương
                 </a>
-                <a href="admin/payroll-calculation" class="btn btn-warning fw-bold px-4 py-2 text-dark shadow-sm">
-                    <i class="fa-solid fa-calculator me-2"></i>Kế Toán Tính Lương
-                </a>
+                <AuthorizeView Roles="ROLE_HR_ACCOUNTANT, ROLE_ADMIN">
+                    <Authorized>
+                        <a href="admin/payroll-calculation" class="btn btn-success fw-bold px-4 py-2 shadow-sm">
+                            <i class="fa-solid fa-calculator me-2"></i>Kế Toán: Tính Lương Hàng Loạt
+                        </a>
+                    </Authorized>
+                </AuthorizeView>
             </div>
         </div>
     </div>
 
-    <!-- 4 TÍNH NĂNG CHÍNH -->
+    <!-- 4 TÍNH NĂNG CHÍNH CỦA HỆ THỐNG -->
     <div class="row g-4 mb-4">
         <div class="col-md-3">
-            <div class="card h-100 border-0 shadow-sm p-4 text-center">
+            <div class="card h-100 border-0 shadow-sm p-4 text-center rounded-4">
                 <div class="bg-primary-subtle text-primary rounded-circle mx-auto p-3 mb-3 d-flex align-items-center justify-content-center" style="width:60px; height:60px;">
                     <i class="fa-solid fa-fingerprint fs-3"></i>
                 </div>
                 <h5 class="fw-bold mb-2">Chấm Công Trực Tuyến</h5>
-                <p class="text-muted small mb-3">Điểm danh Check-In/Check-Out hàng ngày, tự động tính tổng giờ làm việc thực tế.</p>
+                <p class="text-muted small mb-3">Điểm danh Check-In/Check-Out hàng ngày, tự động tính tổng giờ làm việc thực tế và quy đổi ngày công.</p>
                 <a href="my-timesheet" class="btn btn-sm btn-outline-primary mt-auto">Truy cập <i class="fa-solid fa-arrow-right ms-1"></i></a>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card h-100 border-0 shadow-sm p-4 text-center">
+            <div class="card h-100 border-0 shadow-sm p-4 text-center rounded-4">
                 <div class="bg-success-subtle text-success rounded-circle mx-auto p-3 mb-3 d-flex align-items-center justify-content-center" style="width:60px; height:60px;">
                     <i class="fa-solid fa-file-invoice-dollar fs-3"></i>
                 </div>
                 <h5 class="fw-bold mb-2">Phiếu Lương Minh Bạch</h5>
-                <p class="text-muted small mb-3">Xem chi tiết lương ngày công, phụ cấp ăn/xăng và các khoản trích nộp bảo hiểm 10.5%.</p>
+                <p class="text-muted small mb-3">Xem chi tiết lương ngày công, phụ cấp ăn/xăng và các khoản trích nộp bảo hiểm xã hội, y tế, thất nghiệp 10.5%.</p>
                 <a href="my-payslip" class="btn btn-sm btn-outline-success mt-auto">Xem phiếu <i class="fa-solid fa-arrow-right ms-1"></i></a>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card h-100 border-0 shadow-sm p-4 text-center">
+            <div class="card h-100 border-0 shadow-sm p-4 text-center rounded-4">
                 <div class="bg-warning-subtle text-warning rounded-circle mx-auto p-3 mb-3 d-flex align-items-center justify-content-center" style="width:60px; height:60px;">
                     <i class="fa-solid fa-calculator fs-3"></i>
                 </div>
                 <h5 class="fw-bold mb-2">Tính Lương Tự Động</h5>
-                <p class="text-muted small mb-3">Kế toán chạy tính toán hàng loạt cho toàn bộ nhân sự chỉ bằng 1 nút bấm với Database Transaction an toàn.</p>
+                <p class="text-muted small mb-3">Kế toán chạy tính toán hàng loạt cho toàn bộ nhân sự chỉ bằng 1 nút bấm với Database Transaction an toàn tuyệt đối.</p>
                 <a href="admin/payroll-calculation" class="btn btn-sm btn-outline-warning text-dark mt-auto">Mở tính lương <i class="fa-solid fa-arrow-right ms-1"></i></a>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card h-100 border-0 shadow-sm p-4 text-center">
+            <div class="card h-100 border-0 shadow-sm p-4 text-center rounded-4">
                 <div class="bg-info-subtle text-info rounded-circle mx-auto p-3 mb-3 d-flex align-items-center justify-content-center" style="width:60px; height:60px;">
                     <i class="fa-solid fa-calendar-plus fs-3"></i>
                 </div>
                 <h5 class="fw-bold mb-2">Đăng Ký Nghỉ Phép</h5>
-                <p class="text-muted small mb-3">Nộp đơn xin nghỉ phép năm, nghỉ ốm, thai sản trực tuyến và theo dõi trạng thái phê duyệt.</p>
+                <p class="text-muted small mb-3">Nộp đơn xin nghỉ phép năm, nghỉ ốm, thai sản trực tuyến và theo dõi trạng thái phê duyệt từ cấp quản lý.</p>
                 <a href="leave-request" class="btn btn-sm btn-outline-info text-dark mt-auto">Tạo đơn phép <i class="fa-solid fa-arrow-right ms-1"></i></a>
             </div>
         </div>

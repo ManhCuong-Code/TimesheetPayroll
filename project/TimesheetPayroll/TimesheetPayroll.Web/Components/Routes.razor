@@ -5,17 +5,54 @@
                                     typeof(TimesheetPayroll.Web.AdminPortal.Pages.PayrollBatchCalculationPage).Assembly
                                 }">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                <div class="container p-5 text-center">
+                    <div class="card border-0 shadow-sm mx-auto" style="max-width: 600px;">
+                        <div class="card-body p-5">
+                            <div class="text-danger mb-3">
+                                <i class="fa-solid fa-shield-halved fa-4x"></i>
+                            </div>
+                            <h3 class="fw-bold text-danger mb-2">Truy Cập Bị Từ Chối (403)</h3>
+                            <p class="text-muted mb-4">
+                                Tài khoản hiện tại không có quyền truy cập vào chức năng hoặc phân hệ quản trị này. 
+                                Vui lòng đăng nhập với tài khoản có quyền Quản trị viên (ROLE_ADMIN) hoặc Kế toán (ROLE_HR_ACCOUNTANT).
+                            </p>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="/login" class="btn btn-primary px-4">
+                                    <i class="fa-solid fa-right-to-bracket me-2"></i>Đăng Nhập Tài Khoản Khác
+                                </a>
+                                <a href="/" class="btn btn-outline-secondary px-4">
+                                    <i class="fa-solid fa-house me-2"></i>Về Trang Chủ
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </NotAuthorized>
+            <Authorizing>
+                <div class="text-center p-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="mt-2 text-muted">Đang xác thực thông tin tài khoản...</div>
+                </div>
+            </Authorizing>
+        </AuthorizeRouteView>
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
     <NotFound>
         <LayoutView Layout="typeof(Layout.MainLayout)">
             <div class="container p-5 text-center">
-                <div class="alert alert-warning shadow-sm">
-                    <h4 class="alert-heading"><i class="fa-solid fa-triangle-exclamation me-2"></i>Không Tìm Thấy Trang!</h4>
-                    <p>Trang bạn yêu cầu không tồn tại hoặc đã được chuyển hướng.</p>
-                    <hr />
-                    <a href="/" class="btn btn-primary">Về Trang Chủ</a>
+                <div class="card border-0 shadow-sm mx-auto" style="max-width: 600px;">
+                    <div class="card-body p-5">
+                        <div class="text-warning mb-3">
+                            <i class="fa-solid fa-triangle-exclamation fa-4x"></i>
+                        </div>
+                        <h3 class="fw-bold text-dark mb-2">Không Tìm Thấy Trang (404)</h3>
+                        <p class="text-muted mb-4">Đường dẫn bạn yêu cầu không tồn tại trong hệ thống.</p>
+                        <a href="/" class="btn btn-primary px-4">
+                            <i class="fa-solid fa-house me-2"></i>Về Trang Chủ
+                        </a>
+                    </div>
                 </div>
             </div>
         </LayoutView>

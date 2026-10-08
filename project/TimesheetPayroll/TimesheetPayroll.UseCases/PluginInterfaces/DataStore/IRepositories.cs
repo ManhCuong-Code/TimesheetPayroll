@@ -45,3 +45,12 @@ public interface ILeaveRequestRepository
     Task CreateLeaveRequestAsync(LeaveRequest request);
     Task ApproveOrRejectLeaveRequestAsync(long requestId, ApprovalStatus status, string reviewer);
 }
+
+public interface IUserAccountRepository
+{
+    Task<UserAccount?> GetByUsernameAsync(string username);
+    Task<UserAccount?> AuthenticateAsync(string username, string password);
+    Task<IEnumerable<UserAccount>> GetAllUsersAsync();
+    Task UpdateLastLoginAsync(long userId);
+}
+

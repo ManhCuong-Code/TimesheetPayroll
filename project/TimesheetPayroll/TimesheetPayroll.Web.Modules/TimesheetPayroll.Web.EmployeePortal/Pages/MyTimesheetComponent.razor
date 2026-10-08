@@ -91,7 +91,10 @@
 </div>
 
 @code {
-    private const long CurrentEmployeeId = 1;
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private long currentEmployeeId = 1;
     private List<Timesheet> timesheets = new();
     private bool isCheckingIn = false;
     private bool isCheckingOut = false;
@@ -101,12 +104,21 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (AuthStateTask != null)
+        {
+            var authState = await AuthStateTask;
+            var empIdClaim = authState.User.FindFirst("EmployeeId")?.Value;
+            if (long.TryParse(empIdClaim, out var id) && id > 0)
+            {
+                currentEmployeeId = id;
+            }
+        }
         await LoadTimesheetsAsync();
     }
 
     private async Task LoadTimesheetsAsync()
     {
-        var result = await ViewTimesheetUseCase.ExecuteAsync(CurrentEmployeeId, 10, 2026);
+        var result = await ViewTimesheetUseCase.ExecuteAsync(currentEmployeeId, 10, 2026);
         timesheets = result.OrderBy(t => t.WorkDate).ToList();
     }
 
@@ -115,7 +127,7 @@
         isCheckingIn = true;
         try
         {
-            var t = await CheckInUseCase.ExecuteCheckInAsync(CurrentEmployeeId);
+            var t = await CheckInUseCase.ExecuteCheckInAsync(currentEmployeeId);
             statusMessage = $"Check-in thành công lúc {DateTime.Now:HH:mm:ss}!";
             await LoadTimesheetsAsync();
         }
@@ -130,7 +142,7 @@
         isCheckingOut = true;
         try
         {
-            var t = await CheckInUseCase.ExecuteCheckOutAsync(CurrentEmployeeId);
+            var t = await CheckInUseCase.ExecuteCheckOutAsync(currentEmployeeId);
             statusMessage = $"Check-out thành công lúc {DateTime.Now:HH:mm:ss}! Tổng giờ làm: {t.ActualHoursWorked} giờ.";
             await LoadTimesheetsAsync();
         }
@@ -140,3 +152,4 @@
         }
     }
 }
+

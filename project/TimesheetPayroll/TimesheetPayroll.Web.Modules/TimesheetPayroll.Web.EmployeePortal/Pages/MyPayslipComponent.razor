@@ -30,7 +30,10 @@
 </div>
 
 @code {
-    private const long CurrentEmployeeId = 1; // Giả lập nhân viên EMP001 (Nguyễn Văn A)
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private long currentEmployeeId = 1;
     private const long PeriodId = 10;          // Tháng 10/2026
     private Payslip? payslip;
     private bool isLoading = true;
@@ -40,7 +43,16 @@
         isLoading = true;
         try
         {
-            payslip = await ViewPayslipUseCase.ExecuteAsync(PeriodId, CurrentEmployeeId);
+            if (AuthStateTask != null)
+            {
+                var authState = await AuthStateTask;
+                var empIdClaim = authState.User.FindFirst("EmployeeId")?.Value;
+                if (long.TryParse(empIdClaim, out var id) && id > 0)
+                {
+                    currentEmployeeId = id;
+                }
+            }
+            payslip = await ViewPayslipUseCase.ExecuteAsync(PeriodId, currentEmployeeId);
         }
         finally
         {

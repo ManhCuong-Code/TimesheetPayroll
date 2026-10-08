@@ -1,8 +1,10 @@
 -- ============================================================================
--- DỰ ÁN: HỆ THỐNG CHẤM CÔNG & TÍNH LƯƠNG TỰ ĐỘNG (TIMESHEET & PAYROLL SYSTEM)
--- CƠ SỞ DỮ LIỆU RIÊNG BIỆT: BangChamCongDB
--- (ĐÃ TÁCH BIỆT HOÀN TOÀN, ĐỘC LẬP 100% VỚI DỰ ÁN HOMESTAY HUẾ - HomeStayHueDB)
--- Môi trường: Microsoft SQL Server / SQL Server Management Studio (SSMS)
+-- ĐỀ TÀI: HỆ THỐNG CHẤM CÔNG & TÍNH LƯƠNG TỰ ĐỘNG (TIMESHEET & PAYROLL SYSTEM)
+-- HỌC PHẦN: LẬP TRÌNH ỨNG DỤNG WEB
+-- SINH VIÊN THỰC HIỆN: TRẦN VIẾT MẠNH CƯỜNG
+-- MÃ SINH VIÊN: 23K4080003
+-- KHOA: HỆ THỐNG THÔNG TIN KINH TẾ | NGÀNH: TIN HỌC KINH TẾ
+-- CƠ SỞ DỮ LIỆU RIÊNG BIỆT: BangChamCongDB (MICROSOFT SQL SERVER)
 -- ============================================================================
 
 -- BƯỚC 1: TẠO VÀ SỬ DỤNG CSDL RIÊNG 'BangChamCongDB'

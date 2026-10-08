@@ -1,3 +1,6 @@
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavManager
+
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm px-3">
     <div class="container-fluid">
         <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
@@ -14,36 +17,104 @@
                         <i class="fa-solid fa-house me-1"></i>Trang Chủ
                     </NavLink>
                 </li>
-                <li class="nav-item">
-                    <NavLink class="nav-link" href="my-timesheet">
-                        <i class="fa-solid fa-calendar-check me-1"></i>Chấm Công Của Tôi
-                    </NavLink>
-                </li>
-                <li class="nav-item">
-                    <NavLink class="nav-link" href="my-payslip">
-                        <i class="fa-solid fa-file-invoice-dollar me-1"></i>Phiếu Lương Cá Nhân
-                    </NavLink>
-                </li>
-                <li class="nav-item">
-                    <NavLink class="nav-link" href="leave-request">
-                        <i class="fa-solid fa-calendar-plus me-1"></i>Xin Nghỉ Phép
-                    </NavLink>
-                </li>
-                <li class="nav-item dropdown">
-                    <NavLink class="nav-link text-warning fw-semibold" href="admin/payroll-calculation">
-                        <i class="fa-solid fa-calculator me-1"></i>Quản Trị: Tính Lương Hàng Loạt
-                    </NavLink>
-                </li>
+
+                <AuthorizeView>
+                    <Authorized>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="my-timesheet">
+                                <i class="fa-solid fa-calendar-check me-1"></i>Chấm Công Của Tôi
+                            </NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="my-payslip">
+                                <i class="fa-solid fa-file-invoice-dollar me-1"></i>Phiếu Lương Cá Nhân
+                            </NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="leave-request">
+                                <i class="fa-solid fa-calendar-plus me-1"></i>Xin Nghỉ Phép
+                            </NavLink>
+                        </li>
+                    </Authorized>
+                </AuthorizeView>
+
+                <!-- MENU DÀNH RIÊNG CHO KẾ TOÁN & ADMIN -->
+                <AuthorizeView Roles="ROLE_HR_ACCOUNTANT, ROLE_ADMIN">
+                    <Authorized>
+                        <li class="nav-item">
+                            <NavLink class="nav-link text-warning fw-semibold" href="admin/payroll-calculation">
+                                <i class="fa-solid fa-calculator me-1"></i>Quản Trị: Tính Lương Hàng Loạt
+                            </NavLink>
+                        </li>
+                    </Authorized>
+                </AuthorizeView>
             </ul>
-            <div class="d-flex align-items-center text-white small">
-                <div class="bg-primary rounded-circle p-2 me-2 d-flex align-items-center justify-content-center" style="width:32px; height:32px;">
-                    <i class="fa-solid fa-user text-white"></i>
-                </div>
-                <div>
-                    <div class="fw-bold">Nguyễn Văn A</div>
-                    <div class="text-white-50" style="font-size: 0.75rem;">EMP001 • IT Dept</div>
-                </div>
-            </div>
+
+            <AuthorizeView>
+                <Authorized>
+                    <div class="d-flex align-items-center text-white small gap-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary rounded-circle p-2 me-2 d-flex align-items-center justify-content-center" style="width:36px; height:36px;">
+                                <i class="fa-solid fa-user text-white"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">
+                                    @(context.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? context.User.Identity?.Name)
+                                    <span class="badge @GetRoleBadgeClass(context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value) ms-1" style="font-size:0.7rem;">
+                                        @GetRoleDisplayName(context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)
+                                    </span>
+                                </div>
+                                <div class="text-white-50" style="font-size: 0.75rem;">
+                                    @(context.User.FindFirst("EmployeeCode")?.Value ?? "EMP") • @(context.User.FindFirst("DepartmentName")?.Value ?? "Phòng Ban")
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="/login" class="btn btn-outline-light btn-sm" title="Chuyển đổi vai trò">
+                                <i class="fa-solid fa-users me-1"></i>Đổi Tài Khoản
+                            </a>
+                            <button class="btn btn-outline-danger btn-sm" @onclick="HandleLogout" title="Đăng xuất khỏi hệ thống">
+                                <i class="fa-solid fa-right-from-bracket"></i>
+                            </button>
+                        </div>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="/login" class="btn btn-primary btn-sm px-3">
+                            <i class="fa-solid fa-right-to-bracket me-1"></i>Đăng Nhập
+                        </a>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
     </div>
 </nav>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Khởi tạo mặc định nếu phiên mới bắt đầu
+        await AuthStateProvider.EnsureInitialUserAsync();
+    }
+
+    private void HandleLogout()
+    {
+        AuthStateProvider.SignOut();
+        NavManager.NavigateTo("login");
+    }
+
+    private string GetRoleBadgeClass(string? role) => role switch
+    {
+        "ROLE_ADMIN" => "bg-danger",
+        "ROLE_HR_ACCOUNTANT" => "bg-warning text-dark",
+        _ => "bg-success"
+    };
+
+    private string GetRoleDisplayName(string? role) => role switch
+    {
+        "ROLE_ADMIN" => "Admin",
+        "ROLE_HR_ACCOUNTANT" => "Kế toán",
+        _ => "Nhân viên"
+    };
+}

@@ -68,10 +68,13 @@
 </div>
 
 @code {
-    private const long CurrentEmployeeId = 1;
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private long currentEmployeeId = 1;
     private LeaveRequest request = new()
     {
-        EmployeeId = CurrentEmployeeId,
+        EmployeeId = 1,
         StartDate = DateTime.Today,
         EndDate = DateTime.Today,
         TotalDays = 1.0m,
@@ -79,6 +82,20 @@
     };
     private bool isSubmitting = false;
     private bool isSuccess = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthStateTask != null)
+        {
+            var authState = await AuthStateTask;
+            var empIdClaim = authState.User.FindFirst("EmployeeId")?.Value;
+            if (long.TryParse(empIdClaim, out var id) && id > 0)
+            {
+                currentEmployeeId = id;
+                request.EmployeeId = currentEmployeeId;
+            }
+        }
+    }
 
     private async Task HandleSubmitAsync()
     {
@@ -90,11 +107,12 @@
         isSubmitting = true;
         try
         {
+            request.EmployeeId = currentEmployeeId;
             await CreateLeaveUseCase.ExecuteAsync(request);
             isSuccess = true;
             request = new LeaveRequest
             {
-                EmployeeId = CurrentEmployeeId,
+                EmployeeId = currentEmployeeId,
                 StartDate = DateTime.Today,
                 EndDate = DateTime.Today,
                 TotalDays = 1.0m

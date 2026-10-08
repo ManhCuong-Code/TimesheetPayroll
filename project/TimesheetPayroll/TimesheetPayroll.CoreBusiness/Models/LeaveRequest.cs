@@ -28,13 +28,3 @@ public class DeductionRate
     public bool IsActive { get; set; } = true;
 }
 
-public class UserAccount
-{
-    public long Id { get; set; }
-    public long EmployeeId { get; set; }
-    public string Username { get; set; } = string.Empty;
-    public string PasswordHash { get; set; } = string.Empty;
-    public UserRole Role { get; set; } = UserRole.ROLE_EMPLOYEE;
-    public bool IsActive { get; set; } = true;
-    public DateTime? LastLoginAt { get; set; }
-}
