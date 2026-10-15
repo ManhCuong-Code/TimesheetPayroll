@@ -114,6 +114,25 @@ public class TimesheetRepository : ITimesheetRepository
         return await conn.QueryAsync<Timesheet>(sql, new { EmployeeId = employeeId, Month = month, Year = year });
     }
 
+    public async Task<IEnumerable<Timesheet>> GetAllTimesheetsByMonthAsync(int month, int year)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                t.id AS Id, t.employee_id AS EmployeeId, e.employee_code AS EmployeeCode,
+                e.full_name AS EmployeeName, t.period_id AS PeriodId, 
+                t.shift_id AS ShiftId, t.shift_code AS ShiftCode, t.shift_name AS ShiftName,
+                t.work_date AS WorkDate,
+                t.check_in_time AS CheckInTime, t.check_out_time AS CheckOutTime,
+                t.actual_hours_worked AS ActualHoursWorked, t.work_shift_status AS WorkShiftStatus,
+                t.work_units AS WorkUnits, t.is_locked AS IsLocked, t.note AS Note
+            FROM timesheets t
+            JOIN employees e ON t.employee_id = e.id
+            WHERE MONTH(t.work_date) = @Month AND YEAR(t.work_date) = @Year
+            ORDER BY t.work_date DESC, e.employee_code ASC;";
+        return await conn.QueryAsync<Timesheet>(sql, new { Month = month, Year = year });
+    }
+
     public async Task<decimal> CountWorkDaysByEmployeeAndPeriodAsync(long employeeId, int month, int year)
     {
         using var conn = _db.CreateConnection();

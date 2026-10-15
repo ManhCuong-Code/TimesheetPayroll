@@ -39,6 +39,11 @@ public interface ITimesheetRepository
     Task<IEnumerable<Timesheet>> GetTimesheetsByEmployeeAndMonthAsync(long employeeId, int month, int year);
 
     /// <summary>
+    /// Lấy toàn bộ dữ liệu chấm công của tất cả nhân viên theo tháng và năm phục vụ kế toán đối soát tổng hợp.
+    /// </summary>
+    Task<IEnumerable<Timesheet>> GetAllTimesheetsByMonthAsync(int month, int year);
+
+    /// <summary>
     /// Tổng hợp số ngày công thực tế của nhân viên trong tháng phục vụ tính lương.
     /// </summary>
     Task<decimal> CountWorkDaysByEmployeeAndPeriodAsync(long employeeId, int month, int year);

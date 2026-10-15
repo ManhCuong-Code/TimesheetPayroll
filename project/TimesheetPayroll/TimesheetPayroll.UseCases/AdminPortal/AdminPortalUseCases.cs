@@ -203,6 +203,7 @@ public class UnlockPayrollPeriodUseCase : IUnlockPayrollPeriodUseCase
 public interface IViewTimesheetSummaryUseCase
 {
     Task<IEnumerable<Timesheet>> ExecuteAsync(long periodId);
+    Task<IEnumerable<Timesheet>> ExecuteByMonthAsync(int month, int year);
 }
 
 public class ViewTimesheetSummaryUseCase : IViewTimesheetSummaryUseCase
@@ -217,6 +218,11 @@ public class ViewTimesheetSummaryUseCase : IViewTimesheetSummaryUseCase
     public async Task<IEnumerable<Timesheet>> ExecuteAsync(long periodId)
     {
         return await _timesheetRepo.GetTimesheetsByPeriodAsync(periodId);
+    }
+
+    public async Task<IEnumerable<Timesheet>> ExecuteByMonthAsync(int month, int year)
+    {
+        return await _timesheetRepo.GetAllTimesheetsByMonthAsync(month, year);
     }
 }
 

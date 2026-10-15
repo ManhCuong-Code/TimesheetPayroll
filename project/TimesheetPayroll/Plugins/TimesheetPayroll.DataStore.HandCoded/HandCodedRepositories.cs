@@ -71,6 +71,9 @@ public class HandCodedRepositories :
     public Task<IEnumerable<Timesheet>> GetTimesheetsByEmployeeAndMonthAsync(long employeeId, int month, int year) =>
         Task.FromResult<IEnumerable<Timesheet>>(_timesheets.Where(t => t.EmployeeId == employeeId && t.WorkDate.Month == month && t.WorkDate.Year == year));
 
+    public Task<IEnumerable<Timesheet>> GetAllTimesheetsByMonthAsync(int month, int year) =>
+        Task.FromResult<IEnumerable<Timesheet>>(_timesheets.Where(t => t.WorkDate.Month == month && t.WorkDate.Year == year));
+
     public Task<decimal> CountWorkDaysByEmployeeAndPeriodAsync(long employeeId, int month, int year)
     {
         var sum = _timesheets.Where(t => t.EmployeeId == employeeId && t.WorkDate.Month == month && t.WorkDate.Year == year).Sum(t => t.WorkUnits);
