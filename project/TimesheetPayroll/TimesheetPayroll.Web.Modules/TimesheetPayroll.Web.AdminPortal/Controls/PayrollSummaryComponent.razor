@@ -30,7 +30,13 @@ else
                         <td class="fw-bold text-primary">@p.EmployeeCode</td>
                         <td>@p.EmployeeName</td>
                         <td><span class="badge bg-light text-dark border">@(p.DepartmentName ?? "Văn phòng")</span></td>
-                        <td class="text-center fw-semibold">@p.ActualWorkDays</td>
+                        <td class="text-center fw-semibold">
+                            @p.ActualWorkDays
+                            @if (p.Lines.Any(l => l.LineType == PayslipLineType.SPLIT_SHIFT_ALLOWANCE))
+                            {
+                                <div><span class="badge bg-warning text-dark border border-warning" style="font-size: 0.68rem;"><i class="fa-solid fa-bolt me-1"></i>Có ca gãy</span></div>
+                            }
+                        </td>
                         <td class="text-end">@p.GrossSalary.ToString("N0") đ</td>
                         <td class="text-end text-danger">-@p.TotalDeductions.ToString("N0") đ</td>
                         <td class="text-end fw-bold text-success fs-6">@p.NetSalary.ToString("N0") đ</td>

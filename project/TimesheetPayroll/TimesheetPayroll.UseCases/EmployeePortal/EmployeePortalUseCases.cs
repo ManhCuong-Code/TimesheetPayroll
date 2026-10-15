@@ -114,6 +114,7 @@ public interface ICheckInCheckOutUseCase
     Task<Timesheet> ExecuteCheckInAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null);
     Task<Timesheet> ExecuteCheckOutAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null);
     Task<Timesheet> ExecuteManualPunchAsync(long employeeId, long? shiftId, DateTime workDate, TimeSpan? checkInTime, TimeSpan? checkOutTime, string? customNote = null);
+    Task<Timesheet> ChangeShiftAsync(long employeeId, long newShiftId, DateTime workDate);
 }
 
 public class CheckInCheckOutUseCase : ICheckInCheckOutUseCase
@@ -284,6 +285,55 @@ public class CheckInCheckOutUseCase : ICheckInCheckOutUseCase
             timesheet.Note = string.IsNullOrWhiteSpace(timesheet.Note) 
                 ? customNote 
                 : $"{timesheet.Note} • {customNote}";
+        }
+
+        await _timesheetRepo.AddOrUpdateTimesheetAsync(timesheet);
+        return timesheet;
+    }
+
+    public async Task<Timesheet> ChangeShiftAsync(long employeeId, long newShiftId, DateTime workDate)
+    {
+        if (employeeId <= 0)
+            throw new ArgumentException("Mã nhân viên không hợp lệ.", nameof(employeeId));
+        if (newShiftId <= 0)
+            throw new ArgumentException("Mã ca làm việc không hợp lệ.", nameof(newShiftId));
+
+        var shift = await _shiftRepo.GetWorkShiftByIdAsync(newShiftId);
+        if (shift == null)
+            throw new InvalidOperationException($"Không tìm thấy ca làm việc với ID = {newShiftId}.");
+
+        var targetDate = workDate.Date;
+        var existing = (await _timesheetRepo.GetTimesheetsByEmployeeAndMonthAsync(employeeId, targetDate.Month, targetDate.Year))
+            .FirstOrDefault(t => t.WorkDate.Date == targetDate);
+
+        if (existing != null && existing.IsLocked)
+            throw new InvalidOperationException("Bản ghi chấm công của ngày này đã bị khóa sổ và không thể thay đổi ca.");
+
+        var timesheet = existing ?? new Timesheet
+        {
+            EmployeeId = employeeId,
+            WorkDate = targetDate,
+            WorkUnits = shift.WorkUnits,
+            WorkShiftStatus = WorkShiftStatus.PRESENT,
+            Note = $"Đăng ký ca làm việc: {shift.ShiftName}"
+        };
+
+        timesheet.ShiftId = shift.Id;
+        timesheet.ShiftCode = shift.ShiftCode;
+        timesheet.ShiftName = shift.ShiftName;
+        timesheet.WorkUnits = shift.WorkUnits;
+
+        if (timesheet.CheckOutTime.HasValue)
+        {
+            timesheet.EvaluateShift(shift);
+        }
+        else if (timesheet.CheckInTime.HasValue)
+        {
+            timesheet.EvaluateCheckIn(shift);
+        }
+        else
+        {
+            timesheet.Note = $"Đã đăng ký ca: {shift.ShiftName}";
         }
 
         await _timesheetRepo.AddOrUpdateTimesheetAsync(timesheet);

@@ -55,6 +55,17 @@ public class WorkShift
     public bool IsNightShift { get; set; } = false;
 
     /// <summary>
+    /// Đánh dấu là ca gãy (Split Shift: ngắt quãng 2 khung giờ trong ngày, ví dụ: trưa và tối).
+    /// Được hưởng phân bổ lương và phụ cấp đãi ngộ ca gãy riêng biệt so với ca 8 tiếng chuẩn.
+    /// </summary>
+    public bool IsSplitShift { get; set; } = false;
+
+    /// <summary>
+    /// Định mức phụ cấp ca gãy (Split Shift Allowance) theo ngày công (mặc định 50,000 VNĐ / ngày).
+    /// </summary>
+    public decimal SplitShiftAllowance { get; set; } = 50000m;
+
+    /// <summary>
     /// Trạng thái hoạt động của ca.
     /// </summary>
     public bool IsActive { get; set; } = true;

@@ -42,9 +42,7 @@ public class PayrollCalculationService : IPayrollCalculationService
     }
 
     /// <summary>
-    /// Phương thức tính lương mở rộng đầy đủ: bao gồm công làm thêm giờ (OT), nghỉ phép năm, thưởng, phạt và thuế TNCN
-    /// theo các Nghị định mới nhất: NĐ 73/2024/NĐ-CP (trần BHXH/BHYT 46.8tr), NĐ 74/2024/NĐ-CP (trần BHTN 99.2tr),
-    /// Điều 85 Luật BHXH 2014 (quy tắc 14 ngày nghỉ không lương), và Thông tư 111/2013/TT-BTC (thuế TNCN lũy tiến).
+    /// Phương thức tính lương cơ bản tương thích ngược.
     /// </summary>
     public Payslip CalculatePayslip(
         Employee employee,
@@ -58,12 +56,51 @@ public class PayrollCalculationService : IPayrollCalculationService
         decimal penaltyAmount,
         bool calculateTax = true)
     {
+        return CalculatePayslip(
+            employee,
+            periodId,
+            standard8hDays: actualWorkDays,
+            splitShiftDays: 0m,
+            otherShiftDays: 0m,
+            standardWorkDays: standardWorkDays,
+            rates: rates,
+            paidLeaveDays: paidLeaveDays,
+            overtimeHours: overtimeHours,
+            bonusAmount: bonusAmount,
+            penaltyAmount: penaltyAmount,
+            splitShiftAllowancePerDay: 50000m,
+            calculateTax: calculateTax);
+    }
+
+    /// <summary>
+    /// Phương thức tính lương mở rộng đầy đủ với cơ chế PHÂN BỔ PHÂN LƯƠNG RIÊNG BIỆT giữa Ca 8 tiếng và Ca gãy.
+    /// Bao gồm tiền công theo từng loại ca, phụ cấp ca gãy (Split Shift Allowance), OT, phép năm, bảo hiểm và thuế TNCN.
+    /// </summary>
+    public Payslip CalculatePayslip(
+        Employee employee,
+        long periodId,
+        decimal standard8hDays,
+        decimal splitShiftDays,
+        decimal otherShiftDays,
+        decimal standardWorkDays,
+        List<DeductionRate> rates,
+        decimal paidLeaveDays,
+        decimal overtimeHours,
+        decimal bonusAmount,
+        decimal penaltyAmount,
+        decimal splitShiftAllowancePerDay = 50000m,
+        bool calculateTax = true)
+    {
         ArgumentNullException.ThrowIfNull(employee);
 
         if (standardWorkDays <= 0) standardWorkDays = 22.0m;
-        if (actualWorkDays < 0) actualWorkDays = 0m;
+        if (standard8hDays < 0) standard8hDays = 0m;
+        if (splitShiftDays < 0) splitShiftDays = 0m;
+        if (otherShiftDays < 0) otherShiftDays = 0m;
         if (paidLeaveDays < 0) paidLeaveDays = 0m;
         if (overtimeHours < 0) overtimeHours = 0m;
+
+        decimal actualWorkDays = standard8hDays + splitShiftDays + otherShiftDays;
 
         var payslip = new Payslip
         {
@@ -79,14 +116,58 @@ public class PayrollCalculationService : IPayrollCalculationService
             OvertimeHours = overtimeHours
         };
 
-        // 1. Lương thời gian theo ngày công thực tế
-        decimal proratedBaseSalary = _formulaEngine.ComputeProratedBaseSalary(
-            employee.BaseSalary, actualWorkDays, standardWorkDays);
+        // 1. Phân bố phân lương theo từng loại ca làm việc:
+        if (splitShiftDays > 0)
+        {
+            // Có phát sinh ca gãy: tách bạch rõ ràng cấu phần lương ca 8h và ca gãy
+            if (standard8hDays > 0)
+            {
+                decimal standard8hPay = _formulaEngine.ComputeProratedBaseSalary(
+                    employee.BaseSalary, standard8hDays, standardWorkDays);
+                payslip.AddEarningsLine(
+                    PayslipLineType.BASE_SALARY_PRORATED,
+                    $"Lương ngày công ca 8 tiếng chuẩn ({standard8hDays:0.##}/{standardWorkDays:0.##} ngày)",
+                    standard8hPay);
+            }
 
-        payslip.AddEarningsLine(
-            PayslipLineType.BASE_SALARY_PRORATED,
-            $"Lương ngày công thực tế ({actualWorkDays:0.##}/{standardWorkDays:0.##} ngày)",
-            proratedBaseSalary);
+            decimal splitShiftBasePay = _formulaEngine.ComputeProratedBaseSalary(
+                employee.BaseSalary, splitShiftDays, standardWorkDays);
+            payslip.AddEarningsLine(
+                PayslipLineType.BASE_SALARY_PRORATED,
+                $"Lương ngày công ca gãy ({splitShiftDays:0.##}/{standardWorkDays:0.##} ngày)",
+                splitShiftBasePay);
+
+            // Phụ cấp đặc thù ca gãy
+            decimal splitAllowanceTotal = splitShiftDays * splitShiftAllowancePerDay;
+            if (splitAllowanceTotal > 0)
+            {
+                payslip.AddEarningsLine(
+                    PayslipLineType.SPLIT_SHIFT_ALLOWANCE,
+                    $"Phụ cấp làm việc ca gãy ({splitShiftDays:0.##} ca x {splitShiftAllowancePerDay:N0} đ/ca)",
+                    splitAllowanceTotal);
+            }
+
+            if (otherShiftDays > 0)
+            {
+                decimal otherPay = _formulaEngine.ComputeProratedBaseSalary(
+                    employee.BaseSalary, otherShiftDays, standardWorkDays);
+                payslip.AddEarningsLine(
+                    PayslipLineType.BASE_SALARY_PRORATED,
+                    $"Lương ca nửa ngày / khác ({otherShiftDays:0.##}/{standardWorkDays:0.##} ngày)",
+                    otherPay);
+            }
+        }
+        else
+        {
+            // Trường hợp không làm ca gãy (chỉ làm ca 8h hoặc ca nửa ngày)
+            decimal proratedBaseSalary = _formulaEngine.ComputeProratedBaseSalary(
+                employee.BaseSalary, actualWorkDays, standardWorkDays);
+
+            payslip.AddEarningsLine(
+                PayslipLineType.BASE_SALARY_PRORATED,
+                $"Lương ngày công ca 8 tiếng ({actualWorkDays:0.##}/{standardWorkDays:0.##} ngày)",
+                proratedBaseSalary);
+        }
 
         // 2. Tiền lương ngày nghỉ phép có hưởng lương (phép năm)
         decimal paidLeavePay = 0m;

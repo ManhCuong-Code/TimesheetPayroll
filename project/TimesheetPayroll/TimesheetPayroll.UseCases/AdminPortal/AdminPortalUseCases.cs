@@ -56,19 +56,44 @@ public class CalculatePayrollBatchUseCase : ICalculatePayrollBatchUseCase
         var payslips = new List<Payslip>();
         foreach (var emp in employees.Where(e => e.IsActiveEmployee()))
         {
-            decimal actualDays = await _timesheetRepo.CountWorkDaysByEmployeeAndPeriodAsync(
-                emp.Id, period.PeriodMonth, period.PeriodYear);
+            var empTimesheets = (await _timesheetRepo.GetTimesheetsByEmployeeAndMonthAsync(
+                emp.Id, period.PeriodMonth, period.PeriodYear)).ToList();
 
-            // Đối với nhân viên chính thức đang hoạt động nếu chưa phát sinh chấm công riêng lẻ trong kỳ,
-            // tự động mặc định tính đủ ngày công chuẩn của kỳ (22 ngày) thay vì để 0 ngày.
-            if (actualDays <= 0)
+            decimal standard8hDays = 0m;
+            decimal splitShiftDays = 0m;
+            decimal otherShiftDays = 0m;
+
+            if (empTimesheets.Any())
             {
-                actualDays = period.StandardWorkDays;
+                // Phân loại chi tiết từng loại ca:
+                splitShiftDays = empTimesheets
+                    .Where(t => t.ShiftCode == "CA_GAY" || (t.ShiftName != null && t.ShiftName.Contains("Ca Gãy", StringComparison.OrdinalIgnoreCase)))
+                    .Sum(t => t.WorkUnits);
+
+                standard8hDays = empTimesheets
+                    .Where(t => (t.ShiftCode != "CA_GAY" && !(t.ShiftName != null && t.ShiftName.Contains("Ca Gãy", StringComparison.OrdinalIgnoreCase))) && t.WorkUnits >= 1.0m)
+                    .Sum(t => t.WorkUnits);
+
+                otherShiftDays = empTimesheets
+                    .Where(t => (t.ShiftCode != "CA_GAY" && !(t.ShiftName != null && t.ShiftName.Contains("Ca Gãy", StringComparison.OrdinalIgnoreCase))) && t.WorkUnits < 1.0m && t.WorkUnits > 0m)
+                    .Sum(t => t.WorkUnits);
+            }
+            else
+            {
+                // Đối với nhân viên chính thức nếu chưa phát sinh chấm công riêng lẻ trong kỳ,
+                // mặc định tính đủ ngày công chuẩn của ca 8 tiếng hành chính
+                standard8hDays = period.StandardWorkDays;
             }
 
             var payslip = _calcService.CalculatePayslip(
-                emp, periodId, actualDays, period.StandardWorkDays, rates,
+                emp, periodId,
+                standard8hDays: standard8hDays,
+                splitShiftDays: splitShiftDays,
+                otherShiftDays: otherShiftDays,
+                standardWorkDays: period.StandardWorkDays,
+                rates: rates,
                 paidLeaveDays: 0m, overtimeHours: 0m, bonusAmount: 0m, penaltyAmount: 0m,
+                splitShiftAllowancePerDay: 50000m,
                 calculateTax: true);
 
             payslips.Add(payslip);

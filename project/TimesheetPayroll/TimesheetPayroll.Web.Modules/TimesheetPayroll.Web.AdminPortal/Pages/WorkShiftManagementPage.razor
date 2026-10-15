@@ -145,7 +145,13 @@
                                             <span class="small text-muted">@shift.GracePeriodMinutes phút</span>
                                         </td>
                                         <td class="text-center">
-                                            @if (shift.IsNightShift)
+                                            @if (shift.IsSplitShift || shift.ShiftCode == "CA_GAY")
+                                            {
+                                                <span class="badge bg-warning text-dark border border-warning px-2 py-1">
+                                                    <i class="fa-solid fa-bolt me-1 text-danger"></i>Ca Gãy (+50k)
+                                                </span>
+                                            }
+                                            else if (shift.IsNightShift)
                                             {
                                                 <span class="badge bg-dark text-warning border px-2 py-1">
                                                     <i class="fa-solid fa-moon me-1"></i>Ca Đêm
@@ -154,7 +160,7 @@
                                             else
                                             {
                                                 <span class="badge bg-light text-warning-emphasis border px-2 py-1">
-                                                    <i class="fa-solid fa-sun me-1 text-warning"></i>Ca Ngày
+                                                    <i class="fa-solid fa-sun me-1 text-warning"></i>Ca Ngày (8h)
                                                 </span>
                                             }
                                         </td>
@@ -267,14 +273,18 @@
                                            @bind="modalShift.GracePeriodMinutes" />
                                     <div class="form-text" style="font-size: 0.75rem;">Số phút cho phép đến muộn/về sớm không tính phạt.</div>
                                 </div>
-                                <div class="col-md-6 d-flex align-items-center pt-3 gap-4">
+                                <div class="col-md-6 d-flex align-items-center pt-3 gap-3 flex-wrap">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="checkSplitShift" @bind="modalShift.IsSplitShift" />
+                                        <label class="form-check-label small fw-bold text-warning-emphasis" for="checkSplitShift">Ca Gãy (+50k/ca)</label>
+                                    </div>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="checkNightShift" @bind="modalShift.IsNightShift" />
-                                        <label class="form-check-label small fw-bold" for="checkNightShift">Ca Làm Đêm (+30%)</label>
+                                        <label class="form-check-label small fw-bold" for="checkNightShift">Ca Đêm (+30%)</label>
                                     </div>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="checkActive" @bind="modalShift.IsActive" />
-                                        <label class="form-check-label small fw-bold" for="checkActive">Kích Hoạt Áp Dụng</label>
+                                        <label class="form-check-label small fw-bold" for="checkActive">Kích Hoạt</label>
                                     </div>
                                 </div>
 
@@ -370,6 +380,7 @@
             WorkUnits = 1.0m,
             GracePeriodMinutes = 15,
             IsNightShift = false,
+            IsSplitShift = false,
             IsActive = true,
             Description = ""
         };

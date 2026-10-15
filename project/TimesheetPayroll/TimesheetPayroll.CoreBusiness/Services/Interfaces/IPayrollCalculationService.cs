@@ -39,4 +39,23 @@ public interface IPayrollCalculationService
         decimal bonusAmount,
         decimal penaltyAmount,
         bool calculateTax = false);
+
+    /// <summary>
+    /// Tính toán chi tiết phiếu lương với cơ chế phân bổ lương riêng biệt giữa Ca 8 tiếng và Ca gãy (Split Shift),
+    /// tự động phân tách số ngày ca 8h, số ngày ca gãy và áp dụng phụ cấp đặc thù ca gãy (Split Shift Allowance).
+    /// </summary>
+    Payslip CalculatePayslip(
+        Employee employee,
+        long periodId,
+        decimal standard8hDays,
+        decimal splitShiftDays,
+        decimal otherShiftDays,
+        decimal standardWorkDays,
+        List<DeductionRate> rates,
+        decimal paidLeaveDays,
+        decimal overtimeHours,
+        decimal bonusAmount,
+        decimal penaltyAmount,
+        decimal splitShiftAllowancePerDay = 50000m,
+        bool calculateTax = true);
 }

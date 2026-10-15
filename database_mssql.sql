@@ -278,7 +278,8 @@ INSERT INTO work_shifts (id, shift_code, shift_name, start_time, end_time, lunch
 (2, 'CA_SANG', N'Ca Sáng (08:00 - 12:00)', '08:00:00', '12:00:00', 0.00, 4.00, 0.50, 15, 0, 1, N'Ca làm việc buổi sáng nửa ngày'),
 (3, 'CA_CHIEU', N'Ca Chiều (13:30 - 17:30)', '13:30:00', '17:30:00', 0.00, 4.00, 0.50, 15, 0, 1, N'Ca làm việc buổi chiều nửa ngày'),
 (4, 'CA_TOI', N'Ca Tối (18:00 - 22:00)', '18:00:00', '22:00:00', 0.00, 4.00, 0.50, 15, 0, 1, N'Ca làm việc buổi tối tăng cường'),
-(5, 'CA_DEM', N'Ca Đêm (22:00 - 06:00)', '22:00:00', '06:00:00', 0.00, 8.00, 1.00, 15, 1, 1, N'Ca làm việc ban đêm phụ cấp +30%');
+(5, 'CA_DEM', N'Ca Đêm (22:00 - 06:00)', '22:00:00', '06:00:00', 0.00, 8.00, 1.00, 15, 1, 1, N'Ca làm việc ban đêm phụ cấp +30%'),
+(6, 'CA_GAY', N'Ca Gãy (10:00 - 14:00 & 17:00 - 21:00)', '10:00:00', '21:00:00', 3.00, 8.00, 1.00, 15, 0, 1, N'Ca gãy đặc thù dịch vụ/homestay (nghỉ giữa 3h, phụ cấp ca gãy 50.000đ/ca)');
 SET IDENTITY_INSERT work_shifts OFF;
 GO
 

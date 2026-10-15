@@ -176,6 +176,11 @@ public enum PayslipLineType
     BONUS,
 
     /// <summary>
+    /// Phụ cấp đãi ngộ làm việc ca gãy (Split Shift Allowance) do tính chất ngắt quãng đặc thù.
+    /// </summary>
+    SPLIT_SHIFT_ALLOWANCE,
+
+    /// <summary>
     /// Trích nộp Bảo hiểm Xã hội (8% của người lao động).
     /// </summary>
     DEDUCTION_BHXH,
