@@ -1,16 +1,12 @@
 -- ============================================================================
--- ĐỀ TÀI: HỆ THỐNG CHẤM CÔNG & TÍNH LƯƠNG TỰ ĐỘNG (TIMESHEET & PAYROLL SYSTEM)
--- HỌC PHẦN: LẬP TRÌNH ỨNG DỤNG WEB
--- SINH VIÊN THỰC HIỆN: TRẦN VIẾT MẠNH CƯỜNG
--- MÃ SINH VIÊN: 23K4080003
--- KHOA: HỆ THỐNG THÔNG TIN KINH TẾ | NGÀNH: TIN HỌC KINH TẾ
--- CƠ SỞ DỮ LIỆU RIÊNG BIỆT: BangChamCongDB (MICROSOFT SQL SERVER)
+-- HRMS PRO - TIMESHEET & PAYROLL ENTERPRISE DATABASE SYSTEM
+-- CƠ SỞ DỮ LIỆU DOANH NGHIỆP: BangChamCongDB (MICROSOFT SQL SERVER)
 -- ============================================================================
 
 -- BƯỚC 1: TẠO VÀ SỬ DỤNG CSDL RIÊNG 'BangChamCongDB'
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'BangChamCongDB')
 BEGIN
-    CREATE DATABASE BangChamCongDB;
+    CREATE DATABASE BangChamCongDB COLLATE Vietnamese_CI_AS;
 END
 GO
 
@@ -25,6 +21,7 @@ IF OBJECT_ID('dbo.payslip_lines', 'U') IS NOT NULL DROP TABLE dbo.payslip_lines;
 IF OBJECT_ID('dbo.payslips', 'U') IS NOT NULL DROP TABLE dbo.payslips;
 IF OBJECT_ID('dbo.leave_requests', 'U') IS NOT NULL DROP TABLE dbo.leave_requests;
 IF OBJECT_ID('dbo.timesheets', 'U') IS NOT NULL DROP TABLE dbo.timesheets;
+IF OBJECT_ID('dbo.work_shifts', 'U') IS NOT NULL DROP TABLE dbo.work_shifts;
 IF OBJECT_ID('dbo.payroll_periods', 'U') IS NOT NULL DROP TABLE dbo.payroll_periods;
 IF OBJECT_ID('dbo.deduction_rates', 'U') IS NOT NULL DROP TABLE dbo.deduction_rates;
 IF OBJECT_ID('dbo.contracts', 'U') IS NOT NULL DROP TABLE dbo.contracts;
@@ -130,10 +127,31 @@ CREATE TABLE deduction_rates (
 );
 GO
 
+CREATE TABLE work_shifts (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    shift_code NVARCHAR(50) NOT NULL UNIQUE,
+    shift_name NVARCHAR(100) NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    lunch_break_hours DECIMAL(4, 2) NOT NULL DEFAULT 1.50,
+    target_hours DECIMAL(4, 2) NOT NULL DEFAULT 8.00,
+    work_units DECIMAL(3, 2) NOT NULL DEFAULT 1.00,
+    grace_period_minutes INT NOT NULL DEFAULT 15,
+    is_night_shift BIT NOT NULL DEFAULT 0,
+    is_active BIT NOT NULL DEFAULT 1,
+    description NVARCHAR(255) NULL,
+    created_at DATETIME2 NOT NULL DEFAULT GETDATE(),
+    updated_at DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+GO
+
 CREATE TABLE timesheets (
     id BIGINT IDENTITY(1,1) PRIMARY KEY,
     employee_id BIGINT NOT NULL CONSTRAINT fk_timesheets_emp REFERENCES employees(id) ON DELETE CASCADE,
     period_id BIGINT NULL CONSTRAINT fk_timesheets_period REFERENCES payroll_periods(id) ON DELETE NO ACTION,
+    shift_id BIGINT NULL CONSTRAINT fk_timesheets_shift REFERENCES work_shifts(id) ON DELETE SET NULL,
+    shift_code NVARCHAR(50) NULL,
+    shift_name NVARCHAR(100) NULL,
     work_date DATE NOT NULL,
     check_in_time TIME NULL,
     check_out_time TIME NULL,
@@ -254,6 +272,14 @@ INSERT INTO contracts (id, employee_id, contract_number, contract_type, base_sal
 (3, 3, N'HDLD-2021-008', 'INDEFINITE', 25000000.00, 500000.00, 1000000.00, '2021-06-15', NULL, 1),
 (4, 4, N'HDLD-2024-032', 'FULL_TIME', 8000000.00, 500000.00, 0.00, '2024-02-01', '2025-02-01', 1);
 SET IDENTITY_INSERT contracts OFF;
+SET IDENTITY_INSERT work_shifts ON;
+INSERT INTO work_shifts (id, shift_code, shift_name, start_time, end_time, lunch_break_hours, target_hours, work_units, grace_period_minutes, is_night_shift, is_active, description) VALUES
+(1, 'CA_HANH_CHINH', N'Ca Hành Chính (08:00 - 17:30)', '08:00:00', '17:30:00', 1.50, 8.00, 1.00, 15, 0, 1, N'Ca làm việc tiêu chuẩn văn phòng'),
+(2, 'CA_SANG', N'Ca Sáng (08:00 - 12:00)', '08:00:00', '12:00:00', 0.00, 4.00, 0.50, 15, 0, 1, N'Ca làm việc buổi sáng nửa ngày'),
+(3, 'CA_CHIEU', N'Ca Chiều (13:30 - 17:30)', '13:30:00', '17:30:00', 0.00, 4.00, 0.50, 15, 0, 1, N'Ca làm việc buổi chiều nửa ngày'),
+(4, 'CA_TOI', N'Ca Tối (18:00 - 22:00)', '18:00:00', '22:00:00', 0.00, 4.00, 0.50, 15, 0, 1, N'Ca làm việc buổi tối tăng cường'),
+(5, 'CA_DEM', N'Ca Đêm (22:00 - 06:00)', '22:00:00', '06:00:00', 0.00, 8.00, 1.00, 15, 1, 1, N'Ca làm việc ban đêm phụ cấp +30%');
+SET IDENTITY_INSERT work_shifts OFF;
 GO
 
 SET IDENTITY_INSERT payroll_periods ON;

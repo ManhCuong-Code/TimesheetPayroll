@@ -1,12 +1,14 @@
 @page "/admin/payroll-calculation"
-@attribute [Authorize(Roles = "ROLE_HR_ACCOUNTANT, ROLE_ADMIN")]
 @inject ICalculatePayrollBatchUseCase CalculateUseCase
 @inject IViewPayrollSummaryUseCase ViewSummaryUseCase
 @inject ILockPayrollPeriodUseCase LockUseCase
+@inject IUnlockPayrollPeriodUseCase UnlockUseCase
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using TimesheetPayroll.Web.AdminPortal.Controls
 
-
+<AuthorizeView Roles="ROLE_HR_ACCOUNTANT, ROLE_ADMIN">
+    <Authorized>
 <div class="container-fluid py-3">
     <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
         <div>
@@ -33,8 +35,14 @@
             </button>
             @if (payslips.Any() && !isLocked)
             {
-                <button class="btn btn-danger shadow-sm" @onclick="HandleLockPeriodAsync">
+                <button class="btn btn-danger shadow-sm" @onclick="HandleLockPeriodAsync" disabled="@isLoading">
                     <i class="fa-solid fa-lock me-1"></i>Chốt Kỳ Lương (Khóa Sổ)
+                </button>
+            }
+            @if (isLocked)
+            {
+                <button class="btn btn-warning shadow-sm" @onclick="HandleUnlockPeriodAsync" disabled="@isLoading">
+                    <i class="fa-solid fa-lock-open me-1"></i>Mở Khóa Bảng Lương
                 </button>
             }
         </div>
@@ -104,8 +112,37 @@
         </div>
     </div>
 </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="container p-5 text-center">
+            <div class="card border-0 shadow-sm mx-auto" style="max-width: 600px;">
+                <div class="card-body p-5">
+                    <div class="text-danger mb-3">
+                        <i class="fa-solid fa-shield-halved fa-4x"></i>
+                    </div>
+                    <h3 class="fw-bold text-danger mb-2">Truy Cập Bị Từ Chối (403)</h3>
+                    <p class="text-muted mb-4">
+                        Tài khoản hiện tại không có quyền truy cập vào phân hệ tính lương quản trị. 
+                        Vui lòng đăng nhập với tài khoản Quản trị viên (ROLE_ADMIN) hoặc Kế toán (ROLE_HR_ACCOUNTANT).
+                    </p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="/login" class="btn btn-primary px-4">
+                            <i class="fa-solid fa-right-to-bracket me-2"></i>Đăng Nhập Tài Khoản Khác
+                        </a>
+                        <a href="/" class="btn btn-outline-secondary px-4">
+                            <i class="fa-solid fa-house me-2"></i>Về Trang Chủ
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
     private const long DefaultPeriodId = 10;
     private PayrollPeriod? period;
     private List<Payslip> payslips = new();
@@ -171,18 +208,54 @@
         isLoading = true;
         try
         {
-            bool success = await LockUseCase.ExecuteAsync(DefaultPeriodId, "ketoan.thao");
+            string lockedBy = "ketoan.thao";
+            if (AuthStateTask != null)
+            {
+                var authState = await AuthStateTask;
+                var currentUsername = authState.User.Identity?.Name;
+                if (!string.IsNullOrEmpty(currentUsername))
+                {
+                    lockedBy = currentUsername;
+                }
+            }
+
+            bool success = await LockUseCase.ExecuteAsync(DefaultPeriodId, lockedBy);
             if (success)
             {
                 isLocked = true;
                 if (period != null) period.Status = PeriodStatus.LOCKED;
-                alertMessage = "Kỳ lương đã được CHỐT KHÓA SỔ thành công! Toàn bộ bảng công và phiếu lương chuyển sang chế độ Chỉ đọc (Read-Only).";
+                alertMessage = $"Kỳ lương đã được CHỐT KHÓA SỔ thành công bởi {lockedBy}! Toàn bộ bảng công và phiếu lương chuyển sang chế độ Chỉ đọc (Read-Only).";
                 alertType = "warning";
             }
         }
         catch (Exception ex)
         {
             alertMessage = $"Lỗi khi chốt kỳ lương: {ex.Message}";
+            alertType = "danger";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleUnlockPeriodAsync()
+    {
+        isLoading = true;
+        try
+        {
+            bool success = await UnlockUseCase.ExecuteAsync(DefaultPeriodId);
+            if (success)
+            {
+                isLocked = false;
+                if (period != null) period.Status = PeriodStatus.CALCULATED;
+                alertMessage = "Đã MỞ KHÓA BẢNG LƯƠNG thành công! Toàn bộ bảng công của kỳ đã được mở khóa, bạn có thể chỉnh sửa điểm danh và tính lại lương tự động.";
+                alertType = "success";
+            }
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Lỗi khi mở khóa kỳ lương: {ex.Message}";
             alertType = "danger";
         }
         finally

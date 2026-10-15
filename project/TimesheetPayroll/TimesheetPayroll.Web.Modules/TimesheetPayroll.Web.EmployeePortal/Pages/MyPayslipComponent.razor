@@ -1,9 +1,10 @@
 @page "/my-payslip"
 @inject IViewMyPayslipUseCase ViewPayslipUseCase
+@inject IGetEmployeePayslipHistoryUseCase HistoryUseCase
 @using TimesheetPayroll.Web.EmployeePortal.Controls
 
 <div class="container py-3">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
         <div>
             <h2 class="h4 mb-1 text-dark fw-bold">
                 <i class="fa-solid fa-file-invoice-dollar text-primary me-2"></i>Phiếu Lương Của Tôi
@@ -11,10 +12,32 @@
             <p class="text-muted small mb-0">Tra cứu chi tiết thu nhập, tiền công và các khoản trích nộp bảo hiểm cá nhân.</p>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <span class="text-muted small">Kỳ lương:</span>
-            <span class="badge bg-primary px-3 py-2 fs-6">Tháng 10/2026</span>
+            @if (allPayslips.Any())
+            {
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small">Kỳ lương:</span>
+                    <select class="form-select form-select-sm" style="width: auto;" @bind="selectedPeriodId" @bind:after="OnPeriodChangedAsync">
+                        @foreach (var p in allPayslips)
+                        {
+                            <option value="@p.PeriodId">@FormatPeriod(p)</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            <a href="/ai-salary-assistant" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">
+                <i class="fa-solid fa-robot me-1 text-primary"></i>Trợ Lý Lương AI
+            </a>
         </div>
     </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i>@errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
 
     @if (isLoading)
     {
@@ -25,7 +48,30 @@
     }
     else
     {
-        <PayslipDetailCard Payslip="@payslip" />
+        <div class="position-relative">
+            <PayslipDetailCard Payslip="@payslip" />
+
+            <!-- AI QUICK PROMPT FLOATING BANNER -->
+            @if (payslip != null)
+            {
+                <div class="card border-0 bg-light rounded-3 p-3 mt-3 shadow-sm">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                <i class="fa-solid fa-sparkles"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold small text-dark">Bạn có thắc mắc về phiếu lương @FormatPeriod(payslip)?</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">Trợ lý Lương AI sẵn sàng phân tích chênh lệch so với kỳ trước và giải thích bảo hiểm.</div>
+                            </div>
+                        </div>
+                        <a href="/ai-salary-assistant" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold">
+                            <i class="fa-solid fa-comments me-1"></i>Hỏi AI Ngay
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
     }
 </div>
 
@@ -34,13 +80,16 @@
     private Task<AuthenticationState>? AuthStateTask { get; set; }
 
     private long currentEmployeeId = 1;
-    private const long PeriodId = 10;          // Tháng 10/2026
+    private long selectedPeriodId = 10;
+    private List<Payslip> allPayslips = new();
     private Payslip? payslip;
     private bool isLoading = true;
+    private string errorMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
+        errorMessage = string.Empty;
         try
         {
             if (AuthStateTask != null)
@@ -52,11 +101,53 @@
                     currentEmployeeId = id;
                 }
             }
-            payslip = await ViewPayslipUseCase.ExecuteAsync(PeriodId, currentEmployeeId);
+
+            var history = await HistoryUseCase.ExecuteAsync(currentEmployeeId);
+            allPayslips = history.ToList();
+
+            if (allPayslips.Any())
+            {
+                selectedPeriodId = allPayslips.First().PeriodId;
+                payslip = allPayslips.First();
+            }
+            else
+            {
+                payslip = await ViewPayslipUseCase.ExecuteAsync(selectedPeriodId, currentEmployeeId);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể tải thông tin phiếu lương: {ex.Message}";
         }
         finally
         {
             isLoading = false;
         }
+    }
+
+    private async Task OnPeriodChangedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            payslip = await ViewPayslipUseCase.ExecuteAsync(selectedPeriodId, currentEmployeeId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể nạp phiếu lương kỳ đã chọn: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string FormatPeriod(Payslip p)
+    {
+        if (p.PeriodMonth > 0)
+            return $"Tháng {p.PeriodMonth}/{p.PeriodYear}";
+        if (!string.IsNullOrEmpty(p.PeriodCode))
+            return p.PeriodCode;
+        return $"Kỳ #{p.PeriodId}";
     }
 }

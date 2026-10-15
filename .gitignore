@@ -27,9 +27,6 @@ BANG_QUY_DOI_TEN_DU_AN.md
 # Word lock files
 ~$*
 
-# Temporary backup folders
-project/eShop_backup/
-project/eShop/
 
 # OS generated files
 .DS_Store

@@ -1,38 +1,48 @@
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavManager
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm px-3">
+<nav class="navbar navbar-expand-lg navbar-dark shadow-sm px-3" style="background-color: #0f172a; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
     <div class="container-fluid">
-        <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
-            <i class="fa-solid fa-clock-rotate-left text-primary fs-4 me-2"></i>
-            <span>TIMESHEET & PAYROLL</span>
+        <a class="navbar-brand fw-bold d-flex align-items-center me-4" href="/">
+            <div class="bg-primary text-white rounded-3 p-2 me-2 d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                <i class="fa-solid fa-cubes-stacked fs-5"></i>
+            </div>
+            <div class="d-flex flex-column">
+                <span class="fs-5 lh-1 text-white fw-bold">HRM<span style="color: #60a5fa;">PRO</span></span>
+                <span class="text-white-50" style="font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 600;">ENTERPRISE PORTAL</span>
+            </div>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarMain">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1">
                 <li class="nav-item">
-                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        <i class="fa-solid fa-house me-1"></i>Trang Chủ
+                    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                        <i class="fa-solid fa-house me-1 text-white-50"></i>Trang Chủ
                     </NavLink>
                 </li>
 
                 <AuthorizeView>
                     <Authorized>
                         <li class="nav-item">
-                            <NavLink class="nav-link" href="my-timesheet">
-                                <i class="fa-solid fa-calendar-check me-1"></i>Chấm Công Của Tôi
+                            <NavLink class="nav-link" href="/my-timesheet">
+                                <i class="fa-solid fa-fingerprint me-1 text-success"></i>Chấm Công (Check-In/Out)
                             </NavLink>
                         </li>
                         <li class="nav-item">
-                            <NavLink class="nav-link" href="my-payslip">
-                                <i class="fa-solid fa-file-invoice-dollar me-1"></i>Phiếu Lương Cá Nhân
+                            <NavLink class="nav-link" href="/my-payslip">
+                                <i class="fa-solid fa-file-invoice-dollar me-1 text-white-50"></i>Phiếu Lương
                             </NavLink>
                         </li>
                         <li class="nav-item">
-                            <NavLink class="nav-link" href="leave-request">
-                                <i class="fa-solid fa-calendar-plus me-1"></i>Xin Nghỉ Phép
+                            <NavLink class="nav-link text-info fw-semibold" href="/ai-salary-assistant">
+                                <i class="fa-solid fa-robot me-1 text-info"></i>Trợ Lý Lương AI
+                            </NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="/leave-request">
+                                <i class="fa-solid fa-calendar-check me-1 text-white-50"></i>Nghỉ Phép
                             </NavLink>
                         </li>
                     </Authorized>
@@ -42,8 +52,24 @@
                 <AuthorizeView Roles="ROLE_HR_ACCOUNTANT, ROLE_ADMIN">
                     <Authorized>
                         <li class="nav-item">
-                            <NavLink class="nav-link text-warning fw-semibold" href="admin/payroll-calculation">
-                                <i class="fa-solid fa-calculator me-1"></i>Quản Trị: Tính Lương Hàng Loạt
+                            <NavLink class="nav-link text-warning fw-semibold" href="/admin/payroll-calculation">
+                                <i class="fa-solid fa-calculator me-1"></i>Quản Trị Lương
+                            </NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link text-success fw-semibold" href="/admin/shifts">
+                                <i class="fa-solid fa-business-time me-1"></i>Ca Làm Việc
+                            </NavLink>
+                        </li>
+                    </Authorized>
+                </AuthorizeView>
+
+                <!-- MENU DÀNH CHO QUẢN TRỊ VIÊN -->
+                <AuthorizeView Roles="ROLE_ADMIN">
+                    <Authorized>
+                        <li class="nav-item">
+                            <NavLink class="nav-link text-info fw-semibold" href="/admin/user-management">
+                                <i class="fa-solid fa-users-gear me-1"></i>Tài Khoản Nhân Viên
                             </NavLink>
                         </li>
                     </Authorized>
@@ -70,6 +96,9 @@
                             </div>
                         </div>
                         <div class="d-flex gap-2">
+                            <a href="/change-password" class="btn btn-outline-warning btn-sm" title="Đổi mật khẩu tài khoản">
+                                <i class="fa-solid fa-key me-1"></i>Đổi Mật Khẩu
+                            </a>
                             <a href="/login" class="btn btn-outline-light btn-sm" title="Chuyển đổi vai trò">
                                 <i class="fa-solid fa-users me-1"></i>Đổi Tài Khoản
                             </a>
@@ -92,16 +121,11 @@
 </nav>
 
 @code {
-    protected override async Task OnInitializedAsync()
-    {
-        // Khởi tạo mặc định nếu phiên mới bắt đầu
-        await AuthStateProvider.EnsureInitialUserAsync();
-    }
 
     private void HandleLogout()
     {
         AuthStateProvider.SignOut();
-        NavManager.NavigateTo("login");
+        NavManager.NavigateTo("/login");
     }
 
     private string GetRoleBadgeClass(string? role) => role switch

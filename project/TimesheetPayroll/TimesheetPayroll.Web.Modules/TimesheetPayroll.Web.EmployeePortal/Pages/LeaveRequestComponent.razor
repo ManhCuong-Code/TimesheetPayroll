@@ -19,6 +19,14 @@
                     </div>
                 }
 
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>@errorMessage
+                        <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+                    </div>
+                }
+
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Loại Nghỉ Phép</label>
                     <select class="form-select" @bind="request.LeaveType">
@@ -82,6 +90,7 @@
     };
     private bool isSubmitting = false;
     private bool isSuccess = false;
+    private string errorMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -99,8 +108,18 @@
 
     private async Task HandleSubmitAsync()
     {
+        errorMessage = string.Empty;
+        isSuccess = false;
+
         if (string.IsNullOrWhiteSpace(request.Reason))
         {
+            errorMessage = "Vui lòng nhập lý do xin nghỉ phép.";
+            return;
+        }
+
+        if (request.EndDate < request.StartDate)
+        {
+            errorMessage = "Ngày kết thúc nghỉ phép không thể nhỏ hơn ngày bắt đầu.";
             return;
         }
 
@@ -115,8 +134,13 @@
                 EmployeeId = currentEmployeeId,
                 StartDate = DateTime.Today,
                 EndDate = DateTime.Today,
-                TotalDays = 1.0m
+                TotalDays = 1.0m,
+                LeaveType = LeaveType.ANNUAL_LEAVE
             };
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi khi nộp đơn nghỉ phép: {ex.Message}";
         }
         finally
         {

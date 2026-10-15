@@ -1,44 +1,58 @@
 @page "/"
 
-<PageTitle>Trang Chủ - Hệ Thống Chấm Công & Tính Lương Tự Động</PageTitle>
+<PageTitle>Trang Chủ - Cổng Quản Trị Nhân Sự & Tiền Lương HRMS Pro</PageTitle>
 
 <div class="container py-4">
-    <!-- BANNER CHÀO MỪNG & THÔNG TIN ĐỒ ÁN -->
-    <div class="p-5 mb-4 bg-primary text-white rounded-4 shadow position-relative overflow-hidden" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+    <!-- ENTERPRISE CORPORATE HERO BANNER -->
+    <div class="p-5 mb-4 text-white rounded-4 shadow hero-corporate position-relative">
         <div class="position-relative" style="z-index: 2;">
             <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                <span class="badge bg-white text-primary px-3 py-2 fw-bold">ĐỒ ÁN LẬP TRÌNH ỨNG DỤNG WEB</span>
-                <span class="badge bg-warning text-dark px-3 py-2 fw-bold"><i class="fa-solid fa-server me-1"></i>.NET 10 Blazor Server</span>
-                <span class="badge bg-info text-dark px-3 py-2 fw-bold"><i class="fa-solid fa-database me-1"></i>SQL Server: BangChamCongDB</span>
+                <span class="badge bg-primary px-3 py-2 fw-semibold">
+                    <i class="fa-solid fa-shield-halved me-1"></i>HỆ THỐNG NỘI BỘ DOANH NGHIỆP
+                </span>
+                <span class="badge bg-white bg-opacity-10 text-white px-3 py-2 border border-white border-opacity-25">
+                    <i class="fa-solid fa-cloud me-1"></i>Cloud HRMS • Phiên bản 2026
+                </span>
+                <span class="badge bg-success bg-opacity-25 text-white px-3 py-2 border border-success border-opacity-50">
+                    <i class="fa-solid fa-circle-check me-1"></i>Trạng thái: Hoạt động bình thường
+                </span>
             </div>
 
-            <h1 class="display-6 fw-bold mb-2">HỆ THỐNG CHẤM CÔNG & TÍNH LƯƠNG TỰ ĐỘNG</h1>
-            <p class="fs-6 opacity-75 mb-3" style="max-width: 800px;">
-                Số hóa toàn diện quy trình điểm danh chấm công hàng ngày, tự động hóa tính toán bảng lương theo luật lao động & bảo hiểm hiện hành, minh bạch phiếu thu nhập cá nhân.
+            <h1 class="display-6 fw-bold mb-2 tracking-tight">CỔNG QUẢN TRỊ NHÂN SỰ & TIỀN LƯƠNG TỰ ĐỘNG</h1>
+            <p class="fs-6 text-white-50 mb-4" style="max-width: 820px; line-height: 1.6;">
+                Nền tảng số hóa quản trị ca làm việc, điểm danh trực tuyến Check-In / Check-Out, tự động hóa tính toán chi trả tiền lương chính xác theo quy định pháp luật và minh bạch phiếu thu nhập cá nhân.
             </p>
 
-            <div class="p-3 bg-white bg-opacity-10 rounded-3 mb-4 d-inline-block border border-white border-opacity-25">
-                <div class="small fw-semibold">
-                    <i class="fa-solid fa-user-graduate me-1"></i> Sinh viên: <strong>Trần Viết Mạnh Cường</strong> &nbsp;|&nbsp;
-                    <i class="fa-solid fa-id-card me-1"></i> MSV: <strong>23K4080003</strong> &nbsp;|&nbsp;
-                    <i class="fa-solid fa-building-columns me-1"></i> Khoa: <strong>Hệ thống Thông tin Kinh tế</strong> (Ngành: <strong>Tin học Kinh tế</strong>)
-                </div>
-            </div>
-
             <div class="d-flex flex-wrap gap-2">
-                <a href="login" class="btn btn-warning fw-bold px-4 py-2 text-dark shadow-sm">
-                    <i class="fa-solid fa-right-to-bracket me-2"></i>Đăng Nhập / Phân Quyền
+                <a href="/my-timesheet" class="btn btn-success fw-bold px-4 py-2 shadow-sm">
+                    <i class="fa-solid fa-right-to-bracket me-2"></i>Check-In (Vào Ca)
                 </a>
-                <a href="my-timesheet" class="btn btn-light fw-bold px-4 py-2 text-primary shadow-sm">
-                    <i class="fa-solid fa-calendar-check me-2"></i>Chấm Công Của Tôi
+                <a href="/my-timesheet" class="btn btn-warning fw-bold px-4 py-2 text-dark shadow-sm">
+                    <i class="fa-solid fa-right-from-bracket me-2"></i>Check-Out (Hết Ca)
                 </a>
-                <a href="my-payslip" class="btn btn-outline-light fw-bold px-4 py-2">
-                    <i class="fa-solid fa-file-invoice-dollar me-2"></i>Xem Phiếu Lương
+                <a href="/my-timesheet" class="btn btn-primary fw-bold px-4 py-2 shadow-sm">
+                    <i class="fa-solid fa-fingerprint me-2"></i>Bảng Chấm Công
+                </a>
+                <a href="/my-payslip" class="btn btn-light fw-bold px-4 py-2 text-dark shadow-sm">
+                    <i class="fa-solid fa-file-invoice-dollar me-2 text-success"></i>Tra Cứu Phiếu Lương
+                </a>
+                <a href="/ai-salary-assistant" class="btn btn-info fw-bold px-4 py-2 text-dark shadow-sm">
+                    <i class="fa-solid fa-robot me-2"></i>Trợ Lý Lương AI
+                </a>
+                <a href="/leave-request" class="btn btn-outline-light fw-bold px-4 py-2">
+                    <i class="fa-solid fa-calendar-plus me-2"></i>Tạo Đơn Xin Nghỉ Phép
                 </a>
                 <AuthorizeView Roles="ROLE_HR_ACCOUNTANT, ROLE_ADMIN">
                     <Authorized>
-                        <a href="admin/payroll-calculation" class="btn btn-success fw-bold px-4 py-2 shadow-sm">
-                            <i class="fa-solid fa-calculator me-2"></i>Kế Toán: Tính Lương Hàng Loạt
+                        <a href="/admin/payroll-calculation" class="btn btn-warning fw-bold px-4 py-2 text-dark shadow-sm">
+                            <i class="fa-solid fa-calculator me-2"></i>Kế Toán: Quyết Toán Lương
+                        </a>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Roles="ROLE_ADMIN">
+                    <Authorized>
+                        <a href="/admin/user-management" class="btn btn-info fw-bold px-4 py-2 text-dark shadow-sm">
+                            <i class="fa-solid fa-users-gear me-2"></i>Quản Trị Tài Khoản
                         </a>
                     </Authorized>
                 </AuthorizeView>
@@ -46,46 +60,174 @@
         </div>
     </div>
 
-    <!-- 4 TÍNH NĂNG CHÍNH CỦA HỆ THỐNG -->
+    <!-- LIVE KPI STAT WIDGETS -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-widget d-flex align-items-center gap-3">
+                <div class="stat-icon bg-primary-subtle text-primary">
+                    <i class="fa-solid fa-calendar-day"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">KỲ LƯƠNG HIỆN HÀNH</div>
+                    <div class="fs-5 fw-bold text-dark">Tháng 10/2026</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Chuẩn 22 ngày công</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-widget d-flex align-items-center gap-3">
+                <div class="stat-icon bg-success-subtle text-success">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">TỔNG NHÂN SỰ</div>
+                    <div class="fs-5 fw-bold text-dark">Toàn Doanh Nghiệp</div>
+                    <div class="text-success" style="font-size: 0.75rem;"><i class="fa-solid fa-check me-1"></i>100% Hồ sơ hiệu lực</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-widget d-flex align-items-center gap-3">
+                <div class="stat-icon bg-warning-subtle text-warning">
+                    <i class="fa-solid fa-shield-heart"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">BẢO HIỂM BẮT BUỘC</div>
+                    <div class="fs-5 fw-bold text-dark">10.5% Nhân viên</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">BHXH 8% • BHYT 1.5% • BHTN 1%</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="stat-widget d-flex align-items-center gap-3">
+                <div class="stat-icon bg-info-subtle text-info">
+                    <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">CHI TRẢ LƯƠNG</div>
+                    <div class="fs-5 fw-bold text-dark">Tài Khoản Ngân Hàng</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Liên ngân hàng 24/7</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 PHÂN HỆ NGHIỆP VỤ CHÍNH -->
     <div class="row g-4 mb-4">
-        <div class="col-md-3">
-            <div class="card h-100 border-0 shadow-sm p-4 text-center rounded-4">
-                <div class="bg-primary-subtle text-primary rounded-circle mx-auto p-3 mb-3 d-flex align-items-center justify-content-center" style="width:60px; height:60px;">
+        <div class="col-lg-3 col-md-6">
+            <div class="card h-100 card-hover p-4 text-center border-0 shadow-sm bg-white">
+                <div class="bg-primary-subtle text-primary rounded-circle mx-auto p-3 mb-3 d-flex align-items-center justify-content-center" style="width:64px; height:64px;">
                     <i class="fa-solid fa-fingerprint fs-3"></i>
                 </div>
-                <h5 class="fw-bold mb-2">Chấm Công Trực Tuyến</h5>
-                <p class="text-muted small mb-3">Điểm danh Check-In/Check-Out hàng ngày, tự động tính tổng giờ làm việc thực tế và quy đổi ngày công.</p>
-                <a href="my-timesheet" class="btn btn-sm btn-outline-primary mt-auto">Truy cập <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <h5 class="fw-bold mb-2 text-dark">Chấm Công Trực Tuyến</h5>
+                <p class="text-muted small mb-3">Ghi nhận Check-In vào ca và Check-Out hết ca hàng ngày, tự động tính tổng giờ làm việc thực tế và quy đổi ngày công.</p>
+                <a href="/my-timesheet" class="btn btn-sm btn-outline-primary mt-auto fw-semibold">
+                    Vào Chấm Công <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card h-100 border-0 shadow-sm p-4 text-center rounded-4">
-                <div class="bg-success-subtle text-success rounded-circle mx-auto p-3 mb-3 d-flex align-items-center justify-content-center" style="width:60px; height:60px;">
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card h-100 card-hover p-4 text-center border-0 shadow-sm bg-white">
+                <div class="bg-success-subtle text-success rounded-circle mx-auto p-3 mb-3 d-flex align-items-center justify-content-center" style="width:64px; height:64px;">
                     <i class="fa-solid fa-file-invoice-dollar fs-3"></i>
                 </div>
-                <h5 class="fw-bold mb-2">Phiếu Lương Minh Bạch</h5>
-                <p class="text-muted small mb-3">Xem chi tiết lương ngày công, phụ cấp ăn/xăng và các khoản trích nộp bảo hiểm xã hội, y tế, thất nghiệp 10.5%.</p>
-                <a href="my-payslip" class="btn btn-sm btn-outline-success mt-auto">Xem phiếu <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <h5 class="fw-bold mb-2 text-dark">Phiếu Lương Minh Bạch</h5>
+                <p class="text-muted small mb-3">Tra cứu chi tiết tiền lương theo ngày công, phụ cấp ăn/xăng và các khoản trích nộp bảo hiểm xã hội bắt buộc theo luật định.</p>
+                <a href="/my-payslip" class="btn btn-sm btn-outline-success mt-auto fw-semibold">
+                    Xem Phiếu Lương <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card h-100 border-0 shadow-sm p-4 text-center rounded-4">
-                <div class="bg-warning-subtle text-warning rounded-circle mx-auto p-3 mb-3 d-flex align-items-center justify-content-center" style="width:60px; height:60px;">
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card h-100 card-hover p-4 text-center border-0 shadow-sm bg-white">
+                <div class="bg-warning-subtle text-warning rounded-circle mx-auto p-3 mb-3 d-flex align-items-center justify-content-center" style="width:64px; height:64px;">
                     <i class="fa-solid fa-calculator fs-3"></i>
                 </div>
-                <h5 class="fw-bold mb-2">Tính Lương Tự Động</h5>
-                <p class="text-muted small mb-3">Kế toán chạy tính toán hàng loạt cho toàn bộ nhân sự chỉ bằng 1 nút bấm với Database Transaction an toàn tuyệt đối.</p>
-                <a href="admin/payroll-calculation" class="btn btn-sm btn-outline-warning text-dark mt-auto">Mở tính lương <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <h5 class="fw-bold mb-2 text-dark">Tính Lương Tự Động</h5>
+                <p class="text-muted small mb-3">Phân hệ dành cho Kế toán & Quản trị: tính toán bảng lương hàng loạt cho toàn bộ nhân sự với Database Transaction an toàn.</p>
+                <a href="/admin/payroll-calculation" class="btn btn-sm btn-outline-warning text-dark mt-auto fw-semibold">
+                    Mở Bảng Tính Lương <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card h-100 border-0 shadow-sm p-4 text-center rounded-4">
-                <div class="bg-info-subtle text-info rounded-circle mx-auto p-3 mb-3 d-flex align-items-center justify-content-center" style="width:60px; height:60px;">
-                    <i class="fa-solid fa-calendar-plus fs-3"></i>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card h-100 card-hover p-4 text-center border-0 shadow-sm bg-white">
+                <div class="bg-info-subtle text-info rounded-circle mx-auto p-3 mb-3 d-flex align-items-center justify-content-center" style="width:64px; height:64px;">
+                    <i class="fa-solid fa-calendar-check fs-3"></i>
                 </div>
-                <h5 class="fw-bold mb-2">Đăng Ký Nghỉ Phép</h5>
-                <p class="text-muted small mb-3">Nộp đơn xin nghỉ phép năm, nghỉ ốm, thai sản trực tuyến và theo dõi trạng thái phê duyệt từ cấp quản lý.</p>
-                <a href="leave-request" class="btn btn-sm btn-outline-info text-dark mt-auto">Tạo đơn phép <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                <h5 class="fw-bold mb-2 text-dark">Quản Lý Nghỉ Phép</h5>
+                <p class="text-muted small mb-3">Gửi đơn xin nghỉ phép năm, nghỉ ốm, thai sản trực tuyến và theo dõi tiến độ phê duyệt từ Trưởng bộ phận nhân sự.</p>
+                <a href="/leave-request" class="btn btn-sm btn-outline-info text-dark mt-auto fw-semibold">
+                    Gửi Đơn Nghỉ Phép <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- CORPORATE ANNOUNCEMENTS & POLICIES -->
+    <div class="row g-4">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm bg-white p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="fa-solid fa-bullhorn text-primary me-2"></i>Thông Báo Nội Bộ & Lịch Làm Việc
+                    </h5>
+                    <span class="badge bg-light text-muted border">Cập nhật hôm nay</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item px-0 py-3 border-bottom">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="fw-bold text-dark mb-1">Chốt dữ liệu chấm công kỳ Tháng 10/2026</h6>
+                                <p class="text-muted small mb-0">Bộ phận Kế toán & Nhân sự tiến hành chốt bảng chấm công vào ngày 25 hàng tháng. Đề nghị toàn thể nhân viên kiểm tra đối soát trước thời hạn.</p>
+                            </div>
+                            <span class="badge bg-primary-subtle text-primary ms-3">Quan trọng</span>
+                        </div>
+                    </div>
+                    <div class="list-group-item px-0 py-3 border-bottom">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="fw-bold text-dark mb-1">Quy định về trích nộp bảo hiểm xã hội bắt buộc theo luật lao động</h6>
+                                <p class="text-muted small mb-0">Tỷ lệ đóng góp bảo hiểm bắt buộc gồm 8.0% BHXH, 1.5% BHYT và 1.0% BHTN được tự động trừ vào phiếu lương hàng tháng.</p>
+                            </div>
+                            <span class="badge bg-secondary-subtle text-secondary ms-3">Chính sách</span>
+                        </div>
+                    </div>
+                    <div class="list-group-item px-0 py-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="fw-bold text-dark mb-1">Thời gian làm việc tiêu chuẩn và chấm công ca</h6>
+                                <p class="text-muted small mb-0">Ca làm việc hành chính bắt đầu từ 08:00 đến 17:30 (nghỉ trưa 12:00 - 13:30). Nhân viên hoàn thành đủ 8 giờ làm việc được tính 1.0 ngày công chuẩn.</p>
+                            </div>
+                            <span class="badge bg-info-subtle text-info ms-3">Quy định</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-white p-4 h-100">
+                <h5 class="fw-bold mb-3 text-dark">
+                    <i class="fa-solid fa-headset text-success me-2"></i>Trợ Giúp & Hỗ Trợ
+                </h5>
+                <p class="text-muted small mb-3">Mọi thắc mắc về số liệu chấm công hoặc chi trả tiền lương, vui lòng liên hệ các bộ phận chức năng:</p>
+                <div class="p-3 bg-light rounded-3 mb-3">
+                    <div class="fw-bold text-dark small"><i class="fa-solid fa-user-tie me-2 text-primary"></i>Phòng Hành Chính & Kế Toán</div>
+                    <div class="text-muted small mt-1">Trưởng phòng: <strong>Lê Thị Thu Thảo</strong></div>
+                    <div class="text-muted small">Email: <code>ketoan@doanhnghiep.vn</code></div>
+                </div>
+                <div class="p-3 bg-light rounded-3 mb-3">
+                    <div class="fw-bold text-dark small"><i class="fa-solid fa-laptop-code me-2 text-primary"></i>Phòng Công Nghệ Thông Tin</div>
+                    <div class="text-muted small mt-1">Quản trị viên: <strong>Trần Đình Trọng</strong></div>
+                    <div class="text-muted small">Hỗ trợ kỹ thuật hệ thống 24/7</div>
+                </div>
+                <a href="/login" class="btn btn-outline-secondary btn-sm w-100 mt-auto">
+                    <i class="fa-solid fa-right-to-bracket me-1"></i>Chuyển Đổi Tài Khoản Người Dùng
+                </a>
             </div>
         </div>
     </div>

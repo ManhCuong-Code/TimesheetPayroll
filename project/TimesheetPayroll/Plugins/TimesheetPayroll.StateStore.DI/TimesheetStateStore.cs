@@ -1,3 +1,5 @@
+using TimesheetPayroll.UseCases.PluginInterfaces.StateStore;
+
 namespace TimesheetPayroll.StateStore.DI;
 
 public class StateStoreBase
@@ -6,15 +8,6 @@ public class StateStoreBase
     public void AddStateChangeListeners(Action listener) => _listeners += listener;
     public void RemoveStateChangeListeners(Action listener) => _listeners -= listener;
     public void BroadcastStateChange() => _listeners?.Invoke();
-}
-
-public interface ITimesheetStateStore
-{
-    long SelectedPeriodId { get; set; }
-    long CurrentEmployeeId { get; set; }
-    void AddStateChangeListeners(Action listener);
-    void RemoveStateChangeListeners(Action listener);
-    void BroadcastStateChange();
 }
 
 public class TimesheetStateStore : StateStoreBase, ITimesheetStateStore

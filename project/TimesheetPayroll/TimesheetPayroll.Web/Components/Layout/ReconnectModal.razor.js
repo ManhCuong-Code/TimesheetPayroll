@@ -1,18 +1,25 @@
 // Set up event handlers
 const reconnectModal = document.getElementById("components-reconnect-modal");
-reconnectModal.addEventListener("components-reconnect-state-changed", handleReconnectStateChanged);
+if (reconnectModal) {
+    reconnectModal.addEventListener("components-reconnect-state-changed", handleReconnectStateChanged);
+}
 
 const retryButton = document.getElementById("components-reconnect-button");
-retryButton.addEventListener("click", retry);
+if (retryButton) {
+    retryButton.addEventListener("click", retry);
+}
 
 const resumeButton = document.getElementById("components-resume-button");
-resumeButton.addEventListener("click", resume);
+if (resumeButton) {
+    resumeButton.addEventListener("click", resume);
+}
 
 function handleReconnectStateChanged(event) {
+    if (!reconnectModal) return;
     if (event.detail.state === "show") {
-        reconnectModal.showModal();
+        if (typeof reconnectModal.showModal === "function") reconnectModal.showModal();
     } else if (event.detail.state === "hide") {
-        reconnectModal.close();
+        if (typeof reconnectModal.close === "function") reconnectModal.close();
     } else if (event.detail.state === "failed") {
         document.addEventListener("visibilitychange", retryWhenDocumentBecomesVisible);
     } else if (event.detail.state === "rejected") {

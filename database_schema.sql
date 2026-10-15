@@ -1,16 +1,12 @@
--- ============================================================================
--- ĐỀ TÀI: HỆ THỐNG CHẤM CÔNG & TÍNH LƯƠNG TỰ ĐỘNG (TIMESHEET & PAYROLL SYSTEM)
--- HỌC PHẦN: LẬP TRÌNH ỨNG DỤNG WEB
--- SINH VIÊN THỰC HIỆN: TRẦN VIẾT MẠNH CƯỜNG
--- MÃ SINH VIÊN: 23K4080003
--- KHOA: HỆ THỐNG THÔNG TIN KINH TẾ | NGÀNH: TIN HỌC KINH TẾ
--- CƠ SỞ DỮ LIỆU RIÊNG BIỆT: BangChamCongDB (MICROSOFT SQL SERVER)
+﻿-- ============================================================================
+-- HRMS PRO - TIMESHEET & PAYROLL ENTERPRISE DATABASE SCHEMA
+-- CƠ SỞ DỮ LIỆU DOANH NGHIỆP: BangChamCongDB (MICROSOFT SQL SERVER)
 -- ============================================================================
 
 -- BƯỚC 1: TẠO VÀ SỬ DỤNG CSDL RIÊNG 'BangChamCongDB'
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'BangChamCongDB')
 BEGIN
-    CREATE DATABASE BangChamCongDB;
+    CREATE DATABASE BangChamCongDB COLLATE Vietnamese_CI_AS;
 END
 GO
 

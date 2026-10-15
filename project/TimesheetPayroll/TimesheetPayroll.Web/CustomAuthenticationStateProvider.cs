@@ -10,6 +10,8 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     private readonly IUserAccountRepository _userRepository;
     private ClaimsPrincipal _currentPrincipal = new(new ClaimsIdentity());
     private UserAccount? _currentUser;
+    private bool _initialized;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public CustomAuthenticationStateProvider(IUserAccountRepository userRepository)
     {
@@ -18,16 +20,59 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 
     public UserAccount? CurrentUser => _currentUser;
 
-    public override Task<AuthenticationState> GetAuthenticationStateAsync()
+    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        return Task.FromResult(new AuthenticationState(_currentPrincipal));
+        if (!_initialized)
+        {
+            await _initLock.WaitAsync();
+            try
+            {
+                if (!_initialized)
+                {
+                    await InitializeDefaultUserInternalAsync();
+                    _initialized = true;
+                }
+            }
+            finally
+            {
+                _initLock.Release();
+            }
+        }
+
+        return new AuthenticationState(_currentPrincipal);
     }
 
-    public async Task<bool> SignInAsync(UserAccount user)
+    private async Task InitializeDefaultUserInternalAsync()
     {
-        if (user == null || !user.IsActive)
-            return false;
+        if (_currentUser != null) return;
 
+        UserAccount? defaultUser = null;
+        try
+        {
+            defaultUser = await _userRepository.GetByUsernameAsync("nhanvien.a");
+        }
+        catch
+        {
+            // Dự phòng tài khoản mẫu nếu SQL Server chưa sẵn sàng
+        }
+
+        defaultUser ??= new UserAccount
+        {
+            Id = 1,
+            EmployeeId = 1,
+            Username = "nhanvien.a",
+            FullName = "Nguyễn Văn A",
+            Role = "ROLE_EMPLOYEE",
+            EmployeeCode = "EMP001",
+            DepartmentName = "Phòng Công Nghệ Thông Tin",
+            IsActive = true
+        };
+
+        SetPrincipalInternal(defaultUser);
+    }
+
+    private void SetPrincipalInternal(UserAccount user)
+    {
         _currentUser = user;
 
         var claims = new List<Claim>
@@ -44,30 +89,32 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 
         var identity = new ClaimsIdentity(claims, "CustomAuthType");
         _currentPrincipal = new ClaimsPrincipal(identity);
+    }
 
-        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+    public async Task<bool> SignInAsync(UserAccount user)
+    {
+        if (user == null || !user.IsActive)
+            return false;
+
+        _initialized = true;
+        SetPrincipalInternal(user);
+        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_currentPrincipal)));
         return true;
     }
 
     public void SignOut()
     {
+        _initialized = true;
         _currentUser = null;
         _currentPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
-        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(_currentPrincipal)));
     }
 
-    /// <summary>
-    /// Đăng nhập mặc định nếu phiên ban đầu chưa có để người dùng trải nghiệm ngay lập tức.
-    /// </summary>
     public async Task EnsureInitialUserAsync()
     {
         if (_currentUser == null)
         {
-            var defaultUser = await _userRepository.GetByUsernameAsync("nhanvien.a");
-            if (defaultUser != null)
-            {
-                await SignInAsync(defaultUser);
-            }
+            await GetAuthenticationStateAsync();
         }
     }
 }

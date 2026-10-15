@@ -3,6 +3,12 @@ using TimesheetPayroll.UseCases.PluginInterfaces.DataStore;
 
 namespace TimesheetPayroll.UseCases.EmployeePortal;
 
+#region 1. TRA CỨU PHIẾU LƯƠNG CÁ NHÂN (UC18 / UC_EMP_04)
+
+/// <summary>
+/// Ca sử dụng: Tra cứu chi tiết phiếu lương cá nhân của người lao động (UC18).
+/// Áp dụng cơ chế Anti-IDOR: chỉ cho phép người dùng truy vấn phiếu lương thuộc sở hữu của chính mình.
+/// </summary>
 public interface IViewMyPayslipUseCase
 {
     Task<Payslip?> ExecuteAsync(long periodId, long employeeId);
@@ -19,10 +25,20 @@ public class ViewMyPayslipUseCase : IViewMyPayslipUseCase
 
     public async Task<Payslip?> ExecuteAsync(long periodId, long employeeId)
     {
+        if (periodId <= 0 || employeeId <= 0)
+            return null;
+
         return await _payslipRepo.GetPayslipByPeriodAndEmployeeAsync(periodId, employeeId);
     }
 }
 
+#endregion
+
+#region 2. TRA CỨU BẢNG CHẤM CÔNG CÁ NHÂN (UC10 / UC_EMP_03)
+
+/// <summary>
+/// Ca sử dụng: Tra cứu nhật ký chấm công tháng của cá nhân người lao động (UC10).
+/// </summary>
 public interface IViewMyTimesheetUseCase
 {
     Task<IEnumerable<Timesheet>> ExecuteAsync(long employeeId, int month, int year);
@@ -39,10 +55,20 @@ public class ViewMyTimesheetUseCase : IViewMyTimesheetUseCase
 
     public async Task<IEnumerable<Timesheet>> ExecuteAsync(long employeeId, int month, int year)
     {
+        if (employeeId <= 0)
+            return Enumerable.Empty<Timesheet>();
+
         return await _timesheetRepo.GetTimesheetsByEmployeeAndMonthAsync(employeeId, month, year);
     }
 }
 
+#endregion
+
+#region 3. NỘP ĐƠN NGHỈ PHÉP TRỰC TUYẾN (UC11 / UC_EMP_02)
+
+/// <summary>
+/// Ca sử dụng: Nộp đơn xin nghỉ phép trực tuyến gửi phòng nhân sự (UC11).
+/// </summary>
 public interface ICreateLeaveRequestUseCase
 {
     Task ExecuteAsync(LeaveRequest request);
@@ -59,67 +85,235 @@ public class CreateLeaveRequestUseCase : ICreateLeaveRequestUseCase
 
     public async Task ExecuteAsync(LeaveRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.EndDate < request.StartDate)
+            throw new ArgumentException("Ngày kết thúc nghỉ phép không thể nhỏ hơn ngày bắt đầu.");
+
+        if (request.TotalDays <= 0)
+        {
+            var span = (request.EndDate.Date - request.StartDate.Date).TotalDays + 1;
+            request.TotalDays = Math.Max(1m, (decimal)span);
+        }
+
+        request.ApprovalStatus = ApprovalStatus.PENDING;
         await _leaveRepo.CreateLeaveRequestAsync(request);
     }
 }
 
+#endregion
+
+#region 4. ĐIỂM DANH CHECK-IN / CHECK-OUT HÀNG NGÀY (UC09 / UC_EMP_01)
+
+/// <summary>
+/// Ca sử dụng: Điểm danh vào ca (Check-In) và tan ca (Check-Out) hàng ngày (UC09).
+/// Tự động ghi nhận mốc thời gian hệ thống và tính toán tổng giờ làm việc thực tế.
+/// </summary>
 public interface ICheckInCheckOutUseCase
 {
-    Task<Timesheet> ExecuteCheckInAsync(long employeeId);
-    Task<Timesheet> ExecuteCheckOutAsync(long employeeId);
+    Task<Timesheet> ExecuteCheckInAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null);
+    Task<Timesheet> ExecuteCheckOutAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null);
+    Task<Timesheet> ExecuteManualPunchAsync(long employeeId, long? shiftId, DateTime workDate, TimeSpan? checkInTime, TimeSpan? checkOutTime, string? customNote = null);
 }
 
 public class CheckInCheckOutUseCase : ICheckInCheckOutUseCase
 {
     private readonly ITimesheetRepository _timesheetRepo;
+    private readonly IWorkShiftRepository _shiftRepo;
 
-    public CheckInCheckOutUseCase(ITimesheetRepository timesheetRepo)
+    public CheckInCheckOutUseCase(
+        ITimesheetRepository timesheetRepo,
+        IWorkShiftRepository shiftRepo)
     {
         _timesheetRepo = timesheetRepo;
+        _shiftRepo = shiftRepo;
     }
 
-    public async Task<Timesheet> ExecuteCheckInAsync(long employeeId)
+    public async Task<Timesheet> ExecuteCheckInAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null)
     {
-        var today = DateTime.Today;
-        var existing = (await _timesheetRepo.GetTimesheetsByEmployeeAndMonthAsync(employeeId, today.Month, today.Year))
-            .FirstOrDefault(t => t.WorkDate.Date == today);
+        if (employeeId <= 0)
+            throw new ArgumentException("Mã nhân viên không hợp lệ.", nameof(employeeId));
+
+        var targetDate = (workDate ?? DateTime.Today).Date;
+        var existing = (await _timesheetRepo.GetTimesheetsByEmployeeAndMonthAsync(employeeId, targetDate.Month, targetDate.Year))
+            .FirstOrDefault(t => t.WorkDate.Date == targetDate);
+
+        if (existing != null && existing.IsLocked)
+            throw new InvalidOperationException("Bản ghi chấm công của ngày này đã bị khóa sổ và không thể điểm danh.");
+
+        // Xác định ca làm việc
+        WorkShift? shift = null;
+        if (shiftId.HasValue && shiftId.Value > 0)
+        {
+            shift = await _shiftRepo.GetWorkShiftByIdAsync(shiftId.Value);
+        }
+        if (shift == null)
+        {
+            var allShifts = await _shiftRepo.GetWorkShiftsAsync();
+            shift = allShifts.FirstOrDefault(s => s.IsActive && s.ShiftCode == "CA_HANH_CHINH") 
+                 ?? allShifts.FirstOrDefault(s => s.IsActive);
+        }
 
         var timesheet = existing ?? new Timesheet
         {
             EmployeeId = employeeId,
-            WorkDate = today,
-            WorkUnits = 1.0m,
+            WorkDate = targetDate,
+            WorkUnits = shift?.WorkUnits ?? 1.0m,
             WorkShiftStatus = WorkShiftStatus.PRESENT
         };
 
-        timesheet.CheckInTime = DateTime.Now.TimeOfDay;
+        timesheet.CheckInTime = customTime ?? DateTime.Now.TimeOfDay;
+        timesheet.EvaluateCheckIn(shift);
+
         await _timesheetRepo.AddOrUpdateTimesheetAsync(timesheet);
         return timesheet;
     }
 
-    public async Task<Timesheet> ExecuteCheckOutAsync(long employeeId)
+    public async Task<Timesheet> ExecuteCheckOutAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null)
     {
-        var today = DateTime.Today;
-        var existing = (await _timesheetRepo.GetTimesheetsByEmployeeAndMonthAsync(employeeId, today.Month, today.Year))
-            .FirstOrDefault(t => t.WorkDate.Date == today);
+        if (employeeId <= 0)
+            throw new ArgumentException("Mã nhân viên không hợp lệ.", nameof(employeeId));
+
+        var targetDate = (workDate ?? DateTime.Today).Date;
+        var existing = (await _timesheetRepo.GetTimesheetsByEmployeeAndMonthAsync(employeeId, targetDate.Month, targetDate.Year))
+            .FirstOrDefault(t => t.WorkDate.Date == targetDate);
+
+        if (existing != null && existing.IsLocked)
+            throw new InvalidOperationException("Bản ghi chấm công của ngày này đã bị khóa sổ và không thể điểm danh.");
+
+        // Xác định ca
+        WorkShift? shift = null;
+        if (shiftId.HasValue && shiftId.Value > 0)
+        {
+            shift = await _shiftRepo.GetWorkShiftByIdAsync(shiftId.Value);
+        }
+        else if (existing?.ShiftId.HasValue == true)
+        {
+            shift = await _shiftRepo.GetWorkShiftByIdAsync(existing.ShiftId.Value);
+        }
+        if (shift == null)
+        {
+            var allShifts = await _shiftRepo.GetWorkShiftsAsync();
+            shift = allShifts.FirstOrDefault(s => s.IsActive && s.ShiftCode == "CA_HANH_CHINH") 
+                 ?? allShifts.FirstOrDefault(s => s.IsActive);
+        }
 
         var timesheet = existing ?? new Timesheet
         {
             EmployeeId = employeeId,
-            WorkDate = today,
-            WorkUnits = 1.0m,
+            WorkDate = targetDate,
+            WorkUnits = shift?.WorkUnits ?? 1.0m,
             WorkShiftStatus = WorkShiftStatus.PRESENT,
-            CheckInTime = new TimeSpan(8, 0, 0)
+            CheckInTime = shift?.StartTime ?? new TimeSpan(8, 0, 0)
         };
 
-        timesheet.CheckOutTime = DateTime.Now.TimeOfDay;
-        if (timesheet.CheckInTime.HasValue)
+        timesheet.CheckOutTime = customTime ?? DateTime.Now.TimeOfDay;
+        timesheet.EvaluateShift(shift);
+
+        await _timesheetRepo.AddOrUpdateTimesheetAsync(timesheet);
+        return timesheet;
+    }
+
+    public async Task<Timesheet> ExecuteManualPunchAsync(long employeeId, long? shiftId, DateTime workDate, TimeSpan? checkInTime, TimeSpan? checkOutTime, string? customNote = null)
+    {
+        if (employeeId <= 0)
+            throw new ArgumentException("Mã nhân viên không hợp lệ.", nameof(employeeId));
+
+        if (!checkInTime.HasValue && !checkOutTime.HasValue)
+            throw new ArgumentException("Vui lòng nhập giờ vào (Check-In) hoặc giờ ra (Check-Out).");
+
+        var targetDate = workDate.Date;
+        var existing = (await _timesheetRepo.GetTimesheetsByEmployeeAndMonthAsync(employeeId, targetDate.Month, targetDate.Year))
+            .FirstOrDefault(t => t.WorkDate.Date == targetDate);
+
+        if (existing != null && existing.IsLocked)
+            throw new InvalidOperationException("Bản ghi chấm công của ngày này đã bị khóa sổ và không thể chỉnh sửa.");
+
+        WorkShift? shift = null;
+        if (shiftId.HasValue && shiftId.Value > 0)
         {
-            var hours = (timesheet.CheckOutTime.Value - timesheet.CheckInTime.Value).TotalHours;
-            timesheet.ActualHoursWorked = Math.Max(0, Math.Round((decimal)hours, 2));
+            shift = await _shiftRepo.GetWorkShiftByIdAsync(shiftId.Value);
+        }
+        else if (existing?.ShiftId.HasValue == true)
+        {
+            shift = await _shiftRepo.GetWorkShiftByIdAsync(existing.ShiftId.Value);
+        }
+        if (shift == null)
+        {
+            var allShifts = await _shiftRepo.GetWorkShiftsAsync();
+            shift = allShifts.FirstOrDefault(s => s.IsActive && s.ShiftCode == "CA_HANH_CHINH") 
+                 ?? allShifts.FirstOrDefault(s => s.IsActive);
+        }
+
+        var timesheet = existing ?? new Timesheet
+        {
+            EmployeeId = employeeId,
+            WorkDate = targetDate,
+            WorkUnits = shift?.WorkUnits ?? 1.0m,
+            WorkShiftStatus = WorkShiftStatus.PRESENT
+        };
+
+        if (shift != null)
+        {
+            timesheet.ShiftId = shift.Id;
+            timesheet.ShiftCode = shift.ShiftCode;
+            timesheet.ShiftName = shift.ShiftName;
+        }
+
+        if (checkInTime.HasValue)
+        {
+            timesheet.CheckInTime = checkInTime.Value;
+        }
+        else if (!timesheet.CheckInTime.HasValue)
+        {
+            timesheet.CheckInTime = shift?.StartTime ?? new TimeSpan(8, 0, 0);
+        }
+
+        if (checkOutTime.HasValue)
+        {
+            timesheet.CheckOutTime = checkOutTime.Value;
+            timesheet.EvaluateShift(shift);
+        }
+        else
+        {
+            timesheet.EvaluateCheckIn(shift);
+        }
+
+        if (!string.IsNullOrWhiteSpace(customNote))
+        {
+            timesheet.Note = string.IsNullOrWhiteSpace(timesheet.Note) 
+                ? customNote 
+                : $"{timesheet.Note} • {customNote}";
         }
 
         await _timesheetRepo.AddOrUpdateTimesheetAsync(timesheet);
         return timesheet;
     }
 }
+
+#endregion
+
+#region 5. LẤY HỒ SƠ NHÂN VIÊN HIỆN TẠI (UC_EMP_PROFILE)
+
+public interface IGetEmployeeProfileUseCase
+{
+    Task<Employee?> ExecuteAsync(long employeeId);
+}
+
+public class GetEmployeeProfileUseCase : IGetEmployeeProfileUseCase
+{
+    private readonly IEmployeeRepository _employeeRepo;
+
+    public GetEmployeeProfileUseCase(IEmployeeRepository employeeRepo)
+    {
+        _employeeRepo = employeeRepo;
+    }
+
+    public async Task<Employee?> ExecuteAsync(long employeeId)
+    {
+        if (employeeId <= 0) return null;
+        return await _employeeRepo.GetEmployeeByIdAsync(employeeId);
+    }
+}
+
+#endregion

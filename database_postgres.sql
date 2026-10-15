@@ -1,5 +1,5 @@
--- ============================================================================
--- DỰ ÁN: HỆ THỐNG CHẤM CÔNG & TÍNH LƯƠNG TỰ ĐỘNG (TIMESHEET & PAYROLL SYSTEM)
+﻿-- ============================================================================
+-- HRMS PRO - TIMESHEET & PAYROLL ENTERPRISE DATABASE SYSTEM
 -- BẢN DÀNH CHO: POSTGRESQL 16 (DBeaver / pgAdmin 4 / psql)
 -- ============================================================================
 

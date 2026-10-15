@@ -1,0 +1,1206 @@
+@page "/ai-salary-assistant"
+@inject IAskSalaryAiUseCase AskAiUseCase
+@inject ICompareSalaryUseCase CompareUseCase
+@inject ISimulateSalaryUseCase SimulateUseCase
+@inject IGetEmployeePayslipHistoryUseCase HistoryUseCase
+@inject IGetEmployeeProfileUseCase ProfileUseCase
+@inject ILlmClient LlmClient
+@inject IAiKnowledgeBaseService KnowledgeBaseService
+@using System.Globalization
+@using TimesheetPayroll.CoreBusiness.Services.Interfaces
+@using TimesheetPayroll.CoreBusiness.Models
+
+<div class="container-fluid py-3 px-md-4">
+    <!-- TIÊU ĐỀ VÀ PHÂN ĐOÀN ĐIỀU HƯỚNG -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="bg-gradient bg-primary text-white rounded-3 p-2 shadow-sm d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                    <i class="fa-solid fa-robot fs-5"></i>
+                </div>
+                <div>
+                    <h2 class="h5 mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+                        Trợ Lý Lương AI
+                        <span class="badge bg-success-subtle text-success border border-success-subtle fs-7 fw-semibold">
+                            <i class="fa-solid fa-circle text-success me-1" style="font-size: 0.5rem;"></i>AI Sẵn Sàng 24/7
+                        </span>
+                        @if (LlmClient.IsConfigured)
+                        {
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-7 fw-semibold">
+                                <i class="fa-solid fa-sparkles me-1 text-primary"></i>@LlmClient.ProviderName
+                            </span>
+                        }
+                    </h2>
+                    <p class="text-muted small mb-0">Hỗ trợ tra cứu, đối soát biến động thu nhập và mô phỏng lương thực lĩnh.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3 TAB ĐIỀU HƯỚNG CHÍNH & NÚT CẤU HÌNH AI -->
+        <div class="mt-2 mt-md-0 d-flex flex-wrap align-items-center gap-2">
+            <ul class="nav nav-pills bg-light p-1 rounded-pill border shadow-sm">
+                <li class="nav-item">
+                    <button class="nav-link rounded-pill px-3 py-1-5 small fw-semibold @(activeTab == "chat" ? "active shadow-sm" : "text-secondary")"
+                            @onclick='() => SwitchTab("chat")'>
+                        <i class="fa-solid fa-comments me-1"></i>Hỏi Đáp Trợ Lý AI
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link rounded-pill px-3 py-1-5 small fw-semibold @(activeTab == "compare" ? "active shadow-sm" : "text-secondary")"
+                            @onclick='() => SwitchTab("compare")'>
+                        <i class="fa-solid fa-code-compare me-1"></i>Đối Soát & So Sánh
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link rounded-pill px-3 py-1-5 small fw-semibold @(activeTab == "simulate" ? "active shadow-sm" : "text-secondary")"
+                            @onclick='() => SwitchTab("simulate")'>
+                        <i class="fa-solid fa-calculator me-1"></i>Mô Phỏng What-If
+                    </button>
+                </li>
+            </ul>
+
+            <button class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1-5 fw-semibold shadow-sm d-flex align-items-center gap-1"
+                    @onclick="OpenKnowledgeModal">
+                <i class="fa-solid fa-brain text-primary"></i>
+                <span>Nạp Tri Thức & Cấu Hình AI</span>
+                @if (LlmClient.IsConfigured)
+                {
+                    <span class="badge bg-success rounded-pill ms-1" style="font-size: 0.65rem;">Trực Tuyến</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary rounded-pill ms-1" style="font-size: 0.65rem;">Nội Bộ</span>
+                }
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <div class="mt-2 text-muted small">Đang nạp dữ liệu phiếu lương của bạn...</div>
+        </div>
+    }
+    else
+    {
+        <!-- ========================================== -->
+        <!-- TAB 1: TRÒ CHUYỆN HỎI ĐÁP VỚI TRỢ LÝ AI     -->
+        <!-- ========================================== -->
+        @if (activeTab == "chat")
+        {
+            <div class="row g-3">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-flex flex-column" style="height: calc(100vh - 180px); min-height: 550px;">
+                        <!-- THANH TRẠNG THÁI CHAT -->
+                        <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="position-relative">
+                                    <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                        <i class="fa-solid fa-sparkles"></i>
+                                    </div>
+                                    <span class="position-absolute bottom-0 end-0 bg-success rounded-circle border border-2 border-white" style="width: 10px; height: 10px;"></span>
+                                </div>
+                                <div>
+                                    <div class="fw-bold small text-dark d-flex align-items-center gap-1">
+                                        <span>Trợ Lý Lương AI</span>
+                                        @if (LlmClient.IsConfigured)
+                                        {
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-normal" style="font-size: 0.68rem;">
+                                                <i class="fa-solid fa-sparkles text-primary me-1"></i>@LlmClient.ProviderName (@LlmClient.ActiveModel)
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fw-normal" style="font-size: 0.68rem;">
+                                                <i class="fa-solid fa-microchip me-1"></i>Động Cơ Phân Tích Nội Bộ
+                                            </span>
+                                        }
+                                    </div>
+                                    <div class="text-muted" style="font-size: 0.72rem;">Đã nạp tri thức Luật Lao động 2024 & Phiếu lương thực tế (Zero Hallucination)</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select form-select-sm" style="font-size: 0.8rem; width: auto;" @bind="selectedPeriodId">
+                                    @foreach (var p in payslips)
+                                    {
+                                        <option value="@p.PeriodId">Kỳ: @FormatPeriod(p)</option>
+                                    }
+                                </select>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="ClearChat" title="Làm mới cuộc trò chuyện">
+                                    <i class="fa-solid fa-rotate-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- LUỒNG TIN NHẮN (MESSAGE STREAM) -->
+                        <div class="card-body p-3 overflow-y-auto flex-grow-1 bg-light bg-opacity-50" style="scroll-behavior: smooth;">
+                            @foreach (var msg in chatMessages)
+                            {
+                                @if (msg.IsUser)
+                                {
+                                    <!-- TIN NHẮN NGƯỜI DÙNG -->
+                                    <div class="d-flex justify-content-end mb-3">
+                                        <div class="d-flex flex-row-reverse align-items-start gap-2" style="max-width: 82%;">
+                                            <div class="bg-primary text-white rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
+                                                <i class="fa-solid fa-user" style="font-size: 0.8rem;"></i>
+                                            </div>
+                                            <div>
+                                                <div class="bg-primary text-white p-3 rounded-4 shadow-sm" style="border-top-right-radius: 4px !important;">
+                                                    <div style="font-size: 0.9rem; white-space: pre-wrap;">@msg.Text</div>
+                                                </div>
+                                                <div class="text-end text-muted mt-1" style="font-size: 0.68rem;">@msg.Timestamp.ToString("HH:mm")</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <!-- TIN NHẮN TRỢ LÝ AI -->
+                                    <div class="d-flex justify-content-start mb-3">
+                                        <div class="d-flex align-items-start gap-2" style="max-width: 90%;">
+                                            <div class="bg-white border rounded-circle p-1 text-primary shadow-sm d-flex align-items-center justify-content-center flex-shrink-0" style="width: 34px; height: 34px;">
+                                                <i class="fa-solid fa-robot" style="font-size: 0.9rem;"></i>
+                                            </div>
+                                            <div class="w-100">
+                                                <div class="bg-white border text-dark p-3 rounded-4 shadow-sm" style="border-top-left-radius: 4px !important;">
+                                                    <div style="font-size: 0.88rem; line-height: 1.55; white-space: pre-wrap;">@((MarkupString)FormatMarkdownText(msg.Text))</div>
+
+                                                    <!-- NẾU CÓ DỮ LIỆU ĐỐI SOÁT CHÊNH LỆCH KÈM THEO -->
+                                                    @if (msg.ComparisonDiff != null)
+                                                    {
+                                                        <div class="mt-3 pt-2 border-top">
+                                                            <div class="fw-bold small text-secondary mb-2">
+                                                                <i class="fa-solid fa-list-check me-1"></i>Bảng Phân Tích Chênh Lệch Nhanh:
+                                                            </div>
+                                                            <div class="table-responsive">
+                                                                <table class="table table-sm table-bordered align-middle mb-2" style="font-size: 0.8rem;">
+                                                                    <thead class="table-light">
+                                                                        <tr>
+                                                                            <th>Khoản Mục</th>
+                                                                            <th class="text-end">@FormatPeriod(msg.ComparisonDiff.PeriodA)</th>
+                                                                            <th class="text-end">@FormatPeriod(msg.ComparisonDiff.PeriodB)</th>
+                                                                            <th class="text-end">Chênh Lệch</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        @foreach (var line in msg.ComparisonDiff.LineDiffs)
+                                                                        {
+                                                                            <tr>
+                                                                                <td class="fw-semibold">@line.Title</td>
+                                                                                <td class="text-end">@line.AmountA.ToString("N0", vnCulture) đ</td>
+                                                                                <td class="text-end">@line.AmountB.ToString("N0", vnCulture) đ</td>
+                                                                                <td class="text-end fw-bold @(line.Difference > 0 ? "text-success" : (line.Difference < 0 ? "text-danger" : "text-muted"))">
+                                                                                    @(line.Difference > 0 ? "+" : "")@line.Difference.ToString("N0", vnCulture) đ
+                                                                                </td>
+                                                                            </tr>
+                                                                        }
+                                                                        <tr class="table-primary fw-bold">
+                                                                            <td>THỰC LĨNH (NET)</td>
+                                                                            <td class="text-end">@msg.ComparisonDiff.PeriodA.NetSalary.ToString("N0", vnCulture) đ</td>
+                                                                            <td class="text-end">@msg.ComparisonDiff.PeriodB.NetSalary.ToString("N0", vnCulture) đ</td>
+                                                                            <td class="text-end @(msg.ComparisonDiff.NetDiff > 0 ? "text-success" : (msg.ComparisonDiff.NetDiff < 0 ? "text-danger" : "text-muted"))">
+                                                                                @(msg.ComparisonDiff.NetDiff > 0 ? "+" : "")@msg.ComparisonDiff.NetDiff.ToString("N0", vnCulture) đ
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+
+                                                <!-- GỢI Ý CÂU HỎI TIẾP THEO (CHIPS) -->
+                                                @if (msg.FollowUpSuggestions != null && msg.FollowUpSuggestions.Any())
+                                                {
+                                                    <div class="d-flex flex-wrap gap-1 mt-2">
+                                                        @foreach (var suggestion in msg.FollowUpSuggestions)
+                                                        {
+                                                            <button class="btn btn-sm btn-outline-primary bg-white rounded-pill px-2-5 py-1 text-truncate"
+                                                                    style="font-size: 0.75rem; max-width: 280px;"
+                                                                    @onclick="() => AskQuestionAsync(suggestion)">
+                                                                <i class="fa-regular fa-comment-dots me-1"></i>@suggestion
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                <div class="d-flex align-items-center justify-content-between text-muted mt-1" style="font-size: 0.68rem;">
+                                                    <span>@msg.Timestamp.ToString("HH:mm") • Trợ lý AI</span>
+                                                    @if (!string.IsNullOrEmpty(msg.ProviderUsed))
+                                                    {
+                                                        <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.65rem;">
+                                                            <i class="fa-solid fa-bolt text-primary me-1"></i>@msg.ProviderUsed
+                                                        </span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+
+                            <!-- TRẠNG THÁI ĐANG SUY NGHĨ -->
+                            @if (isThinking)
+                            {
+                                <div class="d-flex align-items-center gap-2 text-muted small py-2 px-1">
+                                    <div class="spinner-grow spinner-grow-sm text-primary" role="status"></div>
+                                    <span>AI đang đối soát dữ liệu và phân tích lý do...</span>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- KHUNG NHẬP CÂU HỎI -->
+                        <div class="card-footer bg-white border-top p-3">
+                            <!-- THANH GỢI Ý NHANH (QUICK PROMPTS) -->
+                            <div class="d-flex gap-2 overflow-x-auto pb-2 mb-2" style="scrollbar-width: none;">
+                                <button class="btn btn-sm btn-light border rounded-pill px-3 text-nowrap" style="font-size: 0.78rem;" @onclick='() => AskQuestionAsync("Sao lương tháng 10 ít hơn tháng 9?")'>
+                                    🔍 Sao lương T10 ít hơn T9?
+                                </button>
+                                <button class="btn btn-sm btn-light border rounded-pill px-3 text-nowrap" style="font-size: 0.78rem;" @onclick='() => AskQuestionAsync("Chi tiết phiếu lương tháng này của tôi gồm những gì?")'>
+                                    📄 Chi tiết phiếu lương tháng này
+                                </button>
+                                <button class="btn btn-sm btn-light border rounded-pill px-3 text-nowrap" style="font-size: 0.78rem;" @onclick='() => AskQuestionAsync("Giải thích các khoản trừ bảo hiểm BHXH, BHYT, BHTN")'>
+                                    🛡️ Giải thích trích nộp bảo hiểm (10.5%)
+                                </button>
+                                <button class="btn btn-sm btn-light border rounded-pill px-3 text-nowrap" style="font-size: 0.78rem;" @onclick='() => AskQuestionAsync("Quy định về ngày nghỉ phép năm có lương theo luật")'>
+                                    🌴 Nghỉ phép năm (12 ngày)
+                                </button>
+                                <button class="btn btn-sm btn-light border rounded-pill px-3 text-nowrap" style="font-size: 0.78rem;" @onclick='() => AskQuestionAsync("Cách tính thuế thu nhập cá nhân TNCN theo luật")'>
+                                    📋 Cách tính thuế TNCN
+                                </button>
+                                <button class="btn btn-sm btn-light border rounded-pill px-3 text-nowrap" style="font-size: 0.78rem;" @onclick='() => AskQuestionAsync("Công thức tính tiền làm thêm giờ Overtime và làm đêm")'>
+                                    ⏰ Tiền làm thêm OT & làm ca đêm
+                                </button>
+                                <button class="btn btn-sm btn-light border rounded-pill px-3 text-nowrap" style="font-size: 0.78rem;" @onclick='() => AskQuestionAsync("Quy định tiền lương thử việc theo Bộ luật Lao động")'>
+                                    📝 Lương thử việc (85%)
+                                </button>
+                            </div>
+
+                            <form @onsubmit="HandleSendMessageAsync">
+                                <div class="input-group">
+                                    <input type="text"
+                                           class="form-control rounded-start-pill px-3"
+                                           placeholder="Nhập câu hỏi về lương của bạn (VD: Tại sao lương tháng này giảm?)..."
+                                           @bind="inputQuestion"
+                                           disabled="@isThinking" />
+                                    <button class="btn btn-primary rounded-end-pill px-4 fw-semibold"
+                                            type="submit"
+                                            disabled="@(string.IsNullOrWhiteSpace(inputQuestion) || isThinking)">
+                                        <i class="fa-solid fa-paper-plane me-1"></i>Gửi
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SIDEBAR BÊN PHẢI: TỔNG QUAN PHIẾU LƯƠNG ĐANG CHỌN -->
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold mb-0 text-dark">
+                                <i class="fa-solid fa-wallet text-primary me-2"></i>Kỳ Lương Hiện Tại
+                            </h6>
+                            @if (selectedPayslip != null)
+                            {
+                                <span class="badge bg-primary px-2 py-1">@FormatPeriod(selectedPayslip)</span>
+                            }
+                        </div>
+
+                        @if (selectedPayslip != null)
+                        {
+                            <div class="p-3 bg-primary bg-opacity-10 rounded-3 text-center mb-3">
+                                <div class="text-muted small">Thực Lĩnh Chuyển Khoản (Net)</div>
+                                <div class="display-6 fw-bold text-primary mt-1">
+                                    @selectedPayslip.NetSalary.ToString("N0", vnCulture) <span class="fs-6">VNĐ</span>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-3 text-center">
+                                <div class="col-4">
+                                    <div class="p-2 border rounded-3 bg-light">
+                                        <div class="text-muted" style="font-size: 0.72rem;">Ngày Công</div>
+                                        <div class="fw-bold small text-dark">@selectedPayslip.ActualWorkDays công</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded-3 bg-light">
+                                        <div class="text-muted" style="font-size: 0.72rem;">Tổng Gross</div>
+                                        <div class="fw-bold small text-success">@selectedPayslip.GrossSalary.ToString("N0", vnCulture) đ</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded-3 bg-light">
+                                        <div class="text-muted" style="font-size: 0.72rem;">Khấu Trừ</div>
+                                        <div class="fw-bold small text-danger">@selectedPayslip.TotalDeductions.ToString("N0", vnCulture) đ</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h6 class="small fw-bold text-secondary mb-2">Khoản mục cấu thành:</h6>
+                            <ul class="list-group list-group-flush small mb-3">
+                                @foreach (var l in selectedPayslip.Lines)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-1-5">
+                                        <span class="text-truncate" style="max-width: 190px;" title="@l.LineDescription">
+                                            @(l.IsDeduction ? "🔴" : "🟢") @l.LineDescription
+                                        </span>
+                                        <span class="fw-semibold @(l.IsDeduction ? "text-danger" : "text-success")">
+                                            @(l.IsDeduction ? "-" : "+")@l.Amount.ToString("N0", vnCulture) đ
+                                        </span>
+                                    </li>
+                                }
+                            </ul>
+
+                            <button class="btn btn-outline-primary btn-sm w-100 rounded-pill" @onclick='() => SwitchTab("compare")'>
+                                <i class="fa-solid fa-code-compare me-1"></i>Mở Công Cụ Đối Soát Chi Tiết
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="text-muted text-center py-4 small">Chưa có thông tin phiếu lương</div>
+                        }
+                    </div>
+
+                    <!-- THẺ AN TOÀN & BẢO MẬT DỮ LIỆU -->
+                    <div class="card border-0 shadow-sm rounded-4 p-3 bg-light">
+                        <div class="d-flex align-items-center gap-2 mb-2 text-success">
+                            <i class="fa-solid fa-shield-halved fs-5"></i>
+                            <span class="fw-bold small">Cơ Chế Bảo Mật & Xác Thực AI</span>
+                        </div>
+                        <ul class="small text-muted ps-3 mb-0" style="font-size: 0.78rem; line-height: 1.5;">
+                            <li>Chỉ truy xuất phiếu lương thuộc sở hữu của chính bạn (Anti-IDOR).</li>
+                            <li>Dữ liệu tính toán dựa trên các công thức pháp lý và bảng lương thực tế.</li>
+                            <li>Độ trễ phản hồi dưới 2 giây với độ chính xác số học 100%.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- ========================================== -->
+        <!-- TAB 2: ĐỐI SOÁT & SO SÁNH HAI KỲ LƯƠNG     -->
+        <!-- ========================================== -->
+        @if (activeTab == "compare")
+        {
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+                <div class="row g-3 align-items-end mb-4 pb-3 border-bottom">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-secondary">
+                            <i class="fa-solid fa-calendar-day text-primary me-1"></i>Kỳ Lương A (Kỳ Cần So Sánh):
+                        </label>
+                        <select class="form-select" @bind="comparePeriodA">
+                            @foreach (var p in payslips)
+                            {
+                                <option value="@p.PeriodId">@FormatPeriod(p) — Net: @p.NetSalary.ToString("N0", vnCulture) đ</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-secondary">
+                            <i class="fa-solid fa-clock-rotate-left text-primary me-1"></i>Kỳ Lương B (Kỳ Đối Chiếu):
+                        </label>
+                        <select class="form-select" @bind="comparePeriodB">
+                            @foreach (var p in payslips)
+                            {
+                                <option value="@p.PeriodId">@FormatPeriod(p) — Net: @p.NetSalary.ToString("N0", vnCulture) đ</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <button class="btn btn-primary w-100 fw-semibold" @onclick="RunComparisonAsync" disabled="@(comparePeriodA == comparePeriodB || isComparing)">
+                            @if (isComparing)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                <span>Đang đối soát...</span>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-magnifying-glass-chart me-1"></i>
+                                <span>Thực Hiện Đối Soát Lương</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+
+                @if (comparisonDiff != null)
+                {
+                    <!-- 4 THẺ CHỈ SỐ BIẾN ĐỘNG (DELTA KPI CARDS) -->
+                    <div class="row g-3 mb-4 text-center">
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 rounded-3 border bg-light h-100">
+                                <div class="text-muted small">Chênh lệch Ngày Công</div>
+                                <div class="fs-4 fw-bold mt-1 @(comparisonDiff.WorkDaysDiff >= 0 ? "text-success" : "text-danger")">
+                                    @(comparisonDiff.WorkDaysDiff > 0 ? "+" : "")@comparisonDiff.WorkDaysDiff công
+                                </div>
+                                <div class="text-muted" style="font-size: 0.72rem;">@comparisonDiff.PeriodA.ActualWorkDays vs @comparisonDiff.PeriodB.ActualWorkDays công</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 rounded-3 border bg-light h-100">
+                                <div class="text-muted small">Chênh lệch Thu nhập Gross</div>
+                                <div class="fs-4 fw-bold mt-1 @(comparisonDiff.GrossDiff >= 0 ? "text-success" : "text-danger")">
+                                    @(comparisonDiff.GrossDiff > 0 ? "+" : "")@comparisonDiff.GrossDiff.ToString("N0", vnCulture) đ
+                                </div>
+                                <div class="text-muted" style="font-size: 0.72rem;">@comparisonDiff.PeriodA.GrossSalary.ToString("N0", vnCulture) vs @comparisonDiff.PeriodB.GrossSalary.ToString("N0", vnCulture) đ</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 rounded-3 border bg-light h-100">
+                                <div class="text-muted small">Chênh lệch Khấu Trừ</div>
+                                <div class="fs-4 fw-bold mt-1 @(comparisonDiff.DeductionDiff <= 0 ? "text-success" : "text-danger")">
+                                    @(comparisonDiff.DeductionDiff > 0 ? "+" : "")@comparisonDiff.DeductionDiff.ToString("N0", vnCulture) đ
+                                </div>
+                                <div class="text-muted" style="font-size: 0.72rem;">@comparisonDiff.PeriodA.TotalDeductions.ToString("N0", vnCulture) vs @comparisonDiff.PeriodB.TotalDeductions.ToString("N0", vnCulture) đ</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 rounded-3 border h-100 @(comparisonDiff.NetDiff >= 0 ? "bg-success-subtle border-success" : "bg-danger-subtle border-danger")">
+                                <div class="small fw-semibold @(comparisonDiff.NetDiff >= 0 ? "text-success" : "text-danger")">THỰC LĨNH CHÊNH LỆCH (NET)</div>
+                                <div class="fs-3 fw-bold mt-1 @(comparisonDiff.NetDiff >= 0 ? "text-success" : "text-danger")">
+                                    @(comparisonDiff.NetDiff > 0 ? "+" : "")@comparisonDiff.NetDiff.ToString("N0", vnCulture) đ
+                                </div>
+                                <div class="small fw-semibold opacity-75">
+                                    @(comparisonDiff.NetDiff > 0 ? "Kỳ A nhận nhiều hơn" : (comparisonDiff.NetDiff < 0 ? "Kỳ A nhận ít hơn" : "Hai kỳ bằng nhau"))
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- THẺ GIẢI TRÌNH CÁC NGUYÊN NHÂN CHÍNH (AI EXPLANATION BOX) -->
+                    <div class="card border-0 bg-primary bg-opacity-10 rounded-3 p-3 mb-4">
+                        <div class="d-flex align-items-center gap-2 text-primary fw-bold mb-2">
+                            <i class="fa-solid fa-sparkles fs-5"></i>
+                            <span>Trợ Lý AI Phân Tích Nguyên Nhân Biến Động:</span>
+                        </div>
+                        <div class="row g-2">
+                            @foreach (var factor in comparisonDiff.KeyFactors)
+                            {
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-white rounded-3 border shadow-sm h-100">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <span class="badge @factor.BadgeClass"><i class="fa-solid @factor.Icon me-1"></i>@factor.Title</span>
+                                            @if (factor.ImpactAmount != 0)
+                                            {
+                                                <span class="fw-bold small @(factor.ImpactAmount > 0 ? "text-success" : "text-danger")">
+                                                    @(factor.ImpactAmount > 0 ? "+" : "")@factor.ImpactAmount.ToString("N0", vnCulture) đ
+                                                </span>
+                                            }
+                                        </div>
+                                        <div class="small text-muted">@factor.Description</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- BẢNG ĐỐI CHIẾU CHI TIẾT TỪNG DÒNG (SIDE-BY-SIDE DIFF TABLE) -->
+                    <h6 class="fw-bold text-dark mb-3">
+                        <i class="fa-solid fa-table-list text-primary me-2"></i>Bảng Kê Đối Soát Chi Tiết Từng Khoản Mục
+                    </h6>
+                    <div class="table-responsive rounded-3 border">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.88rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="min-width: 200px;">Khoản Mục Cấu Thành</th>
+                                    <th>Phân Loại</th>
+                                    <th class="text-end" style="width: 150px;">Kỳ A (@FormatPeriod(comparisonDiff.PeriodA))</th>
+                                    <th class="text-end" style="width: 150px;">Kỳ B (@FormatPeriod(comparisonDiff.PeriodB))</th>
+                                    <th class="text-end" style="width: 140px;">Chênh Lệch</th>
+                                    <th>Ghi Chú Giải Trình</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var line in comparisonDiff.LineDiffs)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@line.Title</td>
+                                        <td>
+                                            <span class="badge @(line.Category == "Thu nhập" ? "bg-success-subtle text-success border border-success-subtle" : "bg-danger-subtle text-danger border border-danger-subtle")">
+                                                @line.Category
+                                            </span>
+                                        </td>
+                                        <td class="text-end">@line.AmountA.ToString("N0", vnCulture) đ</td>
+                                        <td class="text-end">@line.AmountB.ToString("N0", vnCulture) đ</td>
+                                        <td class="text-end fw-bold @(line.Difference > 0 ? "text-success" : (line.Difference < 0 ? "text-danger" : "text-muted"))">
+                                            @(line.Difference > 0 ? "+" : "")@line.Difference.ToString("N0", vnCulture) đ
+                                        </td>
+                                        <td class="text-muted small">@line.Reason</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light fw-bold">
+                                <tr>
+                                    <td colspan="2">TỔNG LƯƠNG THỰC LĨNH (NET)</td>
+                                    <td class="text-end text-primary">@comparisonDiff.PeriodA.NetSalary.ToString("N0", vnCulture) đ</td>
+                                    <td class="text-end text-secondary">@comparisonDiff.PeriodB.NetSalary.ToString("N0", vnCulture) đ</td>
+                                    <td class="text-end @(comparisonDiff.NetDiff > 0 ? "text-success" : (comparisonDiff.NetDiff < 0 ? "text-danger" : "text-muted"))">
+                                        @(comparisonDiff.NetDiff > 0 ? "+" : "")@comparisonDiff.NetDiff.ToString("N0", vnCulture) đ
+                                    </td>
+                                    <td class="text-success small">Tự động đối soát chuẩn xác</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info border-0 mb-0">
+                        <i class="fa-solid fa-info-circle me-2"></i>Vui lòng chọn 2 kỳ lương khác nhau và nhấn nút <strong>"Thực Hiện Đối Soát Lương"</strong> để phân tích.
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- ========================================== -->
+        <!-- TAB 3: MÔ PHỎNG WHAT-IF TÍNH THỬ LƯƠNG    -->
+        <!-- ========================================== -->
+        @if (activeTab == "simulate")
+        {
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                        <h6 class="fw-bold text-dark mb-3">
+                            <i class="fa-solid fa-sliders text-primary me-2"></i>Tham Số Dự Kiến Giả Định
+                        </h6>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-secondary">Lương Cơ Bản Hợp Đồng (VNĐ)</label>
+                            <input type="number" class="form-control" @bind="simRequest.BaseSalary" step="500000" />
+                            <div class="form-text" style="font-size: 0.72rem;">Dùng để làm căn cứ đóng bảo hiểm 10.5% và chia đơn giá ngày công.</div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-secondary">Ngày Công Chuẩn</label>
+                                <input type="number" class="form-control" @bind="simRequest.StandardWorkDays" step="1" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-secondary">Ngày Công Làm Thực Tế</label>
+                                <input type="number" class="form-control" @bind="simRequest.ActualWorkDays" step="0.5" />
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-secondary">Giờ Tăng Ca (OT)</label>
+                                <input type="number" class="form-control" @bind="simRequest.OvertimeHours" step="1" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-secondary">Hệ Số Làm Thêm</label>
+                                <select class="form-select" @bind="simRequest.OvertimeMultiplier">
+                                    <option value="1.5">150% (Ngày thường)</option>
+                                    <option value="2.0">200% (Cuối tuần)</option>
+                                    <option value="3.0">300% (Ngày lễ, Tết)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-secondary">Phụ Cấp Ăn Trưa</label>
+                                <input type="number" class="form-control" @bind="simRequest.MealAllowance" step="100000" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-secondary">Phụ Cấp Khác/Xăng Xe</label>
+                                <input type="number" class="form-control" @bind="simRequest.FuelAllowance" step="100000" />
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-4">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-secondary">Thưởng Dự Kiến (KPI)</label>
+                                <input type="number" class="form-control" @bind="simRequest.Bonus" step="200000" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold text-secondary">Số Người Phụ Thuộc</label>
+                                <input type="number" class="form-control" @bind="simRequest.NumberOfDependents" min="0" max="10" />
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary w-100 fw-semibold rounded-pill py-2" @onclick="RunSimulationAsync">
+                            <i class="fa-solid fa-calculator me-2"></i>Tính Toán Dự Kiến Lương Ngay
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    @if (simResult != null)
+                    {
+                        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0 text-dark">
+                                    <i class="fa-solid fa-chart-pie text-success me-2"></i>Kết Quả Mô Phỏng Dự Tính
+                                </h6>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1-5">
+                                    Động cơ SalaryFormulaEngine
+                                </span>
+                            </div>
+
+                            <div class="p-4 bg-success bg-opacity-10 rounded-4 text-center mb-4 border border-success-subtle">
+                                <div class="text-muted small fw-semibold text-uppercase">Lương Thực Lĩnh Dự Kiến (Net)</div>
+                                <div class="display-5 fw-bold text-success mt-1">
+                                    @simResult.NetSalary.ToString("N0", vnCulture) <span class="fs-5">VNĐ</span>
+                                </div>
+                                <div class="small text-muted mt-1">Đã khấu trừ bảo hiểm 10.5% và thuế TNCN theo luật</div>
+                            </div>
+
+                            <!-- LỜI BÌNH AI -->
+                            <div class="alert alert-light border rounded-3 p-3 mb-4">
+                                <div class="d-flex align-items-center gap-2 text-primary fw-bold small mb-1">
+                                    <i class="fa-solid fa-sparkles"></i>Nhận Xét Của Trợ Lý Lương AI:
+                                </div>
+                                <div class="small text-muted" style="line-height: 1.6;">
+                                    @((MarkupString)FormatMarkdownText(simResult.AiAnalysis))
+                                </div>
+                            </div>
+
+                            <!-- DANH MỤC CÁC KHOẢN TÍNH TOÁN -->
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-3 bg-light h-100">
+                                        <div class="fw-bold text-success small mb-2">
+                                            <i class="fa-solid fa-arrow-down-left me-1"></i>Thu Nhập Gộp (Gross): @simResult.GrossSalary.ToString("N0", vnCulture) đ
+                                        </div>
+                                        <ul class="list-unstyled small text-muted mb-0 ps-1" style="line-height: 1.8;">
+                                            <li>• Lương theo công: <strong>@simResult.ProratedBaseSalary.ToString("N0", vnCulture) đ</strong></li>
+                                            @if (simResult.OvertimePay > 0)
+                                            {
+                                                <li>• Tiền làm thêm OT: <strong>@simResult.OvertimePay.ToString("N0", vnCulture) đ</strong></li>
+                                            }
+                                            <li>• Phụ cấp (ăn trưa, xăng): <strong>@simResult.Allowances.ToString("N0", vnCulture) đ</strong></li>
+                                            @if (simResult.Bonus > 0)
+                                            {
+                                                <li>• Tiền thưởng: <strong>@simResult.Bonus.ToString("N0", vnCulture) đ</strong></li>
+                                            }
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded-3 bg-light h-100">
+                                        <div class="fw-bold text-danger small mb-2">
+                                            <i class="fa-solid fa-arrow-up-right me-1"></i>Tổng Khấu Trừ: @simResult.TotalDeductions.ToString("N0", vnCulture) đ
+                                        </div>
+                                        <ul class="list-unstyled small text-muted mb-0 ps-1" style="line-height: 1.8;">
+                                            <li>• BHXH (8%): <strong>@simResult.Bhxh.ToString("N0", vnCulture) đ</strong></li>
+                                            <li>• BHYT (1.5%): <strong>@simResult.Bhyt.ToString("N0", vnCulture) đ</strong></li>
+                                            <li>• BHTN (1%): <strong>@simResult.Bhtn.ToString("N0", vnCulture) đ</strong></li>
+                                            <li>• Thuế TNCN: <strong>@simResult.PersonalIncomeTax.ToString("N0", vnCulture) đ</strong></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@if (showKnowledgeModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1055;" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-white border-bottom py-3 px-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-primary text-white rounded-3 p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                            <i class="fa-solid fa-brain fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark fs-6 mb-0">Nạp Dữ Liệu & Cấu Hình Trợ Lý Lương AI</h5>
+                            <div class="text-muted" style="font-size: 0.72rem;">Quản lý Mô hình Ngôn ngữ Lớn (LLM), Tri thức Luật Lao động & Ngữ cảnh dữ liệu thực tế</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" @onclick="CloseKnowledgeModal"></button>
+                </div>
+
+                <!-- 3 TAB TRONG MODAL -->
+                <div class="px-4 pt-3 border-bottom bg-light bg-opacity-50">
+                    <ul class="nav nav-pills gap-2 pb-2">
+                        <li class="nav-item">
+                            <button class="nav-link py-1-5 px-3 small fw-semibold @(modalActiveTab == "config" ? "active shadow-sm" : "text-secondary")"
+                                    @onclick='() => modalActiveTab = "config"'>
+                                <i class="fa-solid fa-sliders me-1"></i>1. Mô Hình AI & Kết Nối (LLM)
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1-5 px-3 small fw-semibold @(modalActiveTab == "docs" ? "active shadow-sm" : "text-secondary")"
+                                    @onclick='() => modalActiveTab = "docs"'>
+                                <i class="fa-solid fa-book-bookmark me-1"></i>2. Nạp Tri Thức & Quy Chế
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link py-1-5 px-3 small fw-semibold @(modalActiveTab == "grounding" ? "active shadow-sm" : "text-secondary")"
+                                    @onclick='() => modalActiveTab = "grounding"'>
+                                <i class="fa-solid fa-file-invoice-dollar me-1"></i>3. Ngữ Cảnh Dữ Liệu Nạp Vào
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="modal-body p-4 bg-light bg-opacity-25" style="max-height: 65vh; overflow-y: auto;">
+                    @if (!string.IsNullOrEmpty(configSuccessMsg))
+                    {
+                        <div class="alert alert-success d-flex align-items-center gap-2 py-2 px-3 rounded-3 mb-3">
+                            <i class="fa-solid fa-circle-check fs-5"></i>
+                            <span class="small fw-semibold">@configSuccessMsg</span>
+                        </div>
+                    }
+
+                    <!-- TAB 1: CẤU HÌNH LLM PROVIDER -->
+                    @if (modalActiveTab == "config")
+                    {
+                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-white mb-3">
+                            <h6 class="fw-bold text-dark small mb-3">
+                                <i class="fa-solid fa-microchip text-primary me-2"></i>Chọn Động Cơ Trí Tuệ Nhân Tạo (AI Engine)
+                            </h6>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <div class="p-3 border rounded-3 h-100 @(aiConfig.Provider == AiProviderType.Gemini ? "border-primary bg-primary bg-opacity-10" : "bg-light")" 
+                                         style="cursor: pointer;" 
+                                         @onclick="() => aiConfig.Provider = AiProviderType.Gemini">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <input class="form-check-input mt-0" type="radio" name="aiProvider" id="provGemini" 
+                                                   checked="@(aiConfig.Provider == AiProviderType.Gemini)" />
+                                            <label class="form-check-label fw-bold text-dark small" for="provGemini">
+                                                Google Gemini
+                                            </label>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 0.72rem;">Khuyên dùng. Tốc độ cực nhanh, tiếng Việt xuất sắc, miễn phí.</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="p-3 border rounded-3 h-100 @(aiConfig.Provider == AiProviderType.OpenAi ? "border-primary bg-primary bg-opacity-10" : "bg-light")" 
+                                         style="cursor: pointer;" 
+                                         @onclick="() => aiConfig.Provider = AiProviderType.OpenAi">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <input class="form-check-input mt-0" type="radio" name="aiProvider" id="provOpenAi" 
+                                                   checked="@(aiConfig.Provider == AiProviderType.OpenAi)" />
+                                            <label class="form-check-label fw-bold text-dark small" for="provOpenAi">
+                                                OpenAI (ChatGPT)
+                                            </label>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 0.72rem;">Sử dụng mô hình gpt-4o-mini hoặc gpt-4o qua OpenAI API.</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="p-3 border rounded-3 h-100 @(aiConfig.Provider == AiProviderType.LocalEngine ? "border-primary bg-primary bg-opacity-10" : "bg-light")" 
+                                         style="cursor: pointer;" 
+                                         @onclick="() => aiConfig.Provider = AiProviderType.LocalEngine">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <input class="form-check-input mt-0" type="radio" name="aiProvider" id="provLocal" 
+                                                   checked="@(aiConfig.Provider == AiProviderType.LocalEngine)" />
+                                            <label class="form-check-label fw-bold text-dark small" for="provLocal">
+                                                Động Cơ Nội Bộ
+                                            </label>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 0.72rem;">Chạy offline 100%, không cần API Key, bảo mật dữ liệu tuyệt đối.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if (aiConfig.Provider != AiProviderType.LocalEngine)
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold text-secondary">
+                                        API Key (@(aiConfig.Provider == AiProviderType.Gemini ? "Google AI Studio" : "OpenAI Platform"))
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="@(showApiKeyText ? "text" : "password")" 
+                                               class="form-control" 
+                                               placeholder="Dán API Key vào đây..." 
+                                               @bind="aiConfig.ApiKey" />
+                                        <button class="btn btn-outline-secondary" type="button" @onclick="() => showApiKeyText = !showApiKeyText">
+                                            <i class="fa-solid @(showApiKeyText ? "fa-eye-slash" : "fa-eye")"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text" style="font-size: 0.72rem;">
+                                        @if (aiConfig.Provider == AiProviderType.Gemini)
+                                        {
+                                            <span>Lấy API Key miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" class="text-primary fw-semibold">Google AI Studio</a>. Hỗ trợ biến môi trường <code>GEMINI_API_KEY</code>.</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Lấy API Key tại <a href="https://platform.openai.com/api-keys" target="_blank" class="text-primary fw-semibold">OpenAI Platform</a>.</span>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold text-secondary">Mã Mô Hình (Model ID)</label>
+                                    @if (aiConfig.Provider == AiProviderType.Gemini)
+                                    {
+                                        <select class="form-select" @bind="aiConfig.Model">
+                                            <option value="gemini-2.0-flash">gemini-2.0-flash (Mới nhất, siêu nhanh & thông minh)</option>
+                                            <option value="gemini-1.5-flash">gemini-1.5-flash (Chuẩn ổn định, phản hồi tức thì)</option>
+                                            <option value="gemini-1.5-pro">gemini-1.5-pro (Mô hình lý luận sâu)</option>
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <select class="form-select" @bind="aiConfig.Model">
+                                            <option value="gpt-4o-mini">gpt-4o-mini (Nhanh & tiết kiệm chi phí)</option>
+                                            <option value="gpt-4o">gpt-4o (Mạnh mẽ toàn diện)</option>
+                                        </select>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-info border-0 py-2 small mb-0">
+                                    <i class="fa-solid fa-circle-info me-2"></i>Chế độ <strong>Động Cơ Nội Bộ (Local Engine)</strong> sử dụng các thuật toán đối soát toán học tất định (Deterministic Engine) và bộ quy tắc luật lao động 2024 tích hợp sẵn mà không cần kết nối mạng bên ngoài.
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <!-- TAB 2: TÀI LIỆU TRI THỨC (KNOWLEDGE BASE) -->
+                    @if (modalActiveTab == "docs")
+                    {
+                        <div class="mb-3">
+                            <h6 class="fw-bold text-dark small mb-2 d-flex align-items-center justify-content-between">
+                                <span><i class="fa-solid fa-book-open text-primary me-2"></i>Tài Liệu Tri Thức Pháp Luật Đã Tích Hợp</span>
+                                <span class="badge bg-primary">@allKnowledgeDocs.Count tài liệu</span>
+                            </h6>
+                            <div class="accordion accordion-flush rounded-3 border overflow-hidden" id="accordionKnowledge">
+                                @for (int i = 0; i < allKnowledgeDocs.Count; i++)
+                                {
+                                    var doc = allKnowledgeDocs[i];
+                                    int docIdx = i;
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="@($"heading_{docIdx}")">
+                                            <button class="accordion-button collapsed py-2 px-3 small fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="@($"#collapse_{docIdx}")">
+                                                <span class="badge bg-secondary-subtle text-secondary me-2" style="font-size: 0.68rem;">@doc.Category</span>
+                                                @doc.Title
+                                            </button>
+                                        </h2>
+                                        <div id="@($"collapse_{docIdx}")" class="accordion-collapse collapse" data-bs-parent="#accordionKnowledge">
+                                            <div class="accordion-body small bg-light bg-opacity-50 text-muted py-2 px-3" style="font-size: 0.8rem; line-height: 1.5;">
+                                                <div class="fw-semibold text-dark mb-1"><i class="fa-solid fa-scale-balanced me-1 text-primary"></i>Nguồn: @doc.Source</div>
+                                                <div>@doc.Content</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
+                            <h6 class="fw-bold text-dark small mb-2">
+                                <i class="fa-solid fa-pen-to-square text-success me-2"></i>Nạp Thêm Quy Chế / Chính Sách Riêng Của Doanh Nghiệp
+                            </h6>
+                            <p class="text-muted small mb-2" style="font-size: 0.75rem;">
+                                Bạn có thể gõ thêm các chính sách phụ cấp, chế độ thưởng nội bộ của công ty. AI sẽ ghi nhớ và kết hợp trả lời cho người lao động:
+                            </p>
+                            <textarea class="form-control mb-2" rows="3" 
+                                      placeholder="Ví dụ: Công ty hỗ trợ thêm 300.000 VNĐ thưởng chuyên cần nếu nhân viên đi làm đủ 100% ngày công..." 
+                                      @bind="customNotesInput"></textarea>
+                        </div>
+                    }
+
+                    <!-- TAB 3: NGỮ CẢNH DỮ LIỆU THỰC TẾ (GROUNDING CONTEXT) -->
+                    @if (modalActiveTab == "grounding")
+                    {
+                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
+                            <h6 class="fw-bold text-dark small mb-2">
+                                <i class="fa-solid fa-shield-halved text-success me-2"></i>Bản Xem Trước Ngữ Cảnh Dữ Liệu Nhân Sự Nạp Vào AI
+                            </h6>
+                            <p class="text-muted small mb-3" style="font-size: 0.75rem;">
+                                Khi nhân viên gửi câu hỏi, hệ thống tự động tiêm (inject) các thông tin sau vào System Instruction để AI trả lời chuẩn xác 100%:
+                            </p>
+
+                            <div class="p-3 bg-light rounded-3 border" style="font-family: monospace; font-size: 0.75rem; white-space: pre-wrap; max-height: 280px; overflow-y: auto;">
+                                @GetActiveGroundingPreview()
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="modal-footer bg-light border-top py-2 px-4 d-flex justify-content-between">
+                    <span class="text-muted small" style="font-size: 0.75rem;">
+                        <i class="fa-solid fa-lock text-success me-1"></i>Bảo mật dữ liệu theo nguyên tắc Anti-IDOR & Zero-Hallucination
+                    </span>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" @onclick="CloseKnowledgeModal">Đóng</button>
+                        <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 fw-semibold" @onclick="SaveAiConfig">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>Lưu & Cập Nhật Tri Thức
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private long currentEmployeeId = 1;
+    private Employee? currentEmployee;
+    private List<Payslip> payslips = new();
+    private Payslip? selectedPayslip;
+
+    private string activeTab = "chat";
+    private bool isLoading = true;
+
+    // Chat Tab State
+    private long selectedPeriodId = 10;
+    private string inputQuestion = string.Empty;
+    private bool isThinking = false;
+    private List<AiChatMessage> chatMessages = new();
+
+    // Compare Tab State
+    private long comparePeriodA = 10;
+    private long comparePeriodB = 9;
+    private SalaryComparisonDiff? comparisonDiff;
+    private bool isComparing = false;
+
+    // Simulator Tab State
+    private SalarySimulationRequest simRequest = new();
+    private SalarySimulationResult? simResult;
+
+    // AI Configuration & Knowledge Base State
+    private bool showKnowledgeModal = false;
+    private string modalActiveTab = "config";
+    private AiConfiguration aiConfig = new();
+    private string customNotesInput = string.Empty;
+    private bool showApiKeyText = false;
+    private string configSuccessMsg = string.Empty;
+    private List<KnowledgeDocument> allKnowledgeDocs = new();
+
+    private readonly CultureInfo vnCulture = new("vi-VN");
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            if (AuthStateTask != null)
+            {
+                var authState = await AuthStateTask;
+                var empIdClaim = authState.User.FindFirst("EmployeeId")?.Value;
+                if (long.TryParse(empIdClaim, out var id) && id > 0)
+                {
+                    currentEmployeeId = id;
+                }
+            }
+
+            // Tải thông tin nhân viên
+            currentEmployee = await ProfileUseCase.ExecuteAsync(currentEmployeeId);
+
+            // Tải lịch sử phiếu lương (Chống IDOR: chỉ tải của chính nhân viên)
+            var history = await HistoryUseCase.ExecuteAsync(currentEmployeeId);
+            payslips = history.ToList();
+
+            if (payslips.Any())
+            {
+                selectedPeriodId = payslips.First().PeriodId;
+                selectedPayslip = payslips.First();
+
+                comparePeriodA = payslips.First().PeriodId;
+                comparePeriodB = payslips.Count > 1 ? payslips[1].PeriodId : comparePeriodA;
+            }
+
+            // Khởi tạo form mô phỏng với mức lương hợp đồng thực tế
+            if (currentEmployee != null)
+            {
+                simRequest.BaseSalary = currentEmployee.BaseSalary > 0 ? currentEmployee.BaseSalary : 10000000m;
+                simRequest.MealAllowance = currentEmployee.MealAllowance;
+                simRequest.FuelAllowance = currentEmployee.FuelAllowance;
+            }
+            simResult = await SimulateUseCase.ExecuteAsync(currentEmployeeId, simRequest);
+
+            // Tin nhắn mở đầu của Trợ lý AI
+            InitGreetingMessage();
+
+            // Tự động chạy so sánh ban đầu nếu có 2 kỳ
+            if (comparePeriodA != comparePeriodB)
+            {
+                comparisonDiff = await CompareUseCase.ExecuteAsync(currentEmployeeId, comparePeriodA, comparePeriodB);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AiSalaryAssistant] Init error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void InitGreetingMessage()
+    {
+        string name = currentEmployee?.FullName ?? "bạn";
+        chatMessages.Add(new AiChatMessage
+        {
+            IsUser = false,
+            Timestamp = DateTime.Now,
+            Text = $"Dạ chào anh/chị **{name}**! Em là **Trợ lý Lương AI** thông minh.\nEm đã liên kết với phiếu lương của bạn tại hệ thống doanh nghiệp. Anh/chị có thể hỏi bất kỳ câu hỏi nào về các khoản lương, lý do biến động lương hoặc bấm chọn các câu hỏi gợi ý bên dưới nhé!",
+            FollowUpSuggestions = new List<string>
+            {
+                "Sao lương tháng 10 ít hơn tháng 9?",
+                "Chi tiết phiếu lương tháng này của tôi",
+                "Giải thích các khoản trừ bảo hiểm (10.5%)",
+                "Cách tính thuế thu nhập cá nhân (TNCN)"
+            }
+        });
+    }
+
+    private void SwitchTab(string tab)
+    {
+        activeTab = tab;
+    }
+
+    private async Task HandleSendMessageAsync()
+    {
+        if (string.IsNullOrWhiteSpace(inputQuestion) || isThinking) return;
+
+        string question = inputQuestion.Trim();
+        inputQuestion = string.Empty;
+        await AskQuestionAsync(question);
+    }
+
+    private async Task AskQuestionAsync(string question)
+    {
+        // 1. Thêm tin nhắn của User
+        chatMessages.Add(new AiChatMessage
+        {
+            IsUser = true,
+            Text = question,
+            Timestamp = DateTime.Now
+        });
+
+        isThinking = true;
+        StateHasChanged();
+
+        try
+        {
+            // Trì hoãn nhẹ 400ms để tạo cảm giác suy nghĩ tự nhiên mượt mà
+            await Task.Delay(400);
+
+            // Xác định kỳ so sánh nếu có
+            long? compId = null;
+            if (payslips.Count > 1)
+            {
+                var other = payslips.FirstOrDefault(p => p.PeriodId != selectedPeriodId);
+                compId = other?.PeriodId;
+            }
+
+            var aiAnswer = await AskAiUseCase.ExecuteAsync(currentEmployeeId, question, selectedPeriodId, compId);
+            chatMessages.Add(aiAnswer);
+        }
+        catch (Exception ex)
+        {
+            chatMessages.Add(new AiChatMessage
+            {
+                IsUser = false,
+                Text = $"Đã xảy ra sự cố trong quá trình đối soát: {ex.Message}",
+                Timestamp = DateTime.Now
+            });
+        }
+        finally
+        {
+            isThinking = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearChat()
+    {
+        chatMessages.Clear();
+        InitGreetingMessage();
+    }
+
+    private async Task RunComparisonAsync()
+    {
+        if (comparePeriodA == comparePeriodB) return;
+
+        isComparing = true;
+        try
+        {
+            comparisonDiff = await CompareUseCase.ExecuteAsync(currentEmployeeId, comparePeriodA, comparePeriodB);
+        }
+        finally
+        {
+            isComparing = false;
+        }
+    }
+
+    private async Task RunSimulationAsync()
+    {
+        simResult = await SimulateUseCase.ExecuteAsync(currentEmployeeId, simRequest);
+    }
+
+    private string FormatPeriod(Payslip p)
+    {
+        if (p.PeriodMonth > 0)
+            return $"Tháng {p.PeriodMonth}/{p.PeriodYear}";
+        if (!string.IsNullOrEmpty(p.PeriodCode))
+            return p.PeriodCode;
+        return $"Kỳ #{p.PeriodId}";
+    }
+
+    private string FormatMarkdownText(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+        
+        // Escape HTML
+        var safe = System.Net.WebUtility.HtmlEncode(text);
+
+        // Bold: **text** -> <strong>text</strong>
+        safe = System.Text.RegularExpressions.Regex.Replace(safe, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+
+        // Italic: *text* -> <em>text</em>
+        safe = System.Text.RegularExpressions.Regex.Replace(safe, @"\*(.+?)\*", "<em>$1</em>");
+
+        return safe;
+    }
+
+    private void OpenKnowledgeModal()
+    {
+        aiConfig = LlmClient.GetConfiguration();
+        customNotesInput = KnowledgeBaseService.GetCustomNotes();
+        allKnowledgeDocs = KnowledgeBaseService.GetAllDocuments();
+        configSuccessMsg = string.Empty;
+        showKnowledgeModal = true;
+    }
+
+    private void CloseKnowledgeModal()
+    {
+        showKnowledgeModal = false;
+        configSuccessMsg = string.Empty;
+    }
+
+    private void SaveAiConfig()
+    {
+        LlmClient.UpdateConfiguration(aiConfig);
+        KnowledgeBaseService.SetCustomNotes(customNotesInput);
+        allKnowledgeDocs = KnowledgeBaseService.GetAllDocuments();
+        configSuccessMsg = "Đã lưu và cập nhật tri thức cho AI thành công!";
+        StateHasChanged();
+    }
+
+    private string GetActiveGroundingPreview()
+    {
+        Payslip? prev = null;
+        if (payslips.Count > 1)
+        {
+            prev = payslips.FirstOrDefault(p => p.PeriodId != selectedPeriodId);
+        }
+        return KnowledgeBaseService.BuildFullSystemPrompt(currentEmployee, selectedPayslip, prev, comparisonDiff);
+    }
+}

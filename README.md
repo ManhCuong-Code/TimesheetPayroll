@@ -14,6 +14,7 @@
 * **Kho lưu trữ (Repository):** [https://github.com/ManhCuong-Code/TimesheetPayroll.git](https://github.com/ManhCuong-Code/TimesheetPayroll.git)
 * **Cơ sở dữ liệu:** **Microsoft SQL Server (`BangChamCongDB`)** *(Độc lập 100% với HomeStayHueDB)*
 * **Nền tảng công nghệ:** **.NET 10 Blazor Interactive Server + Dapper Micro-ORM + Clean Architecture**
+* **Trí tuệ Nhân tạo (AI):** **Trợ Lý Lương AI & Widget Nổi Toàn Hệ Thống (Google Gemini / OpenAI / Động Cơ Nội Bộ)**
 
 ---
 
@@ -24,11 +25,11 @@ Hệ thống được thiết kế với cơ chế **Xác thực và Phân quy�
 Người dùng có thể đăng nhập tại đường dẫn: **`/login`** (hỗ trợ nút bấm **Đăng nhập nhanh 1-Click** hoặc nhập biểu mẫu kiểm tra trực tiếp vào SQL Server).
 
 | STT | Tên Đăng Nhập | Mật Khẩu | Vai Trò (Role) | Họ Và Tên Nhân Viên | Mã NV | Phòng Ban | Quyền Hạn Nghiệp Vụ Trong Hệ Thống |
-| :---: | :--- | :---: | :--- | :--- | :---: | :--- | :--- |
-| **1** | `nhanvien.a` | `123456` | **`ROLE_EMPLOYEE`** | **Nguyễn Văn A** | `EMP001` | Phòng Công Nghệ Thông Tin | • Điểm danh Check-In/Check-Out hàng ngày<br/>• Tra cứu nhật ký chấm công tháng cá nhân<br/>• Tạo đơn xin nghỉ phép trực tuyến<br/>• Tra cứu phiếu lương chi tiết của chính mình (chống lộ IDOR) |
-| **2** | `ketoan.thao` | `123456` | **`ROLE_HR_ACCOUNTANT`** | **Lê Thị Thu Thảo** | `EMP002` | Phòng Nhân Sự & Kế Toán | • Toàn bộ quyền của nhân viên<br/>• Xét duyệt/từ chối đơn xin nghỉ phép<br/>• Khóa bảng chấm công kỳ<br/>• **Chạy tính toán lương tự động hàng loạt 1-chạm**<br/>• Đối soát quỹ lương tổng hợp toàn công ty<br/>• **Chốt kỳ lương Khóa sổ (Read-Only)** chống sửa đổi<br/>• Xuất file chuyển khoản ngân hàng |
-| **3** | `admin.trong` | `123456` | **`ROLE_ADMIN`** | **Trần Đình Trọng** | `EMP003` | Ban Giám Đốc / QTV | • Toàn quyền quản trị cao nhất toàn hệ thống<br/>• Quản lý tài khoản người dùng và cấp phát vai trò<br/>• Cấu hình các mức tỷ lệ trích nộp bảo hiểm (BHXH, BHYT, BHTN)<br/>• Giám sát tính lương và chốt sổ tài chính |
-| **4** | `nhanvien.tuan` | `123456` | **`ROLE_EMPLOYEE`** | **Hoàng Minh Tuấn** | `EMP004` | Phòng Kinh Doanh & Tiếp Thị | • Chấm công, nộp đơn nghỉ phép và tra cứu phiếu thu nhập cá nhân độc lập của nhân viên Tuấn |
+| :---: | :--- | :--- :--- | :--- | :--- | :---: | :--- | :--- |
+| **1** | `nhanvien.a` | `123456` | **`ROLE_EMPLOYEE`** | **Nguyễn Văn A** | `EMP001` | Phòng Công Nghệ Thông Tin | • Điểm danh Check-In/Check-Out hàng ngày<br/>• Tra cứu nhật ký chấm công tháng cá nhân<br/>• Tạo đơn xin nghỉ phép trực tuyến<br/>• Tra cứu phiếu lương chi tiết của chính mình (chống lộ IDOR)<br/>• **Hỏi đáp Trợ lý Lương AI 24/7 qua Widget nổi ở mọi màn hình**<br/>• **Đối soát biến động thu nhập 2 kỳ & Mô phỏng lương What-If**<br/>• Đổi mật khẩu cá nhân (`/change-password`) |
+| **2** | `ketoan.thao` | `123456` | **`ROLE_HR_ACCOUNTANT`** | **Lê Thị Thu Thảo** | `EMP002` | Phòng Nhân Sự & Kế Toán | • Toàn bộ quyền của nhân viên<br/>• Xét duyệt/từ chối đơn xin nghỉ phép<br/>• Khóa bảng chấm công kỳ<br/>• **Chạy tính toán lương tự động hàng loạt 1-chạm**<br/>• Đối soát quỹ lương tổng hợp toàn công ty<br/>• **Chốt kỳ lương Khóa sổ (Read-Only)** chống sửa đổi<br/>• Xuất file chuyển khoản ngân hàng<br/>• Quản lý danh mục Ca làm việc (`/admin/shifts`)<br/>• Nạp quy chế & tinh chỉnh tri thức cho Trợ lý AI |
+| **3** | `admin.trong` | `123456` | **`ROLE_ADMIN`** | **Trần Đình Trọng** | `EMP003` | Ban Giám Đốc / QTV | • Toàn quyền quản trị cao nhất toàn hệ thống<br/>• **Quản lý tài khoản người dùng, tạo tài khoản & cấp vai trò (`/admin/users`)**<br/>• Cấu hình các mức tỷ lệ trích nộp bảo hiểm (BHXH, BHYT, BHTN)<br/>• Quản lý ca làm việc và hệ số OT (`/admin/shifts`)<br/>• **Cấu hình Động cơ AI (Gemini / OpenAI / Nội bộ), Model, API Key**<br/>• Giám sát tính lương và chốt sổ tài chính |
+| **4** | `nhanvien.tuan` | `123456` | **`ROLE_EMPLOYEE`** | **Hoàng Minh Tuấn** | `EMP004` | Phòng Kinh Doanh & Tiếp Thị | • Chấm công, nộp đơn nghỉ phép, hỏi đáp Trợ lý AI và tra cứu phiếu thu nhập cá nhân độc lập của nhân viên Tuấn |
 
 ---
 
@@ -934,6 +935,11 @@ Ma trận truy vết đảm bảo tính đồng bộ $100\%$ giữa các yêu c�
 | **BR-08** | Khởi tạo kỳ lương, chạy tính toán bảng lương tự động hàng loạt 1-chạm | `UC13, UC14` | `PayrollPeriod, Payslip` | `payroll_periods, payslips` |
 | **BR-09** | Đối soát quỹ lương tổng hợp, chốt sổ Read-Only & xuất file ngân hàng | `UC15, UC16, UC17` | `PayrollPeriod, Payslip` | `payroll_periods, payslips` |
 | **BR-10** | Bảo mật phiếu lương cá nhân chống xem lén thu nhập (Anti-IDOR) | `UC18` | `Payslip, PayslipLine` | `payslips, payslip_lines` |
+| **BR-11** | Trợ lý Lương AI hỏi đáp, đối soát chênh lệch 2 kỳ & mô phỏng What-If | `UC19` | `SalaryAiModels, KnowledgeDocument` | `payslips, payroll_periods, employees` |
+| **BR-12** | Widget Trợ lý AI nổi toàn hệ thống, tinh chỉnh cấu hình trực tiếp ở mọi trang | `UC20` | `AiConfiguration, ILlmClient` | `In-Memory / Config Cache` |
+| **BR-13** | Quản lý danh mục ca làm việc, ca gãy & hệ số phụ cấp OT | `UC21` | `WorkShift` | `work_shifts` |
+| **BR-14** | Quản lý tài khoản người dùng, cấp tài khoản & khóa/mở khóa | `UC22` | `UserAccount` | `user_accounts` |
+| **BR-15** | Đổi mật khẩu cá nhân xác thực mật khẩu cũ BCrypt | `UC23` | `UserAccount` | `user_accounts` |
 
 ---
 
@@ -951,32 +957,56 @@ TimesheetPayroll/
 │   │   ├── UserAccount.cs                                  # Thực thể Tài khoản người dùng & Phân quyền
 │   │   ├── Timesheet.cs                                    # Thực thể Bảng chấm công
 │   │   ├── PayrollPeriod.cs                                # Thực thể Kỳ lương
-│   │   ├── Payslip.cs                                      # Thực thể Phiếu lương & Dòng chi tiết
+│   │   ├── Payslip.cs, PayslipLine.cs                      # Thực thể Phiếu lương & Dòng chi tiết
 │   │   ├── LeaveRequest.cs                                 # Thực thể Đơn nghỉ phép
 │   │   ├── DeductionRate.cs                                # Thực thể Tỷ lệ bảo hiểm
+│   │   ├── Contract.cs                                     # Thực thể Hợp đồng lao động
+│   │   ├── WorkShift.cs                                    # Thực thể Ca làm việc
+│   │   ├── SalaryAiModels.cs                               # Mô hình Trợ lý AI (Diff, What-If, Chat, Config)
+│   │   ├── VietnameseLaborRegulations.cs                   # Hằng số chuẩn Luật Lao động Việt Nam
 │   │   └── Enums.cs                                        # Kiểu liệt kê (UserRole, WorkShiftStatus,...)
 │   └── Services/
-│       ├── Interfaces/IPayrollCalculationService.cs        # Interface động cơ tính toán lương
-│       └── PayrollCalculationService.cs                    # Triển khai thuật toán tính lương luật định
+│       ├── Interfaces/                                     # Cổng giao diện dịch vụ nghiệp vụ cốt lõi
+│       │   ├── IPayrollCalculationService.cs               # Động cơ tính toán lương tự động
+│       │   ├── ISalaryAiAssistantService.cs                # Trợ lý Lương AI thông minh
+│       │   ├── IAiKnowledgeBaseService.cs                  # Quản lý & nạp tri thức cho AI
+│       │   ├── ILlmClient.cs                               # Kết nối Google Gemini / OpenAI / Nội bộ
+│       │   ├── ISalaryFormulaEngine.cs                     # Công thức tính lương chi tiết
+│       │   └── ITimesheetEvaluationService.cs              # Đánh giá công và phạt trễ/về sớm
+│       ├── PayrollCalculationService.cs                    # Triển khai thuật toán tính lương luật định
+│       ├── SalaryAiAssistantService.cs                     # Triển khai Trợ lý AI Grounded Reasoning
+│       ├── AiKnowledgeBaseService.cs                       # Triển khai nạp quy chế & tri thức pháp luật
+│       ├── LlmClient.cs                                    # Triển khai gọi LLM HTTP Client
+│       ├── SalaryFormulaEngine.cs                          # Động cơ tính lương chuẩn xác
+│       └── TimesheetEvaluationService.cs                   # Dịch vụ đánh giá ngày công
 │
 ├── TimesheetPayroll.UseCases/                              # TẦNG TRƯỜNG HỢP SỬ DỤNG (USE CASES)
-│   ├── Authentication/                                     # Ca sử dụng xác thực người dùng
-│   │   └── LoginUseCase.cs                                 # Đăng nhập, kiểm tra mật khẩu BCrypt, lấy DS User
+│   ├── Authentication/                                     # Ca sử dụng xác thực & tài khoản
+│   │   ├── LoginUseCase.cs                                 # Đăng nhập, kiểm tra mật khẩu BCrypt, lấy DS User
+│   │   └── ChangePasswordUseCase.cs                        # Tự đổi mật khẩu cá nhân
 │   ├── AdminPortal/                                        # Ca sử dụng phân hệ Kế toán & Quản trị
-│   │   └── AdminPortalUseCases.cs                          # Tính lương hàng loạt, Khóa sổ, Duyệt phép
-│   ├── EmployeePortal/                                     # Ca sử dụng phân hệ Nhân viên
-│   │   └── EmployeePortalUseCases.cs                       # Xem phiếu lương, Điểm danh công, Nộp đơn phép
+│   │   ├── AdminPortalUseCases.cs                          # Tính lương hàng loạt, Khóa sổ, Duyệt phép
+│   │   ├── UserManagementUseCases.cs                       # Quản lý tài khoản, cấp quyền & khóa/mở khóa
+│   │   └── WorkShiftUseCases.cs                            # Quản lý ca làm việc, giờ làm & hệ số OT
+│   ├── EmployeePortal/                                     # Ca sử dụng phân hệ Nhân viên & AI
+│   │   ├── EmployeePortalUseCases.cs                       # Xem phiếu lương, Điểm danh công, Nộp đơn phép
+│   │   └── SalaryAiUseCases.cs                             # Hỏi đáp AI, So sánh chênh lệch, Mô phỏng What-If
 │   └── PluginInterfaces/                                   # Hợp đồng giao tiếp tầng ngoài (Repository Interfaces)
-│       └── DataStore/IRepositories.cs                      # IUserAccountRepository, IEmployeeRepository,...
+│       ├── DataStore/IRepositories.cs                      # IUserAccountRepository, IEmployeeRepository,...
+│       └── StateStore/                                     # ITimesheetStateStore
 │
 ├── TimesheetPayroll.Web.Modules/                           # CÁC MODULE GIAO DIỆN BLAZOR ĐỘC LẬP
 │   ├── TimesheetPayroll.Web.AdminPortal/                   # Cổng Kế toán & Quản trị Lương
 │   │   ├── Pages/PayrollBatchCalculationPage.razor         # Trang tính lương tự động & Chốt sổ Read-Only
+│   │   ├── Pages/UserManagementPage.razor                  # Trang quản trị tài khoản người dùng (/admin/users)
+│   │   ├── Pages/WorkShiftManagementPage.razor             # Trang quản lý ca làm việc (/admin/shifts)
 │   │   └── Controls/PayrollSummaryComponent.razor          # Bảng đối soát lương chi tiết
 │   ├── TimesheetPayroll.Web.EmployeePortal/                # Cổng Thông tin Nhân viên Cá nhân
 │   │   ├── Pages/MyPayslipComponent.razor                  # Trang xem phiếu lương cá nhân (Anti-IDOR)
 │   │   ├── Pages/MyTimesheetComponent.razor                # Trang điểm danh Check-In/Check-Out
 │   │   ├── Pages/LeaveRequestComponent.razor               # Trang nộp đơn xin nghỉ phép trực tuyến
+│   │   ├── Pages/AiSalaryAssistantComponent.razor          # Trang Trợ Lý Lương AI chuyên sâu (/ai-salary-assistant)
+│   │   ├── Pages/ChangePasswordPage.razor                  # Trang đổi mật khẩu người dùng (/change-password)
 │   │   └── Controls/PayslipDetailCard.razor                # Thẻ đồ họa trực quan thu nhập & bảo hiểm
 │   └── TimesheetPayroll.Web.Common/                        # Thành phần tái sử dụng chung
 │       └── Controls/SearchBarComponent.razor, StatusBadgeComponent.razor
@@ -989,15 +1019,23 @@ TimesheetPayroll/
 │   └── TimesheetPayroll.StateStore.DI/                     # Quản lý trạng thái SignalR StateStore
 │
 └── TimesheetPayroll.Web/                                   # ỨNG DỤNG HOST BLAZOR WEB APP (.NET 10)
+    ├── App_Data/
+    │   └── knowledge_base_hrm.md                           # Tri thức luật lao động, thuế & quy chế nội bộ nạp cho AI
     ├── Components/
     │   ├── App.razor, Routes.razor                         # Cấu hình AuthorizeRouteView bảo vệ phân quyền
-    │   ├── Layout/TopNavbar.razor, MainLayout.razor        # Thanh điều hướng phân quyền & Đăng xuất
+    │   ├── Layout/
+    │   │   ├── TopNavbar.razor                             # Thanh điều hướng phân quyền theo Role
+    │   │   ├── MainLayout.razor                            # Master Layout chứa Widget Trợ lý AI nổi
+    │   │   ├── FloatingAiAssistant.razor                   # Widget Trợ lý AI nổi trên màn hình mọi trang
+    │   │   ├── FloatingAiAssistant.razor.css               # Phong cách Glassmorphism cho Widget nổi
+    │   │   └── ReconnectModal.razor                        # Xử lý kết nối lại SignalR
     │   └── Pages/
     │       ├── Home.razor                                  # Trang chủ giới thiệu hệ thống & đồ án
-    │       └── LoginPage.razor                             # Trang đăng nhập hỗ trợ 1-Click Demo & Form SQL
+    │       ├── LoginPage.razor                             # Trang đăng nhập hỗ trợ 1-Click Demo & Form SQL
+    │       └── NotFoundPage.razor                          # Trang báo lỗi 404 tùy biến thân thiện
     ├── CustomAuthenticationStateProvider.cs                # Triển khai AuthenticationStateProvider Blazor
     ├── Program.cs                                          # Đăng ký Dependency Injection & Middleware
-    └── appsettings.json                                    # Cấu hình kết nối tới BangChamCongDB
+    └── appsettings.json                                    # Cấu hình kết nối tới BangChamCongDB & AI Engine
 ```
 
 ---
@@ -1047,15 +1085,33 @@ Mở trình duyệt truy cập: `https://localhost:5001` (hoặc `http://localho
      * Bấm **[Nguyễn Văn A]** (`nhanvien.a` / `123456`) để vào vai trò Nhân viên.
      * Bấm **[Lê Thị Thu Thảo]** (`ketoan.thao` / `123456`) để vào vai trò Kế toán.
      * Bấm **[Trần Đình Trọng]** (`admin.trong` / `123456`) để vào vai trò Quản trị viên.
-2. **Trải nghiệm phân hệ Nhân viên (`ROLE_EMPLOYEE`):**
+
+2. **Trải nghiệm Widget Trợ Lý Lương AI Nổi (Floating AI Assistant - Nổi trên mọi trang):**
+   * **Nút tròn nổi cố định:** Xuất hiện ở góc dưới bên phải trên **tất cả mọi màn hình** của hệ thống (kèm đèn xanh nhấp nháy báo hiệu AI Online).
+   * **Cửa sổ nổi thông minh:** Bấm vào nút nổi để mở cửa sổ chat và tinh chỉnh AI ngay tại chỗ mà không cần rời trang:
+     * **Tab 💬 Hỏi Đáp AI:** Gõ câu hỏi hoặc bấm các chip gợi ý (*Vì sao lương bị trừ?, Tính bảo hiểm 10.5% thế nào?, Công thức tính OT Điều 98?...*). AI tự động nhận diện danh tính và phiếu lương của người dùng đang đăng nhập để trả lời chính xác từng đồng.
+     * **Tab ⚙️ Tinh Chỉnh & Cấu Hình:** Cho phép chuyển đổi Provider (*Google Gemini, OpenAI ChatGPT, hoặc Động cơ Nội bộ*), nhập API Key, chọn Model, tùy biến System Prompt và nạp thêm quy chế riêng của công ty; có nút **"⚡ Kiểm Tra Kết Nối"** test trực tiếp và **"💾 Lưu Cấu Hình Ngay"** áp dụng tức thì.
+
+3. **Trải nghiệm Cổng Trợ Lý Lương AI Chuyên Sâu (`/ai-salary-assistant`):**
+   * **Tab 1: Trò chuyện AI:** Khung chat kích thước lớn với đầy đủ lịch sử hội thoại và bộ câu hỏi đối soát.
+   * **Tab 2: Đối Soát & So Sánh (Comparison Diff):** Đặt cạnh nhau 2 phiếu lương liền kề, hệ thống tự động bóc tách từng dòng biến động (Line Diff), tính tổng tiền chênh lệch và hiển thị nhận xét giải thích của AI.
+   * **Tab 3: Mô Phỏng Dự Tính Lương What-If (Simulator):** Tự điều chỉnh giả định mức lương cơ bản, số ngày đi làm, số giờ làm thêm OT, phụ cấp để máy tính trước mức thực lĩnh sẽ nhận được.
+
+4. **Trải nghiệm Phân hệ Nhân viên (`ROLE_EMPLOYEE`):**
    * **Điểm danh (`/my-timesheet`):** Bấm Check-In / Check-Out thời gian thực, xem tổng ngày công tích lũy trong tháng 10/2026.
-   * **Nộp đơn xin nghỉ phép (`/leave-request`):** Chọn loại nghỉ phép (phép năm, nghỉ ốm, thai sản, không lương) và gửi đơn.
+   * **Nộp đơn xin nghỉ phép (`/leave-request`):** Chọn loại nghỉ phép (phép năm, nghỉ ốm, thai sản, không lương) và gửi đơn trực tuyến.
    * **Tra cứu phiếu lương (`/my-payslip`):** Xem minh bạch phiếu lương của nhân viên đang đăng nhập: Lương công thực tế (20/22 ngày), phụ cấp ăn trưa 500.000đ, trừ 10.5% bảo hiểm (1.050.000đ), **Thực lĩnh chính xác 8.540.909 đ**.
-3. **Trải nghiệm phân hệ Kế toán & Quản trị (`ROLE_HR_ACCOUNTANT`):**
-   * Menu **"Quản Trị: Tính Lương Hàng Loạt"** sẽ xuất hiện trên thanh điều hướng.
-   * **Chạy tính lương (`/admin/payroll-calculation`):** Bấm nút **"Chạy Tính Lương Tự Động"** tính toán đồng loạt cho 100% nhân viên trong công ty qua Database Transaction.
-   * **Đối soát quỹ lương:** Rà soát danh sách nhân viên, phòng ban, lương gộp và thực lĩnh.
-   * **Chốt sổ kỳ lương:** Bấm nút **"Chốt Kỳ Lương Khóa Sổ"** chuyển vĩnh viễn dữ liệu sang trạng thái **Read-Only** chống sửa đổi và xuất file chuyển khoản ngân hàng.
+   * **Tự đổi mật khẩu (`/change-password`):** Nhập mật khẩu cũ để xác thực mã hóa BCrypt và đổi sang mật khẩu mới an toàn.
+
+5. **Trải nghiệm Phân hệ Kế toán & Quản trị Lương (`ROLE_HR_ACCOUNTANT`):**
+   * **Chạy tính lương hàng loạt (`/admin/payroll-calculation`):** Bấm nút **"Chạy Tính Lương Tự Động"** tính toán đồng loạt cho 100% nhân viên trong công ty qua Database Transaction an toàn tuyệt đối.
+   * **Đối soát quỹ lương:** Rà soát danh sách nhân viên, phòng ban, lương gộp và thực lĩnh toàn diện.
+   * **Chốt sổ kỳ lương:** Bấm nút **"Chốt Kỳ Lương Khóa Sổ"** chuyển vĩnh viễn dữ liệu sang trạng thái **Read-Only** chống sửa đổi và xuất file Excel/ngân hàng.
+   * **Quản lý ca làm việc (`/admin/shifts`):** Xem danh mục ca làm việc (ca sáng, chiều, tối, ca gãy), quy định thời gian vào/ra và hệ số làm thêm giờ.
+
+6. **Trải nghiệm Phân hệ Quản trị viên Toàn quyền (`ROLE_ADMIN`):**
+   * **Quản lý người dùng (`/admin/users`):** Xem danh sách tất cả tài khoản trong bảng `user_accounts`, tạo tài khoản mới cho nhân viên chưa có tài khoản, cấp vai trò (`ROLE_EMPLOYEE`, `ROLE_HR_ACCOUNTANT`, `ROLE_ADMIN`) và bấm nút khóa/mở khóa tài khoản ngay lập tức.
+   * **Cấu hình động cơ AI:** Tinh chỉnh các tham số kết nối Google Gemini / OpenAI hoặc chuyển về Động cơ Nội bộ trong trường hợp chạy hoàn toàn offline.
 
 ---
 
@@ -1063,6 +1119,7 @@ Mở trình duyệt truy cập: `https://localhost:5001` (hoặc `http://localho
 
 * ✅ **Đáp ứng 100% chuẩn học thuật môn học Lập trình Ứng dụng Web:** Đầy đủ trọn bộ **13 sơ đồ UML chuẩn hóa**, kết xuất trực quan bằng cú pháp Mermaid Markdown tương thích hoàn hảo trên GitHub kèm thông tin thuyết minh đặc tả chuyên sâu dưới từng sơ đồ.
 * ✅ **Tách biệt hoàn toàn CSDL:** Cơ sở dữ liệu **`BangChamCongDB`** độc lập 100% với các đồ án khác trên máy chủ SQL Server.
-* ✅ **Bảo mật xác thực & Phân quyền RBAC thực tế:** Tích hợp màn hình đăng nhập `/login`, băm mật khẩu BCrypt, kiểm soát quyền theo vai trò (`ROLE_EMPLOYEE`, `ROLE_HR_ACCOUNTANT`, `ROLE_ADMIN`) và bảo vệ chống xem lén dữ liệu lương (Anti-IDOR).
+* ✅ **Đột phá công nghệ Trí tuệ Nhân tạo (Salary AI Assistant):** Tích hợp Trợ lý Lương AI thông minh (hỗ trợ Google Gemini, OpenAI và Động cơ Nội bộ), giải đáp thắc mắc lương, phân tích nguyên nhân biến động 2 kỳ và mô phỏng What-If. Đặc biệt có **Widget Trợ lý AI nổi (Floating Widget)** trên 100% các trang cho phép tương tác và cấu hình tức thì.
+* ✅ **Bảo mật xác thực & Phân quyền RBAC thực tế:** Tích hợp màn hình đăng nhập `/login`, băm mật khẩu BCrypt, kiểm soát quyền theo vai trò (`ROLE_EMPLOYEE`, `ROLE_HR_ACCOUNTANT`, `ROLE_ADMIN`), trang quản trị người dùng (`/admin/users`), đổi mật khẩu (`/change-password`) và bảo vệ chống xem lén dữ liệu lương (Anti-IDOR).
 * ✅ **Mã nguồn chuẩn Clean Architecture:** Tách lớp độc lập (`CoreBusiness`, `UseCases`, `Plugins`, `Web.Modules`), tuân thủ triệt để các nguyên lý SOLID, sẵn sàng mở rộng quy mô.
 * ✅ **Tính toán chính xác & Khóa sổ an toàn:** Thuật toán tính lương bám sát thực tế luật lao động, hỗ trợ cơ chế khóa sổ bất biến đảm bảo tính toàn vẹn dữ liệu tài chính doanh nghiệp.

@@ -82,7 +82,9 @@ public class TimesheetRepository : ITimesheetRepository
         const string sql = @"
             SELECT 
                 t.id AS Id, t.employee_id AS EmployeeId, e.employee_code AS EmployeeCode,
-                e.full_name AS EmployeeName, t.period_id AS PeriodId, t.work_date AS WorkDate,
+                e.full_name AS EmployeeName, t.period_id AS PeriodId, 
+                t.shift_id AS ShiftId, t.shift_code AS ShiftCode, t.shift_name AS ShiftName,
+                t.work_date AS WorkDate,
                 t.check_in_time AS CheckInTime, t.check_out_time AS CheckOutTime,
                 t.actual_hours_worked AS ActualHoursWorked, t.work_shift_status AS WorkShiftStatus,
                 t.work_units AS WorkUnits, t.is_locked AS IsLocked, t.note AS Note
@@ -99,7 +101,9 @@ public class TimesheetRepository : ITimesheetRepository
         const string sql = @"
             SELECT 
                 t.id AS Id, t.employee_id AS EmployeeId, e.employee_code AS EmployeeCode,
-                e.full_name AS EmployeeName, t.period_id AS PeriodId, t.work_date AS WorkDate,
+                e.full_name AS EmployeeName, t.period_id AS PeriodId, 
+                t.shift_id AS ShiftId, t.shift_code AS ShiftCode, t.shift_name AS ShiftName,
+                t.work_date AS WorkDate,
                 t.check_in_time AS CheckInTime, t.check_out_time AS CheckOutTime,
                 t.actual_hours_worked AS ActualHoursWorked, t.work_shift_status AS WorkShiftStatus,
                 t.work_units AS WorkUnits, t.is_locked AS IsLocked, t.note AS Note
@@ -129,6 +133,9 @@ public class TimesheetRepository : ITimesheetRepository
             ON (target.employee_id = source.emp_id AND target.work_date = source.wdate)
             WHEN MATCHED THEN
                 UPDATE SET 
+                    shift_id = @ShiftId,
+                    shift_code = @ShiftCode,
+                    shift_name = @ShiftName,
                     check_in_time = @CheckInTime,
                     check_out_time = @CheckOutTime,
                     actual_hours_worked = @ActualHoursWorked,
@@ -137,9 +144,39 @@ public class TimesheetRepository : ITimesheetRepository
                     note = @Note,
                     updated_at = GETDATE()
             WHEN NOT MATCHED THEN
-                INSERT (employee_id, period_id, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked, note)
-                VALUES (@EmployeeId, @PeriodId, @WorkDate, @CheckInTime, @CheckOutTime, @ActualHoursWorked, @WorkShiftStatus, @WorkUnits, @IsLocked, @Note);";
-        await conn.ExecuteAsync(sql, t);
+                INSERT (employee_id, period_id, shift_id, shift_code, shift_name, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked, note)
+                VALUES (@EmployeeId, @PeriodId, @ShiftId, @ShiftCode, @ShiftName, @WorkDate, @CheckInTime, @CheckOutTime, @ActualHoursWorked, @WorkShiftStatus, @WorkUnits, @IsLocked, @Note);";
+        string safeStatus = t.WorkShiftStatus switch
+        {
+            WorkShiftStatus.PRESENT => "PRESENT",
+            WorkShiftStatus.LATE => "LATE",
+            WorkShiftStatus.EARLY_LEAVE => "EARLY_LEAVE",
+            WorkShiftStatus.HALF_DAY => "HALF_DAY",
+            WorkShiftStatus.ABSENT_WITH_PERMISSION => "ABSENT_WITH_PERMISSION",
+            WorkShiftStatus.ABSENT_UNAUTHORIZED => "ABSENT_UNAUTHORIZED",
+            WorkShiftStatus.HOLIDAY => "HOLIDAY",
+            _ => "PRESENT"
+        };
+
+        decimal safeActualHours = Math.Max(0m, Math.Min(24.0m, Math.Round(t.ActualHoursWorked, 2)));
+        decimal safeWorkUnits = Math.Max(0m, Math.Min(2.0m, Math.Round(t.WorkUnits, 2)));
+
+        await conn.ExecuteAsync(sql, new
+        {
+            t.EmployeeId,
+            t.PeriodId,
+            t.ShiftId,
+            t.ShiftCode,
+            t.ShiftName,
+            t.WorkDate,
+            t.CheckInTime,
+            t.CheckOutTime,
+            ActualHoursWorked = safeActualHours,
+            WorkShiftStatus = safeStatus,
+            WorkUnits = safeWorkUnits,
+            IsLocked = t.IsLocked ? 1 : 0,
+            t.Note
+        });
     }
 
     public async Task LockTimesheetsByPeriodAsync(long periodId)
@@ -147,6 +184,111 @@ public class TimesheetRepository : ITimesheetRepository
         using var conn = _db.CreateConnection();
         const string sql = "UPDATE timesheets SET is_locked = 1, updated_at = GETDATE() WHERE period_id = @PeriodId;";
         await conn.ExecuteAsync(sql, new { PeriodId = periodId });
+    }
+
+    public async Task UnlockTimesheetsByPeriodAsync(long periodId)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = "UPDATE timesheets SET is_locked = 0, updated_at = GETDATE() WHERE period_id = @PeriodId;";
+        await conn.ExecuteAsync(sql, new { PeriodId = periodId });
+    }
+}
+
+public class WorkShiftRepository : IWorkShiftRepository
+{
+    private readonly IDataAccess _db;
+    public WorkShiftRepository(IDataAccess db) => _db = db;
+
+    public async Task<IEnumerable<WorkShift>> GetWorkShiftsAsync()
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                id AS Id,
+                shift_code AS ShiftCode,
+                shift_name AS ShiftName,
+                start_time AS StartTime,
+                end_time AS EndTime,
+                lunch_break_hours AS LunchBreakHours,
+                target_hours AS TargetHours,
+                work_units AS WorkUnits,
+                grace_period_minutes AS GracePeriodMinutes,
+                is_night_shift AS IsNightShift,
+                is_active AS IsActive,
+                description AS Description,
+                created_at AS CreatedAt,
+                updated_at AS UpdatedAt
+            FROM work_shifts
+            ORDER BY start_time ASC;";
+        return await conn.QueryAsync<WorkShift>(sql);
+    }
+
+    public async Task<WorkShift?> GetWorkShiftByIdAsync(long id)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                id AS Id, shift_code AS ShiftCode, shift_name AS ShiftName,
+                start_time AS StartTime, end_time AS EndTime, lunch_break_hours AS LunchBreakHours,
+                target_hours AS TargetHours, work_units AS WorkUnits, grace_period_minutes AS GracePeriodMinutes,
+                is_night_shift AS IsNightShift, is_active AS IsActive, description AS Description,
+                created_at AS CreatedAt, updated_at AS UpdatedAt
+            FROM work_shifts
+            WHERE id = @Id;";
+        return await conn.QueryFirstOrDefaultAsync<WorkShift>(sql, new { Id = id });
+    }
+
+    public async Task<WorkShift?> GetWorkShiftByCodeAsync(string code)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                id AS Id, shift_code AS ShiftCode, shift_name AS ShiftName,
+                start_time AS StartTime, end_time AS EndTime, lunch_break_hours AS LunchBreakHours,
+                target_hours AS TargetHours, work_units AS WorkUnits, grace_period_minutes AS GracePeriodMinutes,
+                is_night_shift AS IsNightShift, is_active AS IsActive, description AS Description,
+                created_at AS CreatedAt, updated_at AS UpdatedAt
+            FROM work_shifts
+            WHERE shift_code = @Code;";
+        return await conn.QueryFirstOrDefaultAsync<WorkShift>(sql, new { Code = code });
+    }
+
+    public async Task<long> AddWorkShiftAsync(WorkShift shift)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            INSERT INTO work_shifts (shift_code, shift_name, start_time, end_time, lunch_break_hours, target_hours, work_units, grace_period_minutes, is_night_shift, is_active, description)
+            VALUES (@ShiftCode, @ShiftName, @StartTime, @EndTime, @LunchBreakHours, @TargetHours, @WorkUnits, @GracePeriodMinutes, @IsNightShift, @IsActive, @Description);
+            SELECT CAST(SCOPE_IDENTITY() as BIGINT);";
+        return await conn.ExecuteScalarAsync<long>(sql, shift);
+    }
+
+    public async Task UpdateWorkShiftAsync(WorkShift shift)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            UPDATE work_shifts
+            SET shift_code = @ShiftCode,
+                shift_name = @ShiftName,
+                start_time = @StartTime,
+                end_time = @EndTime,
+                lunch_break_hours = @LunchBreakHours,
+                target_hours = @TargetHours,
+                work_units = @WorkUnits,
+                grace_period_minutes = @GracePeriodMinutes,
+                is_night_shift = @IsNightShift,
+                is_active = @IsActive,
+                description = @Description,
+                updated_at = GETDATE()
+            WHERE id = @Id;";
+        await conn.ExecuteAsync(sql, shift);
+    }
+
+    public async Task DeleteWorkShiftAsync(long id)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = "DELETE FROM work_shifts WHERE id = @Id;";
+        await conn.ExecuteAsync(sql, new { Id = id });
     }
 }
 
@@ -226,6 +368,7 @@ public class PayslipRepository : IPayslipRepository
         const string sql = @"
             SELECT 
                 p.id AS Id, p.period_id AS PeriodId, p.employee_id AS EmployeeId,
+                pr.period_code AS PeriodCode, pr.period_month AS PeriodMonth, pr.period_year AS PeriodYear,
                 e.employee_code AS EmployeeCode, e.full_name AS EmployeeName,
                 d.department_name AS DepartmentName, e.bank_account_number AS BankAccountNumber,
                 e.bank_name AS BankName, p.actual_work_days AS ActualWorkDays,
@@ -233,6 +376,7 @@ public class PayslipRepository : IPayslipRepository
                 p.gross_salary AS GrossSalary, p.total_deductions AS TotalDeductions,
                 p.net_salary AS NetSalary, p.note AS Note
             FROM payslips p
+            JOIN payroll_periods pr ON p.period_id = pr.id
             JOIN employees e ON p.employee_id = e.id
             LEFT JOIN departments d ON e.department_id = d.id
             WHERE p.period_id = @PeriodId
@@ -262,6 +406,7 @@ public class PayslipRepository : IPayslipRepository
         const string sql = @"
             SELECT 
                 p.id AS Id, p.period_id AS PeriodId, p.employee_id AS EmployeeId,
+                pr.period_code AS PeriodCode, pr.period_month AS PeriodMonth, pr.period_year AS PeriodYear,
                 e.employee_code AS EmployeeCode, e.full_name AS EmployeeName,
                 d.department_name AS DepartmentName, e.bank_account_number AS BankAccountNumber,
                 e.bank_name AS BankName, p.actual_work_days AS ActualWorkDays,
@@ -269,6 +414,7 @@ public class PayslipRepository : IPayslipRepository
                 p.gross_salary AS GrossSalary, p.total_deductions AS TotalDeductions,
                 p.net_salary AS NetSalary, p.note AS Note
             FROM payslips p
+            JOIN payroll_periods pr ON p.period_id = pr.id
             JOIN employees e ON p.employee_id = e.id
             LEFT JOIN departments d ON e.department_id = d.id
             WHERE p.period_id = @PeriodId AND p.employee_id = @EmployeeId;";
@@ -286,6 +432,43 @@ public class PayslipRepository : IPayslipRepository
             payslip.Lines = (await conn.QueryAsync<PayslipLine>(lineSql, new { PayslipId = payslip.Id })).ToList();
         }
         return payslip;
+    }
+
+    public async Task<IEnumerable<Payslip>> GetPayslipsByEmployeeAsync(long employeeId)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                p.id AS Id, p.period_id AS PeriodId, p.employee_id AS EmployeeId,
+                pr.period_code AS PeriodCode, pr.period_month AS PeriodMonth, pr.period_year AS PeriodYear,
+                e.employee_code AS EmployeeCode, e.full_name AS EmployeeName,
+                d.department_name AS DepartmentName, e.bank_account_number AS BankAccountNumber,
+                e.bank_name AS BankName, p.actual_work_days AS ActualWorkDays,
+                p.paid_leave_days AS PaidLeaveDays, p.overtime_hours AS OvertimeHours,
+                p.gross_salary AS GrossSalary, p.total_deductions AS TotalDeductions,
+                p.net_salary AS NetSalary, p.note AS Note
+            FROM payslips p
+            JOIN payroll_periods pr ON p.period_id = pr.id
+            JOIN employees e ON p.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            WHERE p.employee_id = @EmployeeId
+            ORDER BY pr.period_year DESC, pr.period_month DESC, p.id DESC;";
+
+        var payslips = (await conn.QueryAsync<Payslip>(sql, new { EmployeeId = employeeId })).ToList();
+
+        foreach (var p in payslips)
+        {
+            const string lineSql = @"
+                SELECT id AS Id, payslip_id AS PayslipId, line_type AS LineType,
+                       line_description AS LineDescription, amount AS Amount,
+                       is_deduction AS IsDeduction
+                FROM payslip_lines
+                WHERE payslip_id = @PayslipId
+                ORDER BY is_deduction ASC, id ASC;";
+            p.Lines = (await conn.QueryAsync<PayslipLine>(lineSql, new { PayslipId = p.Id })).ToList();
+        }
+
+        return payslips;
     }
 
     public async Task SavePayslipBatchAsync(IEnumerable<Payslip> payslips)
@@ -526,6 +709,134 @@ public class UserAccountRepository : IUserAccountRepository
             SET last_login_at = GETDATE(), updated_at = GETDATE() 
             WHERE id = @UserId;";
         await conn.ExecuteAsync(sql, new { UserId = userId });
+    }
+
+    public async Task<UserAccount?> GetByIdAsync(long id)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                u.id AS Id, u.employee_id AS EmployeeId, u.username AS Username, 
+                u.password_hash AS PasswordHash, u.role AS Role, u.is_active AS IsActive, 
+                u.last_login_at AS LastLoginAt, u.created_at AS CreatedAt, u.updated_at AS UpdatedAt,
+                e.full_name AS FullName, e.employee_code AS EmployeeCode, e.email AS Email,
+                d.department_name AS DepartmentName
+            FROM user_accounts u
+            INNER JOIN employees e ON u.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            WHERE u.id = @Id;";
+        return await conn.QueryFirstOrDefaultAsync<UserAccount>(sql, new { Id = id });
+    }
+
+    public async Task<UserAccount?> GetByEmployeeIdAsync(long employeeId)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                u.id AS Id, u.employee_id AS EmployeeId, u.username AS Username, 
+                u.password_hash AS PasswordHash, u.role AS Role, u.is_active AS IsActive, 
+                u.last_login_at AS LastLoginAt, u.created_at AS CreatedAt, u.updated_at AS UpdatedAt,
+                e.full_name AS FullName, e.employee_code AS EmployeeCode, e.email AS Email,
+                d.department_name AS DepartmentName
+            FROM user_accounts u
+            INNER JOIN employees e ON u.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            WHERE u.employee_id = @EmployeeId;";
+        return await conn.QueryFirstOrDefaultAsync<UserAccount>(sql, new { EmployeeId = employeeId });
+    }
+
+    public async Task<bool> ExistsUsernameAsync(string username, long? excludeUserId = null)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT COUNT(1) 
+            FROM user_accounts 
+            WHERE username = @Username AND (@ExcludeUserId IS NULL OR id <> @ExcludeUserId);";
+        int count = await conn.ExecuteScalarAsync<int>(sql, new { Username = username, ExcludeUserId = excludeUserId });
+        return count > 0;
+    }
+
+    public async Task<long> CreateUserAccountAsync(UserAccount account, string plainPassword)
+    {
+        using var conn = _db.CreateConnection();
+        string hash = BCrypt.Net.BCrypt.HashPassword(plainPassword);
+        const string sql = @"
+            INSERT INTO user_accounts (employee_id, username, password_hash, role, is_active, created_at, updated_at)
+            OUTPUT INSERTED.id
+            VALUES (@EmployeeId, @Username, @PasswordHash, @Role, @IsActive, GETDATE(), GETDATE());";
+        return await conn.ExecuteScalarAsync<long>(sql, new
+        {
+            account.EmployeeId,
+            account.Username,
+            PasswordHash = hash,
+            Role = string.IsNullOrWhiteSpace(account.Role) ? "ROLE_EMPLOYEE" : account.Role,
+            IsActive = account.IsActive ? 1 : 0
+        });
+    }
+
+    public async Task UpdateUserAccountAsync(UserAccount account, string? newPlainPassword = null)
+    {
+        using var conn = _db.CreateConnection();
+        string? newHash = !string.IsNullOrWhiteSpace(newPlainPassword) 
+            ? BCrypt.Net.BCrypt.HashPassword(newPlainPassword) 
+            : null;
+
+        const string sql = @"
+            UPDATE user_accounts
+            SET username = @Username,
+                role = @Role,
+                is_active = @IsActive,
+                password_hash = COALESCE(@PasswordHash, password_hash),
+                updated_at = GETDATE()
+            WHERE id = @Id;";
+
+        await conn.ExecuteAsync(sql, new
+        {
+            account.Id,
+            account.Username,
+            account.Role,
+            IsActive = account.IsActive ? 1 : 0,
+            PasswordHash = newHash
+        });
+    }
+
+    public async Task<IEnumerable<Employee>> GetEmployeesWithoutAccountAsync()
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                e.id AS Id, e.employee_code AS EmployeeCode, e.full_name AS FullName, 
+                e.email AS Email, e.phone_number AS PhoneNumber, e.department_id AS DepartmentId,
+                d.department_name AS DepartmentName, e.status AS Status, e.hire_date AS HireDate
+            FROM employees e
+            LEFT JOIN departments d ON e.department_id = d.id
+            WHERE e.id NOT IN (SELECT employee_id FROM user_accounts)
+              AND e.status = 'ACTIVE'
+            ORDER BY e.employee_code;";
+        return await conn.QueryAsync<Employee>(sql);
+    }
+
+    public async Task ToggleUserStatusAsync(long userId)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            UPDATE user_accounts 
+            SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END,
+                updated_at = GETDATE()
+            WHERE id = @UserId;";
+        await conn.ExecuteAsync(sql, new { UserId = userId });
+    }
+
+    public async Task ChangePasswordAsync(long userId, string newPlainPassword)
+    {
+        using var conn = _db.CreateConnection();
+        string newHash = BCrypt.Net.BCrypt.HashPassword(newPlainPassword);
+        const string sql = @"
+            UPDATE user_accounts
+            SET password_hash = @PasswordHash,
+                updated_at = GETDATE()
+            WHERE id = @UserId;";
+        await conn.ExecuteAsync(sql, new { UserId = userId, PasswordHash = newHash });
     }
 }
 

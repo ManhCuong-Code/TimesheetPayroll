@@ -2,25 +2,32 @@
 @inject ILoginUseCase LoginUseCase
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavManager
-@rendermode InteractiveServer
+
+<PageTitle>Đăng Nhập - HRMS Pro Enterprise</PageTitle>
 
 <div class="container py-4">
-    <!-- BANNER THÔNG TIN ĐỀ TÀI & SINH VIÊN -->
+    <!-- ENTERPRISE IDENTITY HEADER -->
     <div class="row justify-content-center mb-4">
         <div class="col-lg-10">
-            <div class="card border-0 shadow-sm bg-primary text-white p-4 rounded-4" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 50%, #0a58ca 100%);">
+            <div class="card border-0 shadow-sm text-white p-4 rounded-4 hero-corporate">
                 <div class="row align-items-center">
                     <div class="col-md-8">
-                        <span class="badge bg-white text-primary fw-bold px-3 py-2 mb-2">ĐỒ ÁN LẬP TRÌNH ỨNG DỤNG WEB</span>
-                        <h2 class="h3 fw-bold mb-2">HỆ THỐNG CHẤM CÔNG & TÍNH LƯƠNG TỰ ĐỘNG</h2>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-primary px-3 py-1 fw-bold">
+                                <i class="fa-solid fa-shield-halved me-1"></i>CỔNG XÁC THỰC DOANH NGHIỆP
+                            </span>
+                            <span class="badge bg-white bg-opacity-10 text-white px-2 py-1">
+                                <i class="fa-solid fa-lock me-1"></i>Mã hóa BCrypt & SSL
+                            </span>
+                        </div>
+                        <h2 class="h3 fw-bold mb-1 tracking-tight">HỆ THỐNG QUẢN TRỊ NHÂN SỰ & TIỀN LƯƠNG TẬP TRUNG</h2>
                         <p class="mb-0 text-white-50 small">
-                            <i class="fa-solid fa-graduation-cap me-1"></i> Sinh viên: <strong>Trần Viết Mạnh Cường</strong> (MSV: <strong>23K4080003</strong>)<br />
-                            <i class="fa-solid fa-building-columns me-1"></i> Khoa Hệ thống Thông tin Kinh tế • Ngành Tin học Kinh tế
+                            Đăng nhập an toàn để điểm danh chấm công hàng ngày, theo dõi ngày phép và tra cứu phiếu lương bảo mật.
                         </p>
                     </div>
                     <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                        <span class="badge bg-warning text-dark px-3 py-2 fw-semibold">
-                            <i class="fa-solid fa-database me-1"></i> CSDL: BangChamCongDB (MS SQL Server)
+                        <span class="badge bg-success bg-opacity-25 text-white border border-success border-opacity-50 px-3 py-2 fw-semibold">
+                            <i class="fa-solid fa-server me-1"></i>Hệ thống: Trực tuyến 24/7
                         </span>
                     </div>
                 </div>
@@ -28,16 +35,17 @@
         </div>
     </div>
 
-    <!-- KHUNG ĐĂNG NHẬP -->
-    <div class="row justify-content-center">
-        <div class="col-lg-5 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm rounded-4 h-100 p-4">
+    <!-- KHUNG ĐĂNG NHẬP & PHÂN QUYỀN DEMO -->
+    <div class="row justify-content-center g-4">
+        <!-- FORM ĐĂNG NHẬP CHÍNH -->
+        <div class="col-lg-5 col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white">
                 <div class="text-center mb-4">
-                    <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex p-3 mb-2">
-                        <i class="fa-solid fa-user-lock fa-2x"></i>
+                    <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex p-3 mb-2" style="width: 58px; height: 58px; align-items:center; justify-content:center;">
+                        <i class="fa-solid fa-user-shield fa-2x"></i>
                     </div>
-                    <h4 class="fw-bold text-dark mb-1">Đăng Nhập Hệ Thống</h4>
-                    <p class="text-muted small">Xác thực mật khẩu từ SQL Server BangChamCongDB</p>
+                    <h4 class="fw-bold text-dark mb-1">Đăng Nhập Tài Khoản</h4>
+                    <p class="text-muted small mb-0">Nhập tên người dùng và mật khẩu được cấp</p>
                 </div>
 
                 @if (!string.IsNullOrEmpty(errorMessage))
@@ -68,91 +76,99 @@
                         <label class="form-label small fw-semibold text-secondary">Mật khẩu (Password)</label>
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-key text-muted"></i></span>
-                            <input type="@(showPassword ? "text" : "password")" class="form-control border-start-0 border-end-0" placeholder="Nhập mật khẩu..." @bind="password" required />
-                            <button class="btn btn-light border border-start-0" type="button" @onclick="() => showPassword = !showPassword">
+                            <input type="@(showPassword ? "text" : "password")" class="form-control border-start-0 border-end-0" placeholder="••••••••" @bind="password" required />
+                            <button type="button" class="btn btn-light border border-start-0" @onclick="() => showPassword = !showPassword">
                                 <i class="fa-solid @(showPassword ? "fa-eye-slash" : "fa-eye") text-muted"></i>
                             </button>
                         </div>
-                        <div class="form-text small text-muted">Mật khẩu mặc định cho các tài khoản demo: <code>123456</code></div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm rounded-3" disabled="@isLoading">
+                    <button type="submit" class="btn btn-primary w-100 py-2 shadow-sm mb-3" disabled="@isLoading">
                         @if (isLoading)
                         {
-                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                            <span>Đang xác thực...</span>
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Đang xác thực thông tin...</span>
                         }
                         else
                         {
                             <i class="fa-solid fa-right-to-bracket me-2"></i>
-                            <span>Đăng Nhập</span>
+                            <span>Đăng Nhập Hệ Thống</span>
                         }
                     </button>
+
+                    <div class="text-center">
+                        <span class="text-muted small">
+                            <i class="fa-solid fa-circle-info me-1"></i>Mật khẩu mặc định hệ thống nội bộ: <code>123456</code>
+                        </span>
+                    </div>
                 </form>
             </div>
         </div>
 
-        <!-- TÙY CHỌN CHỌN NHANH TÀI KHOẢN MẪU (1-CLICK DEMO LOGIN) -->
-        <div class="col-lg-5 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-light">
-                <div class="mb-3">
-                    <h5 class="fw-bold text-dark mb-1">
-                        <i class="fa-solid fa-bolt text-warning me-2"></i>Đăng Nhập Nhanh 1-Click
-                    </h5>
-                    <p class="text-muted small">Bấm chọn tài khoản mẫu để đăng nhập và thử nghiệm phân quyền ngay lập tức:</p>
+        <!-- PHÂN HỆ CHUYỂN ĐỔI VAI TRÒ (RBAC DEMO) -->
+        <div class="col-lg-5 col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-success-subtle text-success rounded-circle p-2 me-2 d-inline-flex align-items-center justify-content-center" style="width:36px; height:36px;">
+                        <i class="fa-solid fa-users-gear"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">Chuyển Đổi Nhanh Theo Vai Trò</h5>
+                        <small class="text-muted">Chọn nhân sự để kiểm tra luồng nghiệp vụ tương ứng</small>
+                    </div>
                 </div>
 
-                <div class="d-flex flex-column gap-3">
+                <div class="d-flex flex-column gap-2">
                     <!-- TÀI KHOẢN NHÂN VIÊN A -->
-                    <button class="btn btn-white text-start p-3 border rounded-3 shadow-sm hover-shadow d-flex align-items-center justify-content-between"
+                    <button class="btn btn-white text-start p-3 border rounded-3 shadow-sm card-hover d-flex align-items-center justify-content-between"
                             @onclick='() => QuickLoginAsync("nhanvien.a", "123456")' disabled="@isLoading">
                         <div class="d-flex align-items-center">
-                            <div class="bg-success-subtle text-success rounded-circle p-2 me-3" style="width: 42px; height: 42px; display: flex; align-items:center; justify-content:center;">
+                            <div class="bg-primary-subtle text-primary rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
                                 <i class="fa-solid fa-user"></i>
                             </div>
                             <div>
                                 <div class="fw-bold text-dark">Nguyễn Văn A</div>
-                                <div class="small text-muted"><code>nhanvien.a</code> • Lập trình viên</div>
+                                <div class="small text-muted"><code>nhanvien.a</code> • Kỹ sư phần mềm (IT)</div>
                             </div>
                         </div>
-                        <span class="badge bg-success">ROLE_EMPLOYEE</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary border-opacity-25">Nhân Viên</span>
                     </button>
 
                     <!-- TÀI KHOẢN KẾ TOÁN THẢO -->
-                    <button class="btn btn-white text-start p-3 border rounded-3 shadow-sm hover-shadow d-flex align-items-center justify-content-between"
+                    <button class="btn btn-white text-start p-3 border rounded-3 shadow-sm card-hover d-flex align-items-center justify-content-between"
                             @onclick='() => QuickLoginAsync("ketoan.thao", "123456")' disabled="@isLoading">
                         <div class="d-flex align-items-center">
-                            <div class="bg-warning-subtle text-warning rounded-circle p-2 me-3" style="width: 42px; height: 42px; display: flex; align-items:center; justify-content:center;">
+                            <div class="bg-warning-subtle text-warning rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
                                 <i class="fa-solid fa-calculator"></i>
                             </div>
                             <div>
                                 <div class="fw-bold text-dark">Lê Thị Thu Thảo</div>
-                                <div class="small text-muted"><code>ketoan.thao</code> • Kế toán & Nhân sự</div>
+                                <div class="small text-muted"><code>ketoan.thao</code> • Trưởng phòng Kế toán & HR</div>
                             </div>
                         </div>
-                        <span class="badge bg-warning text-dark">ROLE_HR_ACCOUNTANT</span>
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning border-opacity-25">Kế Toán Trưởng</span>
                     </button>
 
                     <!-- TÀI KHOẢN QUẢN TRỊ TRỌNG -->
-                    <button class="btn btn-white text-start p-3 border rounded-3 shadow-sm hover-shadow d-flex align-items-center justify-content-between"
+                    <button class="btn btn-white text-start p-3 border rounded-3 shadow-sm card-hover d-flex align-items-center justify-content-between"
                             @onclick='() => QuickLoginAsync("admin.trong", "123456")' disabled="@isLoading">
                         <div class="d-flex align-items-center">
-                            <div class="bg-danger-subtle text-danger rounded-circle p-2 me-3" style="width: 42px; height: 42px; display: flex; align-items:center; justify-content:center;">
+                            <div class="bg-danger-subtle text-danger rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
                                 <i class="fa-solid fa-shield-halved"></i>
                             </div>
                             <div>
                                 <div class="fw-bold text-dark">Trần Đình Trọng</div>
-                                <div class="small text-muted"><code>admin.trong</code> • Quản trị hệ thống</div>
+                                <div class="small text-muted"><code>admin.trong</code> • Giám đốc CNTT (IT)</div>
                             </div>
                         </div>
-                        <span class="badge bg-danger">ROLE_ADMIN</span>
+                        <span class="badge bg-danger-subtle text-danger border border-danger border-opacity-25">Quản Trị Viên</span>
                     </button>
 
                     <!-- TÀI KHOẢN NHÂN VIÊN TUẤN -->
-                    <button class="btn btn-white text-start p-3 border rounded-3 shadow-sm hover-shadow d-flex align-items-center justify-content-between"
+                    <button class="btn btn-white text-start p-3 border rounded-3 shadow-sm card-hover d-flex align-items-center justify-content-between"
                             @onclick='() => QuickLoginAsync("nhanvien.tuan", "123456")' disabled="@isLoading">
                         <div class="d-flex align-items-center">
-                            <div class="bg-info-subtle text-info rounded-circle p-2 me-3" style="width: 42px; height: 42px; display: flex; align-items:center; justify-content:center;">
+                            <div class="bg-info-subtle text-info rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
                                 <i class="fa-solid fa-user-tag"></i>
                             </div>
                             <div>
@@ -160,7 +176,7 @@
                                 <div class="small text-muted"><code>nhanvien.tuan</code> • Chuyên viên Kinh doanh</div>
                             </div>
                         </div>
-                        <span class="badge bg-secondary">ROLE_EMPLOYEE</span>
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary border-opacity-25">Nhân Viên</span>
                     </button>
                 </div>
             </div>
@@ -204,11 +220,11 @@
             // Định tuyến trang theo vai trò
             if (user.Role == "ROLE_HR_ACCOUNTANT" || user.Role == "ROLE_ADMIN")
             {
-                NavManager.NavigateTo("admin/payroll-calculation");
+                NavManager.NavigateTo("/admin/payroll-calculation");
             }
             else
             {
-                NavManager.NavigateTo("my-timesheet");
+                NavManager.NavigateTo("/my-timesheet");
             }
         }
         catch (Exception ex)

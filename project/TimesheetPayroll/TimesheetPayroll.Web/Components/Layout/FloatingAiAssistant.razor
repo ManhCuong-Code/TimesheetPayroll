@@ -1,0 +1,671 @@
+@using TimesheetPayroll.CoreBusiness.Models
+@using TimesheetPayroll.CoreBusiness.Services.Interfaces
+@using TimesheetPayroll.UseCases.EmployeePortal
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Globalization
+
+@inject IAskSalaryAiUseCase AskAiUseCase
+@inject ISalaryAiAssistantService SalaryAiService
+@inject IGetEmployeeProfileUseCase ProfileUseCase
+@inject IGetEmployeePayslipHistoryUseCase HistoryUseCase
+@inject ILlmClient LlmClient
+@inject IAiKnowledgeBaseService KnowledgeBaseService
+@inject NavigationManager NavManager
+
+<!-- ========================================================================= -->
+<!-- KHỐI WIDGET NỔI TRÊN MÀN HÌNH - HIỆN DIỆN TRÊN TẤT CẢ CÁC TRANG CỦA HỆ THỐNG -->
+<!-- ========================================================================= -->
+<div class="floating-ai-container">
+
+    <!-- 1. CỬA SỔ NỔI TRỢ LÝ AI (KHI MỞ) -->
+    @if (isOpen)
+    {
+        <div class="floating-ai-panel @(isExpandedWide ? "expanded-wide" : "") shadow-lg">
+            
+            <!-- PANEL HEADER -->
+            <div class="panel-header">
+                <div class="panel-header-left">
+                    <div class="header-avatar">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div>
+                        <div class="header-title-text d-flex align-items-center gap-2">
+                            <span>Trợ Lý Lương AI</span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold" style="font-size: 0.65rem;">
+                                Sẵn Sàng 24/7
+                            </span>
+                        </div>
+                        <div class="header-status-indicator">
+                            <i class="fa-solid fa-circle text-success" style="font-size: 0.45rem;"></i>
+                            <span>@LlmClient.ProviderName • @LlmClient.ActiveModel</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-header-actions">
+                    <!-- Nút mở rộng/thu nhỏ chiều ngang -->
+                    <button type="button" class="panel-btn-action" @onclick="ToggleExpand" title="@(isExpandedWide ? "Thu nhỏ chiều ngang" : "Mở rộng chiều ngang")">
+                        <i class="fa-solid @(isExpandedWide ? "fa-compress" : "fa-expand")"></i>
+                    </button>
+
+                    <!-- Nút chuyển tới trang đầy đủ (/ai-salary-assistant) -->
+                    <a href="/ai-salary-assistant" class="panel-btn-action" title="Mở trang Trợ Lý Lương đầy đủ (Mô phỏng What-If & Đối soát chi tiết)">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+
+                    <!-- Nút thu nhỏ / đóng cửa sổ nổi -->
+                    <button type="button" class="panel-btn-action" @onclick="ToggleOpen" title="Thu nhỏ cửa sổ">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB BAR: CHAT & TINH CHỈNH CẤU HÌNH -->
+            <div class="panel-tab-bar">
+                <button type="button" class="panel-tab-btn @(activeTab == "chat" ? "active" : "")" @onclick='() => SwitchTab("chat")'>
+                    <i class="fa-solid fa-comments text-primary"></i>
+                    <span>Hỏi Đáp AI</span>
+                    @if (chatMessages.Count > 1)
+                    {
+                        <span class="badge bg-primary text-white rounded-pill ms-1" style="font-size: 0.6rem;">@chatMessages.Count</span>
+                    }
+                </button>
+                <button type="button" class="panel-tab-btn @(activeTab == "config" ? "active" : "")" @onclick='() => SwitchTab("config")'>
+                    <i class="fa-solid fa-sliders text-warning"></i>
+                    <span>Tinh Chỉnh & Cấu Hình</span>
+                    @if (LlmClient.IsConfigured)
+                    {
+                        <span class="badge bg-success text-white rounded-pill ms-1" style="font-size: 0.58rem;">Online</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary text-white rounded-pill ms-1" style="font-size: 0.58rem;">Nội bộ</span>
+                    }
+                </button>
+            </div>
+
+            <!-- PANEL CONTENT -->
+            <div class="panel-body">
+
+                <!-- ============================================== -->
+                <!-- TAB 1: TRÒ CHUYỆN & HỎI ĐÁP VỚI TRỢ LÝ LƯƠNG AI -->
+                <!-- ============================================== -->
+                @if (activeTab == "chat")
+                {
+                    <div class="chat-messages-container" id="floatingChatScroll">
+                        
+                        <!-- Thanh thông tin ngữ cảnh người dùng đang đăng nhập -->
+                        @if (currentEmployee != null)
+                        {
+                            <div class="alert alert-light border py-1-5 px-2 mb-2 d-flex justify-content-between align-items-center" style="font-size: 0.73rem;">
+                                <span class="text-secondary">
+                                    <i class="fa-solid fa-id-badge text-primary me-1"></i>
+                                    <strong>@currentEmployee.FullName</strong> (@currentEmployee.EmployeeCode) - @currentEmployee.DepartmentName
+                                </span>
+                                @if (payslips.Any())
+                                {
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                        Kỳ @FormatPeriodName(payslips.First())
+                                    </span>
+                                }
+                            </div>
+                        }
+
+                        <!-- Danh sách các tin nhắn trao đổi -->
+                        @foreach (var msg in chatMessages)
+                        {
+                            <div class="chat-bubble-wrap @(msg.IsUser ? "user" : "ai")">
+                                <div class="chat-avatar-mini">
+                                    @if (msg.IsUser)
+                                    {
+                                        <i class="fa-solid fa-user"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fa-solid fa-robot"></i>
+                                    }
+                                </div>
+                                <div>
+                                    <div class="chat-bubble">
+                                        @((MarkupString)FormatMarkdownText(msg.Text))
+                                    </div>
+                                    <div class="chat-bubble-meta">
+                                        <span>@msg.Timestamp.ToString("HH:mm")</span>
+                                        @if (!msg.IsUser)
+                                        {
+                                            <span>• @(msg.ProviderUsed ?? LlmClient.ProviderName)</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Trạng thái đang suy nghĩ & sinh câu trả lời -->
+                        @if (isThinking)
+                        {
+                            <div class="thinking-box">
+                                <div class="dot-wave">
+                                    <span></span><span></span><span></span>
+                                </div>
+                                <span>AI đang đối soát dữ liệu & phân tích...</span>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Gợi ý câu hỏi nhanh (Suggestion Chips) -->
+                    <div class="suggestion-chips-grid">
+                        @foreach (var sug in quickSuggestions)
+                        {
+                            <button type="button" class="suggestion-chip" @onclick="() => SendQuickQuestion(sug)" disabled="@isThinking">
+                                <i class="fa-regular fa-lightbulb text-warning"></i>
+                                <span>@sug</span>
+                            </button>
+                        }
+                    </div>
+
+                    <!-- Ô NHẬP TIN NHẮN CHAT -->
+                    <div class="chat-input-container">
+                        <input type="text" class="chat-input-field" 
+                               placeholder="Hỏi AI về lương, thuế, bảo hiểm, công thức..."
+                               @bind="inputQuestion" 
+                               @bind:event="oninput" 
+                               @onkeydown="HandleKeyDown" 
+                               disabled="@isThinking" />
+                        
+                        <button type="button" class="chat-send-btn" @onclick="SendMessageAsync" disabled="@(isThinking || string.IsNullOrWhiteSpace(inputQuestion))" title="Gửi tin nhắn (Enter)">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+
+                        <button type="button" class="btn btn-link text-muted p-1" @onclick="ClearChat" title="Xóa lịch sử trò chuyện" style="font-size: 0.85rem;">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                }
+
+                @if (activeTab == "config")
+                {
+                    <div class="d-flex flex-column gap-2" style="overflow-y: auto;">
+                        
+                        <!-- Thông báo khi lưu thành công -->
+                        @if (!string.IsNullOrEmpty(configSuccessMsg))
+                        {
+                            <div class="alert alert-success py-2 px-3 small d-flex align-items-center gap-2 mb-2 rounded-3">
+                                <i class="fa-solid fa-circle-check fs-5"></i>
+                                <span>@configSuccessMsg</span>
+                            </div>
+                        }
+
+                        <!-- Kết quả test kết nối -->
+                        @if (!string.IsNullOrEmpty(testResultMsg))
+                        {
+                            <div class="alert @(isTestSuccess ? "alert-success" : "alert-warning") py-2 px-3 small mb-2 rounded-3">
+                                <div class="fw-bold d-flex align-items-center gap-1 mb-1">
+                                    <i class="fa-solid @(isTestSuccess ? "fa-circle-check text-success" : "fa-triangle-exclamation text-warning")"></i>
+                                    <span>Kết Quả Kiểm Tra Kết Nối:</span>
+                                </div>
+                                <div style="font-size: 0.78rem;">@testResultMsg</div>
+                            </div>
+                        }
+
+                        <!-- 1. CHỌN NHÀ CUNG CẤP AI (PROVIDER) -->
+                        <div class="config-card">
+                            <label class="config-label">
+                                <i class="fa-solid fa-microchip text-primary"></i>
+                                <span>1. Động Cơ Trí Tuệ Nhân Tạo (AI Engine)</span>
+                            </label>
+                            
+                            <div class="provider-options">
+                                <!-- Google Gemini -->
+                                <div class="provider-chip @(aiConfig.Provider == AiProviderType.Gemini ? "selected" : "")"
+                                     @onclick="() => SetProvider(AiProviderType.Gemini)">
+                                    <span class="provider-chip-title"><i class="fa-solid fa-sparkles text-primary me-1"></i>Gemini</span>
+                                    <span class="provider-chip-desc">Nhanh, miễn phí</span>
+                                </div>
+
+                                <!-- OpenAI (ChatGPT) -->
+                                <div class="provider-chip @(aiConfig.Provider == AiProviderType.OpenAi ? "selected" : "")"
+                                     @onclick="() => SetProvider(AiProviderType.OpenAi)">
+                                    <span class="provider-chip-title"><i class="fa-solid fa-robot text-success me-1"></i>OpenAI</span>
+                                    <span class="provider-chip-desc">GPT-4o-mini</span>
+                                </div>
+
+                                <!-- Động cơ nội bộ -->
+                                <div class="provider-chip @(aiConfig.Provider == AiProviderType.LocalEngine ? "selected" : "")"
+                                     @onclick="() => SetProvider(AiProviderType.LocalEngine)">
+                                    <span class="provider-chip-title"><i class="fa-solid fa-shield-halved text-warning me-1"></i>Nội Bộ</span>
+                                    <span class="provider-chip-desc">Offline, 100% An toàn</span>
+                                </div>
+                            </div>
+
+                            @if (aiConfig.Provider != AiProviderType.LocalEngine)
+                            {
+                                <!-- API KEY INPUT -->
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="small fw-semibold text-secondary" style="font-size: 0.74rem;">
+                                            API Key (@(aiConfig.Provider == AiProviderType.Gemini ? "Google AI Studio" : "OpenAI Platform"))
+                                        </span>
+                                        @if (aiConfig.Provider == AiProviderType.Gemini)
+                                        {
+                                            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="small text-primary text-decoration-none" style="font-size: 0.7rem;">
+                                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Lấy Key Miễn Phí
+                                            </a>
+                                        }
+                                    </div>
+                                    <div class="input-group input-group-sm">
+                                        <input type="@(showApiKeyText ? "text" : "password")" 
+                                               class="form-control config-input" 
+                                               placeholder="Nhập khóa API (vd: AIzaSy... hoặc sk-...)"
+                                               @bind="aiConfig.ApiKey" />
+                                        <button class="btn btn-outline-secondary" type="button" @onclick="() => showApiKeyText = !showApiKeyText" title="Ẩn/Hiện khóa">
+                                            <i class="fa-solid @(showApiKeyText ? "fa-eye-slash" : "fa-eye")"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- MODEL NAME SELECTION -->
+                                <div class="mb-2">
+                                    <span class="small fw-semibold text-secondary d-block mb-1" style="font-size: 0.74rem;">
+                                        Mô Hình (Model Name)
+                                    </span>
+                                    <div class="d-flex gap-1 mb-1">
+                                        @if (aiConfig.Provider == AiProviderType.Gemini)
+                                        {
+                                            <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size: 0.7rem;" @onclick='() => aiConfig.Model = "gemini-2.0-flash"'>gemini-2.0-flash</button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 0.7rem;" @onclick='() => aiConfig.Model = "gemini-2.5-flash"'>gemini-2.5-flash</button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 0.7rem;" @onclick='() => aiConfig.Model = "gemini-1.5-flash"'>gemini-1.5-flash</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size: 0.7rem;" @onclick='() => aiConfig.Model = "gpt-4o-mini"'>gpt-4o-mini</button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 0.7rem;" @onclick='() => aiConfig.Model = "gpt-4o"'>gpt-4o</button>
+                                        }
+                                    </div>
+                                    <input type="text" class="form-control config-input form-control-sm" @bind="aiConfig.Model" placeholder="Tên model" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-secondary py-2 px-3 small mb-0 rounded-3" style="font-size: 0.75rem;">
+                                    <i class="fa-solid fa-circle-check text-success me-1"></i>
+                                    <strong>Chế độ Nội Bộ:</strong> Phân tích theo luật lao động Việt Nam và công thức HRM chuẩn xác, hoàn toàn không gửi dữ liệu ra ngoài Internet.
+                                </div>
+                            }
+                        </div>
+
+                        <!-- 2. NẠP TRI THỨC & GHI CHÚ QUY CHẾ RIÊNG CÔNG TY -->
+                        <div class="config-card">
+                            <label class="config-label">
+                                <i class="fa-solid fa-book-bookmark text-success"></i>
+                                <span>2. Quy Chế & Ghi Chú Riêng Doanh Nghiệp</span>
+                            </label>
+                            <p class="text-muted mb-1" style="font-size: 0.72rem;">
+                                Thêm các quy định phụ cấp đặc thù, tiền thưởng chuyên cần, ngày chốt công hàng tháng... để AI áp dụng khi trả lời.
+                            </p>
+                            <textarea class="form-control config-input" rows="3" style="font-size: 0.78rem;" 
+                                      placeholder="Ví dụ: Công ty phụ cấp cơm trưa 35.000đ/ngày, chuyên cần 500.000đ nếu không đi muộn, ngày chốt công là ngày 25 hàng tháng..."
+                                      @bind="customNotesInput"></textarea>
+                        </div>
+
+                        <!-- NÚT THAO TÁC CẤU HÌNH -->
+                        <div class="config-actions-bar">
+                            <button type="button" class="btn btn-outline-info btn-sm rounded-pill px-3" 
+                                    @onclick="TestAiConnectionAsync" disabled="@isTesting">
+                                @if (isTesting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                    <span>Đang test...</span>
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-bolt me-1"></i>
+                                    <span>Kiểm Tra Kết Nối</span>
+                                }
+                            </button>
+
+                            <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 fw-semibold" @onclick="SaveAiConfig">
+                                <i class="fa-solid fa-floppy-disk me-1"></i>
+                                <span>Lưu Cấu Hình Ngay</span>
+                            </button>
+                        </div>
+
+                    </div>
+                }
+
+            </div>
+        </div>
+    }
+
+    <!-- 2. NÚT KÍCH HOẠT NỔI Ở GÓC MÀN HÌNH (FLOATING ACTION BUTTON) -->
+    <button type="button" class="floating-ai-trigger" @onclick="ToggleOpen" title="Trợ Lý Lương AI & Tinh Chỉnh Cấu Hình (Bấm để mở)">
+        <div class="trigger-icon-wrap">
+            <i class="fa-solid fa-robot"></i>
+            <span class="online-pulse-dot"></span>
+        </div>
+        <div class="trigger-text-group">
+            <span class="trigger-main-title">Trợ Lý Lương AI</span>
+            <span class="trigger-sub-badge">
+                @(LlmClient.IsConfigured ? LlmClient.ProviderName : "AI Sẵn Sàng")
+            </span>
+        </div>
+    </button>
+
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    // Trạng thái hiển thị Widget
+    private bool isOpen = false;
+    private bool isExpandedWide = false;
+    private string activeTab = "chat"; // "chat" hoặc "config"
+
+    // Trạng thái Nhân viên & Phiếu lương
+    private long currentEmployeeId = 1;
+    private Employee? currentEmployee;
+    private List<Payslip> payslips = new();
+    private long selectedPeriodId = 10;
+
+    // Chat Tab State
+    private string inputQuestion = string.Empty;
+    private bool isThinking = false;
+    private List<AiChatMessage> chatMessages = new();
+    private List<string> quickSuggestions = new()
+    {
+        "Vì sao lương tháng này bị trừ?",
+        "Mức đóng BHXH 10.5% tính thế nào?",
+        "Làm thêm giờ (OT) tính hệ số mấy?",
+        "Quy chế nghỉ phép năm hưởng lương"
+    };
+
+    // Config Tab State
+    private AiConfiguration aiConfig = new();
+    private string customNotesInput = string.Empty;
+    private bool showApiKeyText = false;
+    private string configSuccessMsg = string.Empty;
+    private string testResultMsg = string.Empty;
+    private bool isTestSuccess = false;
+    private bool isTesting = false;
+
+    private readonly CultureInfo vnCulture = new("vi-VN");
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Tải cấu hình AI hiện có
+            aiConfig = LlmClient.GetConfiguration();
+            customNotesInput = KnowledgeBaseService.GetCustomNotes();
+
+            // Nhận diện người dùng nếu đã đăng nhập
+            if (AuthStateTask != null)
+            {
+                var authState = await AuthStateTask;
+                if (authState.User.Identity?.IsAuthenticated == true)
+                {
+                    var empIdClaim = authState.User.FindFirst("EmployeeId")?.Value;
+                    if (long.TryParse(empIdClaim, out var id) && id > 0)
+                    {
+                        currentEmployeeId = id;
+                    }
+                }
+            }
+
+            // Tải hồ sơ và lịch sử phiếu lương của nhân viên
+            try
+            {
+                currentEmployee = await ProfileUseCase.ExecuteAsync(currentEmployeeId);
+                var history = await HistoryUseCase.ExecuteAsync(currentEmployeeId);
+                payslips = history.ToList();
+                if (payslips.Any())
+                {
+                    selectedPeriodId = payslips.First().PeriodId;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[FloatingAi] Note: Employee profile or payslip history not loaded: {ex.Message}");
+            }
+
+            // Khởi tạo lời chào mở đầu
+            InitGreeting();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[FloatingAi] Init Error: {ex.Message}");
+        }
+    }
+
+    private void ToggleOpen()
+    {
+        isOpen = !isOpen;
+        if (isOpen)
+        {
+            configSuccessMsg = string.Empty;
+            testResultMsg = string.Empty;
+            // Tải lại cấu hình mới nhất
+            aiConfig = LlmClient.GetConfiguration();
+            customNotesInput = KnowledgeBaseService.GetCustomNotes();
+        }
+    }
+
+    private void ToggleExpand()
+    {
+        isExpandedWide = !isExpandedWide;
+    }
+
+    private void SwitchTab(string tab)
+    {
+        activeTab = tab;
+        configSuccessMsg = string.Empty;
+        testResultMsg = string.Empty;
+    }
+
+    private void SetProvider(AiProviderType provider)
+    {
+        aiConfig.Provider = provider;
+        if (provider == AiProviderType.Gemini && (string.IsNullOrWhiteSpace(aiConfig.Model) || aiConfig.Model.StartsWith("gpt")))
+        {
+            aiConfig.Model = "gemini-2.0-flash";
+        }
+        else if (provider == AiProviderType.OpenAi && (string.IsNullOrWhiteSpace(aiConfig.Model) || aiConfig.Model.StartsWith("gemini")))
+        {
+            aiConfig.Model = "gpt-4o-mini";
+        }
+    }
+
+    private void InitGreeting()
+    {
+        string name = currentEmployee?.FullName ?? "bạn";
+        chatMessages.Clear();
+        chatMessages.Add(new AiChatMessage
+        {
+            IsUser = false,
+            Timestamp = DateTime.Now,
+            ProviderUsed = LlmClient.ProviderName,
+            Text = $"Dạ chào anh/chị **{name}**! Em là **Trợ lý Lương AI** thông minh.\n\n" +
+                   $"Em có thể giải thích chi tiết phiếu lương, đối soát các khoản chênh lệch, quy định bảo hiểm (10.5%), thuế TNCN và các quy chế làm việc tại công ty bất cứ lúc nào.\n\n" +
+                   $"Anh/chị có thể gõ câu hỏi hoặc bấm chọn các gợi ý bên dưới nhé!"
+        });
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessageAsync();
+        }
+    }
+
+    private async Task SendQuickQuestion(string question)
+    {
+        inputQuestion = question;
+        await SendMessageAsync();
+    }
+
+    private async Task SendMessageAsync()
+    {
+        if (string.IsNullOrWhiteSpace(inputQuestion) || isThinking) return;
+
+        string question = inputQuestion.Trim();
+        inputQuestion = string.Empty;
+
+        // Thêm câu hỏi của user vào danh sách
+        chatMessages.Add(new AiChatMessage
+        {
+            IsUser = true,
+            Text = question,
+            Timestamp = DateTime.Now
+        });
+
+        isThinking = true;
+        StateHasChanged();
+
+        try
+        {
+            AiChatMessage responseMsg;
+
+            // Nếu có dữ liệu nhân viên, sử dụng UseCase đối soát chuyên sâu
+            if (currentEmployeeId > 0 && payslips.Any())
+            {
+                responseMsg = await AskAiUseCase.ExecuteAsync(currentEmployeeId, question, selectedPeriodId, null);
+            }
+            else
+            {
+                // Fallback gọi trực tiếp dịch vụ Trợ lý AI
+                responseMsg = await SalaryAiService.AnswerQuestionAsync(question, payslips.FirstOrDefault(), null, currentEmployee, null);
+            }
+
+            chatMessages.Add(responseMsg);
+
+            // Cập nhật gợi ý tiếp theo nếu có
+            if (responseMsg.FollowUpSuggestions != null && responseMsg.FollowUpSuggestions.Any())
+            {
+                quickSuggestions = responseMsg.FollowUpSuggestions;
+            }
+        }
+        catch (Exception ex)
+        {
+            chatMessages.Add(new AiChatMessage
+            {
+                IsUser = false,
+                Timestamp = DateTime.Now,
+                Text = $"Dạ em rất tiếc, đã có lỗi xử lý: {ex.Message}. Vui lòng kiểm tra lại cấu hình AI ở tab bên cạnh nhé!",
+                ProviderUsed = LlmClient.ProviderName
+            });
+        }
+        finally
+        {
+            isThinking = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearChat()
+    {
+        InitGreeting();
+        StateHasChanged();
+    }
+
+    private void SaveAiConfig()
+    {
+        try
+        {
+            LlmClient.UpdateConfiguration(aiConfig);
+            KnowledgeBaseService.SetCustomNotes(customNotesInput);
+            configSuccessMsg = "Đã lưu và áp dụng cấu hình AI thành công cho toàn bộ hệ thống!";
+            testResultMsg = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            configSuccessMsg = $"Lỗi khi lưu cấu hình: {ex.Message}";
+        }
+        StateHasChanged();
+    }
+
+    private async Task TestAiConnectionAsync()
+    {
+        isTesting = true;
+        testResultMsg = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            // Tạm thời áp dụng cấu hình hiện tại để test
+            LlmClient.UpdateConfiguration(aiConfig);
+
+            if (aiConfig.Provider == AiProviderType.LocalEngine)
+            {
+                await Task.Delay(400);
+                isTestSuccess = true;
+                testResultMsg = "Động cơ Phân tích Nội bộ hoạt động hoàn hảo! Đã sẵn sàng đối soát theo luật lao động.";
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(aiConfig.ApiKey))
+                {
+                    isTestSuccess = false;
+                    testResultMsg = "Vui lòng nhập API Key trước khi kiểm tra kết nối.";
+                }
+                else
+                {
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    var reply = await LlmClient.GenerateResponseAsync(
+                        "Bạn là trợ lý AI HRM Enterprise.",
+                        "Hãy phản hồi đúng 1 câu ngắn: 'Kết nối API thành công! Tôi đã sẵn sàng hỗ trợ bạn.'",
+                        CancellationToken.None);
+                    sw.Stop();
+
+                    if (!string.IsNullOrWhiteSpace(reply))
+                    {
+                        isTestSuccess = true;
+                        testResultMsg = $"Kết nối {LlmClient.ProviderName} ({aiConfig.Model}) thành công trong {sw.ElapsedMilliseconds}ms! Phản hồi từ AI: \"{reply.Trim()}\"";
+                    }
+                    else
+                    {
+                        isTestSuccess = false;
+                        testResultMsg = "Không nhận được phản hồi từ mô hình. Vui lòng kiểm tra lại API Key hoặc tên model.";
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            isTestSuccess = false;
+            testResultMsg = $"Kiểm tra kết nối thất bại: {ex.Message}";
+        }
+        finally
+        {
+            isTesting = false;
+            StateHasChanged();
+        }
+    }
+
+    private string FormatPeriodName(Payslip p)
+    {
+        if (p.PeriodMonth > 0)
+            return $"Tháng {p.PeriodMonth}/{p.PeriodYear}";
+        if (!string.IsNullOrEmpty(p.PeriodCode))
+            return p.PeriodCode;
+        return $"#{p.PeriodId}";
+    }
+
+    private string FormatMarkdownText(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+
+        var safe = System.Net.WebUtility.HtmlEncode(text);
+
+        // Bold: **text** -> <strong>text</strong>
+        safe = System.Text.RegularExpressions.Regex.Replace(safe, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+
+        // Italic: *text* -> <em>text</em>
+        safe = System.Text.RegularExpressions.Regex.Replace(safe, @"\*(.+?)\*", "<em>$1</em>");
+
+        // Line break
+        safe = safe.Replace("\n", "<br />");
+
+        return safe;
+    }
+}
