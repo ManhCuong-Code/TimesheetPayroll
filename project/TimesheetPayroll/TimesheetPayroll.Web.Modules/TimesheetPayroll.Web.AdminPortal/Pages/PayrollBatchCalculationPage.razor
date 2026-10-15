@@ -3,6 +3,8 @@
 @inject IViewPayrollSummaryUseCase ViewSummaryUseCase
 @inject ILockPayrollPeriodUseCase LockUseCase
 @inject IUnlockPayrollPeriodUseCase UnlockUseCase
+@inject IExportPayrollExcelUseCase ExportExcelUseCase
+@inject IJSRuntime JSRuntime
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using TimesheetPayroll.Web.AdminPortal.Controls
@@ -33,6 +35,30 @@
                     <span>Chạy Tính Lương Tự Động</span>
                 }
             </button>
+            @if (payslips.Any())
+            {
+                <div class="btn-group shadow-sm">
+                    <button class="btn btn-success" @onclick="HandleExportExcelAsync" disabled="@isLoading" title="Tải xuống bảng tính Excel chi tiết">
+                        <i class="fa-solid fa-file-excel me-1"></i>
+                        <span>Xuất Excel Bảng Lương</span>
+                    </button>
+                    <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" disabled="@isLoading" title="Tùy chọn xuất file">
+                        <span class="visually-hidden">Tùy chọn xuất file</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li>
+                            <button class="dropdown-item py-2" @onclick="HandleExportExcelAsync">
+                                <i class="fa-solid fa-file-excel text-success me-2"></i>Bảng thanh toán lương chi tiết (.xls)
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item py-2" @onclick="HandleExportCsvAsync">
+                                <i class="fa-solid fa-file-csv text-primary me-2"></i>Dữ liệu chuyển khoản ngân hàng (.csv)
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            }
             @if (payslips.Any() && !isLocked)
             {
                 <button class="btn btn-danger shadow-sm" @onclick="HandleLockPeriodAsync" disabled="@isLoading">
@@ -103,9 +129,17 @@
             <h5 class="card-title h6 mb-0 fw-bold">
                 <i class="fa-solid fa-list-check me-2 text-primary"></i>Danh Sách Phiếu Lương Đối Soát Chi Tiết
             </h5>
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
-                Tổng nhân sự: @payslips.Count người
-            </span>
+            <div class="d-flex align-items-center gap-2">
+                @if (payslips.Any())
+                {
+                    <button class="btn btn-sm btn-outline-success fw-semibold shadow-sm" @onclick="HandleExportExcelAsync" disabled="@isLoading" title="Xuất nhanh bảng lương Excel">
+                        <i class="fa-solid fa-file-excel me-1"></i>Xuất Excel
+                    </button>
+                }
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+                    Tổng nhân sự: @payslips.Count người
+                </span>
+            </div>
         </div>
         <div class="card-body p-0">
             <PayrollSummaryComponent Payslips="@payslips" />
@@ -256,6 +290,68 @@
         catch (Exception ex)
         {
             alertMessage = $"Lỗi khi mở khóa kỳ lương: {ex.Message}";
+            alertType = "danger";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleExportExcelAsync()
+    {
+        if (period == null || !payslips.Any())
+        {
+            alertMessage = "Chưa có dữ liệu phiếu lương để xuất Excel. Vui lòng bấm 'Chạy Tính Lương Tự Động' trước.";
+            alertType = "warning";
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            byte[] excelBytes = ExportExcelUseCase.ExportToExcelHtml(period, payslips);
+            string base64Data = Convert.ToBase64String(excelBytes);
+            string fileName = $"Bang_Luong_{period.PeriodCode}_{DateTime.Now:yyyyMMdd_HHmmss}.xls";
+
+            await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", fileName, "application/vnd.ms-excel;charset=utf-8", base64Data);
+            alertMessage = $"Đã xuất thành công bảng tính Excel lương kỳ {period.PeriodCode} ({payslips.Count} nhân viên)!";
+            alertType = "success";
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Lỗi khi xuất bảng Excel: {ex.Message}";
+            alertType = "danger";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleExportCsvAsync()
+    {
+        if (period == null || !payslips.Any())
+        {
+            alertMessage = "Chưa có dữ liệu phiếu lương để xuất CSV.";
+            alertType = "warning";
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            byte[] csvBytes = ExportExcelUseCase.ExportToCsv(period, payslips);
+            string base64Data = Convert.ToBase64String(csvBytes);
+            string fileName = $"Bang_Luong_NganHang_{period.PeriodCode}_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+
+            await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", fileName, "text/csv;charset=utf-8", base64Data);
+            alertMessage = $"Đã xuất thành công file CSV chuyển khoản ngân hàng ({payslips.Count} nhân viên)!";
+            alertType = "success";
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Lỗi khi xuất file CSV: {ex.Message}";
             alertType = "danger";
         }
         finally

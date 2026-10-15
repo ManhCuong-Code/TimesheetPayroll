@@ -100,6 +100,7 @@ builder.Services.AddTransient<IGetEmployeesWithoutAccountUseCase, GetEmployeesWi
 builder.Services.AddTransient<IToggleUserStatusUseCase, ToggleUserStatusUseCase>();
 builder.Services.AddTransient<IGetWorkShiftsUseCase, GetWorkShiftsUseCase>();
 builder.Services.AddTransient<IManageWorkShiftUseCase, ManageWorkShiftUseCase>();
+builder.Services.AddTransient<IExportPayrollExcelUseCase, ExportPayrollExcelUseCase>();
 
 // 6. EMPLOYEE PORTAL USE CASES
 builder.Services.AddTransient<IViewMyPayslipUseCase, ViewMyPayslipUseCase>();
