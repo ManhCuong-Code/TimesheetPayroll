@@ -12,7 +12,7 @@
 * **Học phần:** **Lập trình Ứng dụng Web**
 * **Tên đề tài:** **Hệ Thống Chấm Công & Tính Lương Tự Động (Timesheet & Payroll System)**
 * **Kho lưu trữ (Repository):** [https://github.com/ManhCuong-Code/TimesheetPayroll.git](https://github.com/ManhCuong-Code/TimesheetPayroll.git)
-* **Cơ sở dữ liệu:** **Microsoft SQL Server (`BangChamCongDB`)** *(Độc lập 100% với HomeStayHueDB)*
+* **Cơ sở dữ liệu:** **Microsoft SQL Server (`BangChamCongDB`)**
 * **Nền tảng công nghệ:** **.NET 10 Blazor Interactive Server + Dapper Micro-ORM + Clean Architecture**
 * **Trí tuệ Nhân tạo (AI):** **Trợ Lý Lương AI & Widget Nổi Toàn Hệ Thống (Google Gemini / OpenAI / Động Cơ Nội Bộ)**
 
@@ -1118,7 +1118,7 @@ Mở trình duyệt truy cập: `https://localhost:5001` (hoặc `http://localho
 ## 📋 7. KẾT LUẬN & ĐÁNH GIÁ KẾT QUẢ ĐẠT ĐƯỢC
 
 * ✅ **Đáp ứng 100% chuẩn học thuật môn học Lập trình Ứng dụng Web:** Đầy đủ trọn bộ **13 sơ đồ UML chuẩn hóa**, kết xuất trực quan bằng cú pháp Mermaid Markdown tương thích hoàn hảo trên GitHub kèm thông tin thuyết minh đặc tả chuyên sâu dưới từng sơ đồ.
-* ✅ **Tách biệt hoàn toàn CSDL:** Cơ sở dữ liệu **`BangChamCongDB`** độc lập 100% với các đồ án khác trên máy chủ SQL Server.
+* ✅ **Chuẩn hóa CSDL:** Cơ sở dữ liệu **`BangChamCongDB`** hoàn chỉnh, thiết kế chuẩn hóa 10 bảng dữ liệu trên máy chủ Microsoft SQL Server.
 * ✅ **Đột phá công nghệ Trí tuệ Nhân tạo (Salary AI Assistant):** Tích hợp Trợ lý Lương AI thông minh (hỗ trợ Google Gemini, OpenAI và Động cơ Nội bộ), giải đáp thắc mắc lương, phân tích nguyên nhân biến động 2 kỳ và mô phỏng What-If. Đặc biệt có **Widget Trợ lý AI nổi (Floating Widget)** trên 100% các trang cho phép tương tác và cấu hình tức thì.
 * ✅ **Bảo mật xác thực & Phân quyền RBAC thực tế:** Tích hợp màn hình đăng nhập `/login`, băm mật khẩu BCrypt, kiểm soát quyền theo vai trò (`ROLE_EMPLOYEE`, `ROLE_HR_ACCOUNTANT`, `ROLE_ADMIN`), trang quản trị người dùng (`/admin/users`), đổi mật khẩu (`/change-password`) và bảo vệ chống xem lén dữ liệu lương (Anti-IDOR).
 * ✅ **Mã nguồn chuẩn Clean Architecture:** Tách lớp độc lập (`CoreBusiness`, `UseCases`, `Plugins`, `Web.Modules`), tuân thủ triệt để các nguyên lý SOLID, sẵn sàng mở rộng quy mô.

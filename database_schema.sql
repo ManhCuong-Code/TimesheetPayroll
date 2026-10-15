@@ -1,4 +1,4 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- HRMS PRO - TIMESHEET & PAYROLL ENTERPRISE DATABASE SCHEMA
 -- CƠ SỞ DỮ LIỆU DOANH NGHIỆP: BangChamCongDB (MICROSOFT SQL SERVER)
 -- ============================================================================
@@ -15,7 +15,7 @@ GO
 
 -- ============================================================================
 -- BƯỚC 2: XÓA BẢNG CŨ (NẾU CÓ) THEO THỨ TỰ PHỤ THUỘC TRONG BangChamCongDB
--- Tuyệt đối không ảnh hưởng đến bất kỳ CSDL nào khác (như HomeStayHueDB)
+-- Đảm bảo an toàn, chỉ thao tác trên CSDL BangChamCongDB
 -- ============================================================================
 IF OBJECT_ID('dbo.payslip_lines', 'U') IS NOT NULL DROP TABLE dbo.payslip_lines;
 IF OBJECT_ID('dbo.payslips', 'U') IS NOT NULL DROP TABLE dbo.payslips;
