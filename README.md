@@ -161,33 +161,65 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    actor Emp as "Nhân Viên (ROLE_EMPLOYEE)"
+    Emp["👤 Nhân Viên<br/>(ROLE_EMPLOYEE)"]
+    ExtAI["🤖 Dịch Vụ LLM Bên Ngoài<br/>(Google Gemini / OpenAI)"]
 
-    subgraph ScopeEmp["Cổng Nhân Viên (Yêu cầu Xác thực & Quyền Sở hữu)"]
-        Auth(["Xác Thực Tài Khoản Đăng Nhập"])
-        CI(["UC09a: Điểm Danh Vào Ca (Check-In)"])
-        CO(["UC09b: Điểm Danh Tan Ca (Check-Out)"])
-        VT(["UC10: Tra Cứu Nhật Ký Chấm Công Hàng Ngày"])
-        LR(["UC11: Tạo Đơn Xin Nghỉ Phép Trực Tuyến"])
-        VP(["UC18: Tra Cứu Phiếu Lương Cá Nhân Minh Bạch"])
-        DT(["UC19: Xem Giải Thích Chi Tiết Thu Nhập & Bảo Hiểm"])
+    subgraph ScopeEmp["Phân Hệ Nhân Viên & Hỗ Trợ Trực Tuyến (Employee Self-Service)"]
+        subgraph P1["1. Xác Thực & Hồ Sơ Cá Nhân"]
+            UC_AUTH_01(["UC01: Đăng Nhập Hệ Thống"])
+            UC_AUTH_02(["UC03: Đổi Mật Khẩu Cá Nhân"])
+        end
+
+        subgraph P2["2. Nghiệp Vụ Chấm Công & Nghỉ Phép"]
+            UC_EMP_01(["UC09: Điểm Danh Check-In / Check-Out Hàng Ngày"])
+            UC_EMP_02(["UC11: Nộp Đơn Xin Nghỉ Phép Trực Tuyến"])
+            UC_EMP_03(["UC10: Tra Cứu Lịch Sử Bảng Công Tháng"])
+        end
+
+        subgraph P3["3. Tra Cứu Thu Nhập & Lương (Anti-IDOR)"]
+            UC_EMP_04(["UC18: Xem Chi Tiết Phiếu Lương Cá Nhân"])
+            UC_EMP_06(["Tải / In Phiếu Lương Định Dạng PDF"])
+        end
+
+        subgraph P4["4. Tương Tác Trí Tuệ Nhân Tạo (AI Support & Widget)"]
+            UC_AI_01(["UC19: Hỏi Đáp & Giải Thích Lương Với AI"])
+            UC_AI_02(["UC19a: So Sánh Biến Động Lương 2 Tháng"])
+            UC_AI_03(["UC19b: Mô Phỏng Dự Tính Lương What-If & BHXH"])
+            UC_AI_04(["UC20: Tương Tác Trợ Lý AI Nổi Trên Mọi Màn Hình"])
+        end
     end
 
-    Emp --> Auth
-    Auth --> CI
-    Auth --> CO
-    Auth --> VT
-    Auth --> LR
-    Auth --> VP
-    VP -.->|extend| DT
+    Emp --> UC_AUTH_01
+    Emp --> UC_AUTH_02
+    Emp --> UC_EMP_01
+    Emp --> UC_EMP_02
+    Emp --> UC_EMP_03
+    Emp --> UC_EMP_04
+    Emp --> UC_AI_01
+    Emp --> UC_AI_04
+
+    UC_EMP_04 -.->|<<extend>>| UC_EMP_06
+    UC_AI_01 -.->|<<extend>>| UC_AI_02
+    UC_AI_01 -.->|<<extend>>| UC_AI_03
+    UC_AI_04 -.->|<<include>>| UC_AI_01
+
+    UC_AI_01 -->|Gửi Prompt & Bóc tách kết quả| ExtAI
 ```
 
 #### 📋 Thông Tin Đặc Tả Sơ Đồ 02:
-* **Mục đích:** Mô hình hóa các chức năng tự phục vụ (Self-Service) dành riêng cho người lao động, đề cao tính tiện lợi và bảo mật quyền sở hữu dữ liệu cá nhân.
-* **Tác tử:** `ROLE_EMPLOYEE` (Người lao động).
+* **Mục đích:** Mô hình hóa các chức năng tự phục vụ (Self-Service) dành riêng cho người lao động, phân rã chi tiết thành 4 phân nhóm nghiệp vụ: Xác thực & Hồ sơ, Điểm danh & Nghỉ phép, Tra cứu thu nhập lương và Tương tác Trí tuệ Nhân tạo (AI Support).
+* **Các tác tử tham gia:**
+  * `ROLE_EMPLOYEE (Nhân viên)`: Tác tử chính tương tác với các ca sử dụng tự phục vụ.
+  * `External LLM Service (Dịch vụ AI bên ngoài)`: Tác tử hệ thống phụ trợ (Google Gemini / OpenAI API) kết nối xử lý ngôn ngữ tự nhiên và phân tích dữ liệu.
+* **Phân rã 4 nhóm ca sử dụng chính:**
+  1. *Xác thực & Hồ sơ cá nhân:* `UC01` (Đăng nhập), `UC03` (Đổi mật khẩu cá nhân).
+  2. *Chấm công & Nghỉ phép:* `UC09` (Điểm danh Check-In/Check-Out hàng ngày), `UC11` (Nộp đơn xin nghỉ phép trực tuyến), `UC10` (Tra cứu lịch sử ngày công).
+  3. *Tra cứu thu nhập & Lương:* `UC18` (Xem chi tiết phiếu lương cá nhân), mở rộng `<<extend>>` tính năng tải/in PDF.
+  4. *Tương tác Trợ lý AI:* `UC19` (Hỏi đáp thắc mắc lương với AI), mở rộng `UC19a` (Đối soát chênh lệch 2 kỳ), `UC19b` (Mô phỏng What-If dự tính thu nhập tương lai), và `UC20` (Widget Trợ lý AI nổi tiện lợi ở mọi màn hình).
 * **Quy tắc nghiệp vụ then chốt:**
-  * **Chấm công 1 lần/ngày:** Nhân viên chỉ được điểm danh Check-In/Check-Out trong ngày làm việc hiện tại, hệ thống tự động ghi nhận giờ server ngăn chặn gian lận thời gian.
-  * **Anti-IDOR:** Nhân viên chỉ có quyền truy vấn phiếu lương (`UC18`) gắn liền với `EmployeeId` của chính mình được trích xuất từ phiên đăng nhập an toàn (`ClaimsPrincipal`), tuyệt đối không được xem lương của đồng nghiệp.
+  * **Bảo vệ quyền sở hữu chống xem lén (Anti-IDOR):** Nhân viên chỉ có quyền truy vấn phiếu lương (`UC18`) gắn liền với `EmployeeId` của chính mình được trích xuất từ phiên đăng nhập an toàn (`ClaimsPrincipal`), hoàn toàn ngăn chặn rủi ro lộ thu nhập cá nhân.
+  * **Chấm công chuẩn giờ Server:** Nhân viên chỉ được điểm danh trong ngày làm việc hiện tại, hệ thống lấy thời gian thực từ máy chủ máy chủ để xác định chính xác đi đúng giờ hay đi trễ.
+  * **Grounded AI Reasoning:** Trợ lý AI chỉ giải thích dựa trên dữ liệu phiếu lương thực tế trong CSDL kết hợp các điều khoản Luật Lao động 2019, tuyệt đối không bịa đặt số liệu (Zero-Hallucination).
 
 ---
 
@@ -195,44 +227,80 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    actor HR as "Kế Toán / HR (ROLE_HR_ACCOUNTANT)"
-    actor Admin as "Quản Trị Viên (ROLE_ADMIN)"
+    HR["👔 Kế Toán / Nhân Sự<br/>(ROLE_HR_ACCOUNTANT)"]
+    Admin["🛡️ Quản Trị Viên<br/>(ROLE_ADMIN)"]
 
-    subgraph ScopeAdmin["Phân Hệ Quản Trị & Kế Toán Tiền Lương"]
-        UC_Emp(["UC04: Quản Lý Hồ Sơ & Phòng Ban"])
-        UC_Leave(["UC12: Duyệt / Từ Chối Đơn Nghỉ Phép"])
-        UC_LockTS(["UC13: Khóa Bảng Chấm Công Tháng"])
-        UC_Batch(["UC14: Chạy Tính Lương Tự Động Toàn Doanh Nghiệp"])
-        UC_Preview(["UC15: Đối Soát Bảng Lương Tổng Hợp"])
-        UC_LockPR(["UC16: Chốt Kỳ Lương Khóa Sổ (Read-Only)"])
-        UC_Bank(["UC17: Xuất File Ủy Nhiệm Chi Ngân Hàng"])
-        UC_User(["UC07: Quản Lý Người Dùng & Phân Quyền"])
-        UC_Rate(["UC08: Cấu Hình Tỷ Lệ Bảo Hiểm Động"])
+    subgraph ScopeAdmin["Phân Hệ Quản Trị Hệ Thống & Kế Toán Tiền Lương"]
+        subgraph P_Sys["1. Quản Trị Hệ Thống & Tổ Chức"]
+            UC_AUTH_01(["UC01: Đăng Nhập Hệ Thống"])
+            UC_AUTH_02(["UC03: Đổi Mật Khẩu Cá Nhân"])
+            UC_ADM_01(["UC22: Quản Lý Tài Khoản Người Dùng (/admin/users)"])
+            UC_ADM_02(["UC02: Phân Quyền Vai Trò (Role Management)"])
+            UC_HR_01(["UC04: Quản Lý Danh Mục Phòng Ban"])
+        end
+
+        subgraph P_HR["2. Hồ Sơ Nhân Sự, Ca Làm Việc & Chế Độ"]
+            UC_HR_02(["UC05: Quản Lý Hồ Sơ Nhân Viên"])
+            UC_HR_03(["UC06: Quản Lý Hợp Đồng & Lương Cơ Bản"])
+            UC_HR_04(["UC21: Quản Lý Ca Làm Việc & Hệ Số OT (/admin/shifts)"])
+            UC_HR_05(["UC08: Cấu Hình Tỷ Lệ Trích Nộp & Động Cơ AI"])
+        end
+
+        subgraph P_Time["3. Giám Sát & Phê Duyệt Chấm Công"]
+            UC_HR_06(["UC12: Duyệt / Từ Chối Đơn Nghỉ Phép"])
+            UC_HR_07(["UC13: Khóa Bảng Chấm Công Kỳ (Lock Timesheet)"])
+        end
+
+        subgraph P_Pay["4. Động Cơ Tính Lương & Quyết Toán (Core Engine)"]
+            UC_HR_08(["UC14: Khởi Tạo & Tính Lương Tự Động (Batch Run)"])
+            UC_HR_09(["UC15: Xem & Đối Soát Bảng Lương Tổng Hợp"])
+            UC_HR_10(["UC16: Chốt Kỳ Lương Khóa Sổ Bất Biến (Read-Only)"])
+            UC_HR_11(["UC17: Xuất Danh Sách Chuyển Khoản Ngân Hàng"])
+        end
     end
 
-    HR --> UC_Emp
-    HR --> UC_Leave
-    HR --> UC_LockTS
-    HR --> UC_Batch
-    HR --> UC_Preview
-    HR --> UC_LockPR
-    HR --> UC_Bank
+    Admin --> UC_AUTH_01
+    Admin --> UC_AUTH_02
+    Admin --> UC_ADM_01
+    Admin --> UC_ADM_02
+    Admin --> UC_HR_01
+    Admin --> UC_HR_04
+    Admin --> UC_HR_05
+    Admin --> UC_HR_10
 
-    Admin --> UC_User
-    Admin --> UC_Rate
-    Admin --> UC_LockPR
+    HR --> UC_AUTH_01
+    HR --> UC_AUTH_02
+    HR --> UC_HR_01
+    HR --> UC_HR_02
+    HR --> UC_HR_03
+    HR --> UC_HR_04
+    HR --> UC_HR_05
+    HR --> UC_HR_06
+    HR --> UC_HR_07
+    HR --> UC_HR_08
+    HR --> UC_HR_09
+    HR --> UC_HR_10
+    HR --> UC_HR_11
 
-    UC_Batch -->|Bắt buộc| UC_Preview
-    UC_Preview -->|Điều kiện tiên quyết| UC_LockPR
-    UC_LockPR -->|Kích hoạt| UC_Bank
+    UC_HR_08 -->|Bắt buộc sau tính toán| UC_HR_09
+    UC_HR_09 -->|Điều kiện tiên quyết| UC_HR_10
+    UC_HR_10 -->|Kích hoạt xuất file| UC_HR_11
 ```
 
 #### 📋 Thông Tin Đặc Tả Sơ Đồ 03:
-* **Mục đích:** Mô tả quy trình vận hành quản trị nhân sự, xử lý nghiệp vụ tiền lương định kỳ và quản lý chính sách doanh nghiệp.
-* **Tác tử:** `ROLE_HR_ACCOUNTANT` (Kế toán), `ROLE_ADMIN` (Quản trị viên).
-* **Quy tắc nghiệp vụ:**
-  * Kế toán phải xét duyệt xong đơn nghỉ phép (`UC12`) và khóa bảng công (`UC13`) trước khi chạy tính lương (`UC14`).
-  * Tính lương hàng loạt bắt buộc phải qua đối soát (`UC15`) trước khi có thể bấm nút chốt sổ kỳ lương (`UC16`).
+* **Mục đích:** Mô tả chi tiết phân hệ nghiệp vụ dành cho Kế toán tiền lương (HR) và Quản trị viên hệ thống (Admin), tổ chức thành 4 phân nhóm quản trị và quyết toán tài chính chuyên nghiệp.
+* **Các tác tử tham gia:**
+  * `ROLE_HR_ACCOUNTANT (Kế toán / HR)`: Thực hiện các nghiệp vụ nhân sự, quản lý ca làm việc, giám sát ngày công, chạy tính lương tự động hàng loạt và chốt sổ tài chính.
+  * `ROLE_ADMIN (Quản trị viên toàn quyền)`: Quản lý người dùng (`/admin/users`), cấp phát vai trò, cấu hình tỷ lệ bảo hiểm và quản lý kết nối động cơ AI.
+* **Phân rã 4 nhóm ca sử dụng quản trị:**
+  1. *Quản trị hệ thống & Tổ chức:* `UC01` (Đăng nhập), `UC03` (Đổi mật khẩu), `UC22` (Quản lý tài khoản người dùng), `UC02` (Phân quyền vai trò RBAC), `UC04` (Quản lý danh mục phòng ban).
+  2. *Hồ sơ nhân sự, Ca làm việc & Chế độ:* `UC05` (Hồ sơ nhân viên), `UC06` (Hợp đồng lao động & Lương cơ bản), `UC21` (Quản lý danh mục ca làm việc, giờ vào/ra, hệ số OT), `UC08` (Cấu hình tỷ lệ trích nộp bảo hiểm BHXH/BHYT/BHTN & Động cơ AI).
+  3. *Giám sát & Phê duyệt chấm công:* `UC12` (Xét duyệt/Từ chối đơn xin nghỉ phép), `UC13` (Khóa sổ bảng chấm công kỳ ngăn sửa đổi).
+  4. *Động cơ tính lương & Quyết toán (Core Engine):* `UC14` (Chạy tính toán lương hàng loạt tự động 1-chạm qua Transaction), `UC15` (Xem bảng đối soát tổng hợp toàn công ty), `UC16` (Chốt kỳ lương Khóa sổ Read-Only), `UC17` (Xuất file danh sách chuyển khoản ngân hàng).
+* **Quy tắc nghiệp vụ then chốt:**
+  * **Tuần tự nghiệp vụ nghiêm ngặt:** Kế toán bắt buộc phải hoàn thành xét duyệt đơn nghỉ phép (`UC12`) và khóa bảng công (`UC13`) trước khi có thể kích hoạt động cơ tính lương (`UC14`).
+  * **Transaction an toàn tài chính:** Quá trình tính toán lương cho toàn thể nhân viên (`UC14`) thực thi nguyên khối (Atomic Transaction), nếu có sự cố xảy ra hệ thống tự động Rollback đảm bảo không bị sai lệch số liệu.
+  * **Khóa sổ bất biến (Read-Only Lock):** Sau khi kế toán kiểm tra đối soát (`UC15`) và bấm Chốt kỳ lương (`UC16`), toàn bộ bảng lương chuyển sang trạng thái chỉ đọc, không thể chỉnh sửa để phục vụ kiểm toán và xuất file ngân hàng (`UC17`).
 
 ---
 
