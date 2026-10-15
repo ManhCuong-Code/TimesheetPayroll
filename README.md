@@ -775,67 +775,183 @@ classDiagram
 
 ---
 
-### SƠ ĐỒ 12: Sơ Đồ Kiến Trúc Thành Phần Hệ Thống Clean Architecture (System Component Diagram)
+### SƠ ĐỒ 12: Sơ Đồ Máy Trạng Thái Vòng Đời Kỳ Lương (PayrollPeriod State Machine Diagram) & Kiến Trúc Thành Phần Clean Architecture
+
+#### 1. Sơ Đồ Máy Trạng Thái Vòng Đời Kỳ Lương (State Machine Diagram - Chuẩn hóa theo `12_state_payroll_period.puml`):
+
+Sơ đồ trực quan hóa vòng đời chuyển tiếp trạng thái nghiêm ngặt của thực thể **Kỳ Lương (`PayrollPeriod`)**, kiểm soát tính toàn vẹn dữ liệu tài chính doanh nghiệp và ngăn chặn mọi hành vi gian lận hoặc sửa đổi dữ liệu quá khứ:
+
+```mermaid
+stateDiagram-v2
+    [*] --> DRAFT : Khởi tạo kỳ lương mới (VD: Tháng 10/2026)
+
+    state DRAFT {
+        DRAFT_1 : • Thu thập dữ liệu bảng chấm công hàng ngày
+        DRAFT_2 : • Tiếp nhận & xét duyệt đơn xin nghỉ phép (UC12)
+        DRAFT_3 : • Khóa sổ bảng chấm công kỳ ngăn sửa đổi (UC13)
+        DRAFT_4 : • Cho phép điều chỉnh thông tin hợp đồng và phụ cấp
+    }
+
+    DRAFT --> CALCULATING : Kế toán bấm "Chạy Tính Lương Tự Động" (UC14)
+
+    state CALCULATING {
+        CALC_1 : • Khởi tạo Database Transaction an toàn (Commit/Rollback)
+        CALC_2 : • Tính lương gộp, phụ cấp theo ngày công thực tế
+        CALC_3 : • Trích nộp 10.5% bảo hiểm (BHXH 8%, BHYT 1.5%, BHTN 1%)
+        CALC_4 : • Khóa tạm thời bảng công (Lock rows chống sửa)
+    }
+
+    CALCULATING --> DRAFT : Phát sinh lỗi ngoại lệ / Rollback an toàn (Bảo toàn dữ liệu)
+    CALCULATING --> CALCULATED : Tính toán 100% thành công cho tất cả nhân viên
+
+    state CALCULATED {
+        RES_1 : • Phiếu lương ở dạng Xem trước (Preview)
+        RES_2 : • Kế toán đối soát tổng quỹ lương trên màn hình tổng hợp (UC15)
+        RES_3 : • Cho phép chạy lại tính toán khi dữ liệu đầu vào thay đổi
+    }
+
+    CALCULATED --> CALCULATING : Chạy lại tính lương khi có điều chỉnh
+    CALCULATED --> LOCKED : Kế toán đối soát xong và bấm "Chốt Kỳ Lương" (UC16)
+
+    state LOCKED {
+        LOCK_1 : • Đã khóa chỉnh sửa, toàn bộ dữ liệu chuyển sang Read-Only
+        LOCK_2 : • Ngăn chặn tuyệt đối mọi hành vi sửa đổi dữ liệu quá khứ
+        LOCK_3 : • Phiếu lương hiển thị công khai tới nhân viên (UC18)
+        LOCK_4 : • Kích hoạt Trợ lý AI giải đáp thắc mắc lương 24/7 (UC19)
+        LOCK_5 : • Xuất file danh sách chuyển khoản cho Ngân hàng (UC17)
+    }
+
+    LOCKED --> PAID : Kế toán xác nhận ủy nhiệm chi ngân hàng thành công
+
+    state PAID {
+        PAID_1 : • Đã hoàn tất chi trả tiền lương vào tài khoản nhân viên
+        PAID_2 : • Lưu trữ vào kho dữ liệu kế toán lịch sử (Archive vĩnh viễn)
+    }
+
+    PAID --> [*] : Kết thúc chu kỳ quyết toán kỳ lương
+```
+
+---
+
+#### 2. Sơ Đồ Kiến Trúc Thành Phần Hệ Thống Clean Architecture (System Component Diagram - Bản Nâng Cấp Đầy Đủ):
+
+Sơ đồ thể hiện sự phân rã thành phần phần mềm theo nguyên lý Đảo ngược Phụ thuộc (Dependency Inversion Principle - DIP), tích hợp đầy đủ các phân hệ mới bao gồm **Widget Trợ lý AI nổi (Floating Widget)**, Cổng Trợ lý AI chuyên sâu, Quản lý ca làm việc, Quản trị người dùng và Cổng dịch vụ LLM Cloud:
 
 ```mermaid
 flowchart TB
-    subgraph PresentationTier["1. Tầng Trình Diễn (Presentation - Blazor Interactive Server)"]
-        Host["TimesheetPayroll.Web<br/>(Host App, SignalR WebSocket, Program.cs)"]
+    subgraph PresentationTier["1. TẦNG TRÌNH DIỄN (Presentation - Blazor Interactive Server)"]
+        Host["TimesheetPayroll.Web<br/>(Host App, SignalR Server, Program.cs)"]
         AuthComp["CustomAuthenticationStateProvider<br/>(Quản lý phiên đăng nhập, Claims & RBAC)"]
-        ModAdmin["TimesheetPayroll.Web.AdminPortal<br/>(PayrollBatchCalculationPage, SummaryControls)"]
-        ModEmp["TimesheetPayroll.Web.EmployeePortal<br/>(MyTimesheet, MyPayslip, LeaveRequest)"]
-        ModCommon["TimesheetPayroll.Web.Common<br/>(SearchBar, StatusBadge, Controls)"]
+        FloatingAI["FloatingAiAssistant.razor<br/>(Widget Trợ lý AI nổi trên màn hình mọi trang)"]
+        
+        subgraph ModAdmin["TimesheetPayroll.Web.AdminPortal"]
+            P_Batch["PayrollBatchCalculationPage.razor<br/>(Tính lương tự động & Chốt sổ Read-Only)"]
+            P_Users["UserManagementPage.razor<br/>(Quản trị tài khoản & Cấp quyền /admin/users)"]
+            P_Shifts["WorkShiftManagementPage.razor<br/>(Quản lý ca làm việc /admin/shifts)"]
+        end
+
+        subgraph ModEmp["TimesheetPayroll.Web.EmployeePortal"]
+            P_TS["MyTimesheetComponent.razor (Chấm công)"]
+            P_PS["MyPayslipComponent.razor (Phiếu lương)"]
+            P_LR["LeaveRequestComponent.razor (Nghỉ phép)"]
+            P_AI["AiSalaryAssistantComponent.razor (Trợ lý AI chuyên sâu)"]
+            P_PW["ChangePasswordPage.razor (Đổi mật khẩu)"]
+        end
+
+        ModCommon["TimesheetPayroll.Web.Common<br/>(StatusBadge, SearchBar, Controls)"]
     end
 
-    subgraph UseCasesTier["2. Tầng Trường Hợp Sử Dụng (Use Cases)"]
-        UCAdmin["AdminPortal Use Cases<br/>(CalculatePayrollBatch, LockPeriod, ProcessLeave)"]
-        UCEmp["EmployeePortal Use Cases<br/>(ViewMyPayslip, CheckInCheckOut, ViewTimesheet)"]
-        UCAuth["Authentication Use Cases<br/>(LoginUseCase, GetUserAccountsUseCase)"]
-        PluginIntf["PluginInterfaces.DataStore<br/>(IRepositories: User, Employee, Timesheet, Payslip)"]
+    subgraph UseCasesTier["2. TẦNG TRƯỜNG HỢP SỬ DỤNG (Application Use Cases)"]
+        UCAdmin["AdminPortal Use Cases<br/>(CalculatePayrollBatch, LockPeriod, ManageUsers, ManageShifts)"]
+        UCEmp["EmployeePortal Use Cases<br/>(ViewMyPayslip, CheckInCheckOut, ProcessLeave)"]
+        UCAi["Salary AI Use Cases<br/>(AskSalaryAi, CompareSalary, SimulateSalary)"]
+        UCAuth["Authentication Use Cases<br/>(LoginUseCase, ChangePasswordUseCase)"]
+        PluginIntf["PluginInterfaces.DataStore & StateStore<br/>(IRepositories: User, Employee, Timesheet, Payslip, Shift)"]
     end
 
-    subgraph CoreBusinessTier["3. Tầng Miền Nghiệp Vụ Cốt Lõi (Core Business)"]
-        DomainModels["Domain Entities<br/>(Employee, UserAccount, Timesheet, Payslip, PayrollPeriod)"]
-        CalcEngine["PayrollCalculationService<br/>(IPayrollCalculationService: Động cơ tính lương chuẩn)"]
+    subgraph CoreBusinessTier["3. TẦNG MIỀN NGHIỆP VỤ CỐT LÕI (Domain & Core Services)"]
+        DomainModels["Domain Entities<br/>(Employee, UserAccount, Timesheet, Payslip, PayrollPeriod, WorkShift, SalaryAiModels)"]
+        CalcEngine["PayrollCalculationService<br/>(Động cơ tính toán lương tự động chuẩn luật)"]
+        AiService["SalaryAiAssistantService<br/>(Động cơ Grounded AI đối soát lương & luật lao động)"]
+        KbService["AiKnowledgeBaseService<br/>(Quản lý & nạp quy chế tri thức nhân sự)"]
+        LlmClient["LlmClient<br/>(Cổng kết nối LLM Google Gemini / OpenAI / Nội bộ)"]
     end
 
-    subgraph InfrastructureTier["4. Tầng Hạ Tầng Kỹ Thuật & CSDL (Infrastructure Plugins)"]
-        DapperRepo["TimesheetPayroll.DataStore.SQL.Dapper<br/>(UserAccountRepository, PayslipRepo, TimesheetRepo)"]
-        StateStore["TimesheetPayroll.StateStore.DI<br/>(TimesheetStateStore)"]
-        HandCoded["TimesheetPayroll.DataStore.HandCoded<br/>(Mock Data Testing)"]
-        SQLDB[("Microsoft SQL Server Instance<br/>Database: BangChamCongDB (10 Bảng)")]
+    subgraph InfrastructureTier["4. TẦNG HẠ TẦNG KỸ THUẬT & CSDL (Infrastructure Plugins & Cloud)"]
+        DapperRepo["TimesheetPayroll.DataStore.SQL.Dapper<br/>(Dapper Micro-ORM, Dynamic Parameters, BCrypt)"]
+        SQLDB[("Microsoft SQL Server Instance<br/>CSDL: BangChamCongDB (10 Bảng Chuẩn)")]
+        StateStore["TimesheetPayroll.StateStore.DI<br/>(Quản lý trạng thái SignalR StateStore)"]
+        ExtLLM["External AI Cloud Services<br/>(Google Gemini 2.0 Flash / OpenAI API)"]
+        KbFile["App_Data/knowledge_base_hrm.md<br/>(Kho tri thức Luật Lao động & Thuế TNCN)"]
     end
 
     Host --> AuthComp
+    Host --> FloatingAI
     Host --> ModAdmin
     Host --> ModEmp
     Host --> ModCommon
 
-    ModAdmin --> UCAdmin
-    ModEmp --> UCEmp
+    P_Batch --> UCAdmin
+    P_Users --> UCAdmin
+    P_Shifts --> UCAdmin
+
+    P_TS --> UCEmp
+    P_PS --> UCEmp
+    P_LR --> UCEmp
+    P_PW --> UCAuth
+
+    FloatingAI --> UCAi
+    P_AI --> UCAi
     AuthComp --> UCAuth
-    ModCommon --> DomainModels
 
     UCAdmin --> PluginIntf
     UCAdmin --> CalcEngine
     UCEmp --> PluginIntf
     UCAuth --> PluginIntf
+    UCAi --> AiService
+    UCAi --> PluginIntf
 
-    PluginIntf --> DomainModels
+    AiService --> KbService
+    AiService --> LlmClient
+    AiService --> CalcEngine
     CalcEngine --> DomainModels
+    PluginIntf --> DomainModels
 
     DapperRepo ..|> PluginIntf
-    HandCoded ..|> PluginIntf
-    StateStore --> DomainModels
     DapperRepo --> SQLDB
+    StateStore --> DomainModels
+    LlmClient --> ExtLLM
+    KbService --> KbFile
 ```
 
 #### 📋 Thông Tin Đặc Tả Sơ Đồ 12:
-* **Mục đích:** Thể hiện kiến trúc phần mềm phân tầng sạch (Clean Architecture), đảm bảo nguyên lý đảo ngược phụ thuộc (Dependency Inversion Principle - DIP).
-* **Quy tắc phụ thuộc:**
-  * Tầng `CoreBusiness` nằm ở trung tâm và không phụ thuộc vào bất kỳ framework bên ngoài nào.
-  * Tầng `UseCases` chỉ giao tiếp với tầng CSDL thông qua các abstraction interface (`PluginInterfaces`).
-  * Tầng `Infrastructure` (Dapper) và `Presentation` (Blazor) phụ thuộc hướng vào trong, cho phép dễ dàng thay đổi CSDL hoặc nâng cấp UI mà không ảnh hưởng logic lõi.
+* **Mục đích:**
+  * **Về mặt vòng đời dữ liệu (State Machine):** Đảm bảo tính nhất quán và bất biến tài chính; quy định chặt chẽ điều kiện chuyển trạng thái của kỳ lương từ bản nháp (`DRAFT`) tới quyết toán chi trả ngân hàng (`PAID`).
+  * **Về mặt kiến trúc phần mềm (Clean Architecture):** Bảo đảm tính phân tách độc lập giữa các tầng; cô lập logic nghiệp vụ tính lương và phân tích AI ở tầng trung tâm, không phụ thuộc vào hạ tầng CSDL SQL Server hay giao diện Blazor.
+* **Bảng ma trận chuyển tiếp trạng thái kỳ lương (State Transition Table):**
+
+| Trạng Thái Nguồn (From) | Sự Kiện Kích Hoạt (Trigger) | Điều Kiện Tiên Quyết (Guard) | Hành Động Hệ Thống (Action) | Trạng Thái Đích (To) | Mã Use Case | Đặc Tính Toàn Vẹn |
+| :--- | :--- | :--- | :--- | :--- | :---: | :--- |
+| `[*]` | Khởi tạo kỳ lương mới | Chọn tháng/năm hợp lệ | Thêm bản ghi vào `payroll_periods` | `DRAFT` | `UC13` | Trạng thái ban đầu |
+| `DRAFT` | Bấm "Tính Lương Tự Động" | Đã duyệt phép & khóa bảng công | Mở Database Transaction, tính toán hàng loạt | `CALCULATING` | `UC14` | Khóa tạm thời bảng công (Lock rows) |
+| `CALCULATING` | Phát sinh lỗi / Ngoại lệ | Gặp lỗi tính toán hoặc ngắt kết nối | Tự động Rollback Transaction | `DRAFT` | `UC14` | Bảo toàn 100% dữ liệu gốc |
+| `CALCULATING` | Tính toán thành công | Tính đủ 100% nhân viên trong danh sách | Commit Transaction, sinh phiếu lương Preview | `CALCULATED` | `UC14` | Dữ liệu xem trước |
+| `CALCULATED` | Yêu cầu tính toán lại | Có điều chỉnh công hoặc hợp đồng hợp lệ | Xóa kết quả tính cũ, mở lại Transaction | `CALCULATING` | `UC14` | Tái tính toán an toàn |
+| `CALCULATED` | Bấm "Chốt Kỳ Lương" | Kế toán đã đối soát bảng tổng hợp | Kích hoạt cờ Read-Only vĩnh viễn | `LOCKED` | `UC16` | **Khóa sổ bất biến, kích hoạt AI & phiếu lương** |
+| `LOCKED` | Xác nhận chi lương | Kế toán nhận xác nhận chuyển khoản ngân hàng | Ghi nhận hoàn tất thanh toán | `PAID` | `UC17` | Chi trả thành công |
+| `PAID` | Quyết toán hoàn tất | Đã đồng bộ vào sổ kế toán lưu trữ | Lưu kho lịch sử kế toán (Archive) | `[*]` | — | Kết thúc vòng đời |
+
+* **4 Quy tắc máy trạng thái then chốt:**
+  1. **Tính nguyên khối Transaction & Rollback tự động (`CALCULATING` $\rightarrow$ `DRAFT`):** Toàn bộ quy trình tính toán cho hàng chục hoặc hàng trăm nhân sự được thực thi trong một Database Transaction duy nhất. Nếu xảy ra bất kỳ lỗi tính toán hay ngắt kết nối nào, hệ thống lập tức Rollback về trạng thái `DRAFT` nguyên vẹn, đảm bảo không có rủi ro dữ liệu dở dang.
+  2. **Xem trước & đối soát linh hoạt (`CALCULATED`):** Tại trạng thái này, kế toán có thể xem toàn bộ bảng tổng hợp lương (`UC15`). Nếu phát hiện sai sót đầu vào, hệ thống cho phép kích hoạt tính toán lại mà không để lại vết rác dữ liệu.
+  3. **Khóa sổ bất biến Read-Only (`LOCKED`):** Ngay khi kế toán bấm "Chốt Kỳ Lương" (`UC16`), hệ thống áp dụng cơ chế khóa sổ (Read-Only Lock). Mọi thao tác sửa đổi công, phụ cấp hoặc tính toán lại kỳ này bị chặn 100%. Đây là điều kiện tiên quyết để:
+     * Nhân viên được phép truy cập xem phiếu lương chính thức (`UC18`).
+     * Kích hoạt Trợ lý AI phân tích và giải thích phiếu lương (`UC19`).
+     * Xuất file danh sách chuyển khoản cho ngân hàng (`UC17`).
+  4. **Quyết toán chi trả ngân hàng (`PAID`):** Sau khi ngân hàng hoàn tất ủy nhiệm chi, kỳ lương chuyển sang `PAID` và được lưu kho vĩnh viễn phục vụ thanh tra và kiểm toán tài chính.
+* **Quy tắc kiến trúc phần mềm Clean Architecture:**
+  * **Nguyên lý Dependency Inversion (DIP):** Tầng `UseCases` và `CoreBusiness` chỉ định nghĩa Interface; tầng `Plugins` (`DataStore.SQL.Dapper`, `LlmClient`) đảm nhiệm việc hiện thực hóa.
+  * **Tích hợp AI Module độc lập:** Trợ lý AI kết nối qua cổng `ILlmClient` và `IAiKnowledgeBaseService`, cho phép hoán đổi linh hoạt giữa Google Gemini API, OpenAI hoặc Động cơ Phân tích Nội bộ mà không ảnh hưởng tới các chức năng chấm công và tính lương cốt lõi.
 
 ---
 
