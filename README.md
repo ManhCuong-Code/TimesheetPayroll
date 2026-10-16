@@ -1086,7 +1086,7 @@ erDiagram
     }
 ```
 
-#### 📋 Bảng Từ Điển Dữ Liệu 10 Bảng Nghiệp Vụ CSDL `BangChamCongDB`:
+#### 📋 Bảng Từ Điển Dữ Liệu 11 Bảng Nghiệp Vụ CSDL `BangChamCongDB`:
 
 | STT | Tên Bảng SQL | Mục Đích Lưu Trữ | Khóa Chính (PK) | Khóa Ngoại (FK) & Quan Hệ | Ràng Buộc Nghiệp Vụ (Constraints) |
 | :---: | :--- | :--- | :---: | :--- | :--- |
@@ -1096,10 +1096,11 @@ erDiagram
 | **4** | `contracts` | Hợp đồng lao động, mức lương CB, phụ cấp | `id` (BIGINT) | `employee_id` $\rightarrow$ `employees(id)` | `contract_number` UNIQUE, `base_salary >= 0` |
 | **5** | `payroll_periods` | Kỳ lương hàng tháng, trạng thái khóa sổ | `id` (BIGINT) | Không | `(period_month, period_year)` UNIQUE |
 | **6** | `deduction_rates` | Danh mục tỷ lệ bảo hiểm (BHXH, BHYT, BHTN) | `id` (BIGINT) | Không | `rate_code` UNIQUE, `employee_rate >= 0` |
-| **7** | `timesheets` | Nhật ký chấm công hàng ngày | `id` (BIGINT) | `employee_id` $\rightarrow$ `employees(id)`, `period_id` $\rightarrow$ `payroll_periods(id)` | `(employee_id, work_date)` UNIQUE |
-| **8** | `leave_requests` | Đơn xin nghỉ phép trực tuyến | `id` (BIGINT) | `employee_id` $\rightarrow$ `employees(id)` | `approval_status` IN ('PENDING', 'APPROVED', 'REJECTED') |
-| **9** | `payslips` | Phiếu lương tổng hợp của từng nhân sự | `id` (BIGINT) | `period_id` $\rightarrow$ `payroll_periods(id)`, `employee_id` $\rightarrow$ `employees(id)` | `(period_id, employee_id)` UNIQUE |
-| **10** | `payslip_lines` | Chi tiết các dòng lương, phụ cấp & khấu trừ | `id` (BIGINT) | `payslip_id` $\rightarrow$ `payslips(id)` (Cascade Delete) | `amount >= 0`, `is_deduction` BIT |
+| **7** | `work_shifts` | Danh mục ca làm việc (ca chuẩn, ca kíp, ca gãy) | `id` (BIGINT) | Không | `shift_code` UNIQUE, `target_hours > 0` |
+| **8** | `timesheets` | Nhật ký chấm công hàng ngày | `id` (BIGINT) | `employee_id` $\rightarrow$ `employees(id)`, `period_id` $\rightarrow$ `payroll_periods(id)`, `shift_id` $\rightarrow$ `work_shifts(id)` | `(employee_id, work_date)` UNIQUE |
+| **9** | `leave_requests` | Đơn xin nghỉ phép trực tuyến | `id` (BIGINT) | `employee_id` $\rightarrow$ `employees(id)` | `approval_status` IN ('PENDING', 'APPROVED', 'REJECTED') |
+| **10** | `payslips` | Phiếu lương tổng hợp của từng nhân sự | `id` (BIGINT) | `period_id` $\rightarrow$ `payroll_periods(id)`, `employee_id` $\rightarrow$ `employees(id)` | `(period_id, employee_id)` UNIQUE |
+| **11** | `payslip_lines` | Chi tiết các dòng lương, phụ cấp & khấu trừ | `id` (BIGINT) | `payslip_id` $\rightarrow$ `payslips(id)` (Cascade Delete) | `amount >= 0`, `is_deduction` BIT |
 
 ---
 

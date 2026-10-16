@@ -1,4 +1,4 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- HRMS PRO - TIMESHEET & PAYROLL ENTERPRISE DATABASE SYSTEM
 -- BẢN DÀNH CHO: POSTGRESQL 16 (DBeaver / pgAdmin 4 / psql)
 -- ============================================================================
@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS payslip_lines CASCADE;
 DROP TABLE IF EXISTS payslips CASCADE;
 DROP TABLE IF EXISTS leave_requests CASCADE;
 DROP TABLE IF EXISTS timesheets CASCADE;
+DROP TABLE IF EXISTS work_shifts CASCADE;
 DROP TABLE IF EXISTS payroll_periods CASCADE;
 DROP TABLE IF EXISTS deduction_rates CASCADE;
 DROP TABLE IF EXISTS contracts CASCADE;
@@ -104,10 +105,30 @@ CREATE TABLE payroll_periods (
     CONSTRAINT uq_period_month_year UNIQUE (period_month, period_year)
 );
 
+CREATE TABLE work_shifts (
+    id BIGSERIAL PRIMARY KEY,
+    shift_code VARCHAR(50) NOT NULL UNIQUE,
+    shift_name VARCHAR(100) NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    lunch_break_hours NUMERIC(4, 2) NOT NULL DEFAULT 1.50,
+    target_hours NUMERIC(4, 2) NOT NULL DEFAULT 8.00,
+    work_units NUMERIC(3, 2) NOT NULL DEFAULT 1.00,
+    grace_period_minutes INT NOT NULL DEFAULT 15,
+    is_night_shift BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    description VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE timesheets (
     id BIGSERIAL PRIMARY KEY,
     employee_id BIGINT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
     period_id BIGINT REFERENCES payroll_periods(id) ON DELETE SET NULL,
+    shift_id BIGINT REFERENCES work_shifts(id) ON DELETE SET NULL,
+    shift_code VARCHAR(50),
+    shift_name VARCHAR(100),
     work_date DATE NOT NULL,
     check_in_time TIME,
     check_out_time TIME,
