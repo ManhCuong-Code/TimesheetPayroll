@@ -23,7 +23,7 @@
             <button class="btn btn-outline-primary" @onclick="LoadDataAsync" disabled="@isLoading">
                 <i class="fa-solid fa-arrows-rotate me-1"></i>Làm mới
             </button>
-            <button class="btn btn-primary shadow-sm" @onclick="HandleCalculateBatchAsync" disabled="@(isLoading || isLocked)">
+            <button class="btn btn-primary shadow-sm" @onclick="HandleCalculateBatchAsync" disabled="@isLoading" title="@(isLocked ? "Bấm vào để demo chặn vi phạm tính lại kỳ đã khóa" : "Chạy tính lương tự động")">
                 @if (isLoading)
                 {
                     <span class="spinner-border spinner-border-sm me-1" role="status"></span>
@@ -95,14 +95,8 @@
             <div class="card border-0 shadow-sm bg-white p-3 border-start border-4 border-info">
                 <div class="text-muted small fw-semibold">TRẠNG THÁI KỲ</div>
                 <div class="fs-4 fw-bold mt-1">
-                    @if (isLocked)
-                    {
-                        <span class="badge bg-danger fs-6"><i class="fa-solid fa-lock me-1"></i>ĐÃ KHÓA SỔ (READ-ONLY)</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-success fs-6"><i class="fa-solid fa-unlock me-1"></i>@(period?.Status.ToString() ?? "CALCULATED")</span>
-                    }
+                    <StatusBadgeComponent Status="@(isLocked ? "LOCKED" : (period?.Status.ToString() ?? "CALCULATED"))" 
+                                          Label="@(isLocked ? "ĐÃ KHÓA SỔ (READ-ONLY)" : (period?.Status.ToString() ?? "SẴN SÀNG TÍNH"))" />
                 </div>
                 <div class="small text-muted">@(isLocked ? "Không thể chỉnh sửa" : "Cho phép đối soát & tính lại")</div>
             </div>
@@ -142,9 +136,16 @@
             </div>
         </div>
         <div class="card-body p-0">
-            <PayrollSummaryComponent Payslips="@payslips" />
+            <PayrollSummaryComponent Payslips="@payslips" OnSelectPayslip="HandleSelectPayslip" />
         </div>
     </div>
+
+    @if (selectedPayslip != null)
+    {
+        <div class="mt-4">
+            <PayslipDetailCard Payslip="@selectedPayslip" OnClose="() => selectedPayslip = null" />
+        </div>
+    }
 </div>
     </Authorized>
     <NotAuthorized>
@@ -180,6 +181,7 @@
     private const long DefaultPeriodId = 10;
     private PayrollPeriod? period;
     private List<Payslip> payslips = new();
+    private Payslip? selectedPayslip;
     private bool isLoading = false;
     private bool isLocked = false;
     private string alertMessage = string.Empty;
@@ -214,6 +216,11 @@
         }
     }
 
+    private void HandleSelectPayslip(Payslip p)
+    {
+        selectedPayslip = p;
+    }
+
     private async Task HandleCalculateBatchAsync()
     {
         isLoading = true;
@@ -223,8 +230,15 @@
             payslips = results.ToList();
             var summary = await ViewSummaryUseCase.ExecuteAsync(DefaultPeriodId);
             period = summary.Period;
+            isLocked = period?.Status == PeriodStatus.LOCKED;
             alertMessage = $"Đã tính toán thành công toàn bộ {payslips.Count} nhân viên với tổng thực lĩnh {totalNet:N0} đ!";
             alertType = "success";
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Bắt lỗi vi phạm quy tắc nghiệp vụ K3.3 (Luật 2: Kỳ đã chốt không được tính lại)
+            alertMessage = $"[CHẶN VI PHẠM LUẬT NGHIỆP VỤ] {ex.Message}";
+            alertType = "danger";
         }
         catch (Exception ex)
         {

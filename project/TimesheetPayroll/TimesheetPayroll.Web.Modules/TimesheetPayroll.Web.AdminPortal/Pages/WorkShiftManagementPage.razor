@@ -67,13 +67,16 @@
 
             <!-- DANH SÁCH CA LÀM VIỆC -->
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h5 class="card-title h6 mb-0 fw-bold">
                         <i class="fa-solid fa-list-check text-primary me-2"></i>Danh Mục Ca Chấm Công Hệ Thống
                     </h5>
-                    <span class="badge bg-primary-subtle text-primary fw-medium px-2 py-1">
-                        @shifts.Count ca làm việc
-                    </span>
+                    <div class="d-flex align-items-center gap-2" style="min-width: 280px;">
+                        <SearchBarComponent Placeholder="Tìm nhanh ca..." OnSearch="HandleSearch" />
+                        <span class="badge bg-primary-subtle text-primary fw-medium px-2 py-2 text-nowrap">
+                            @DisplayShifts.Count() ca làm việc
+                        </span>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
@@ -103,7 +106,7 @@
                             }
                             else
                             {
-                                @foreach (var shift in shifts)
+                                @foreach (var shift in DisplayShifts)
                                 {
                                     <tr class="@(!shift.IsActive ? "table-light text-muted opacity-75" : "")">
                                         <td>
@@ -165,18 +168,7 @@
                                             }
                                         </td>
                                         <td class="text-center">
-                                            @if (shift.IsActive)
-                                            {
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
-                                                    <i class="fa-solid fa-circle-check me-1"></i>Áp Dụng
-                                                </span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
-                                                    <i class="fa-solid fa-circle-pause me-1"></i>Tạm Dừng
-                                                </span>
-                                            }
+                                            <StatusBadgeComponent Status="@(shift.IsActive ? "APPROVED" : "REJECTED")" Label="@(shift.IsActive ? "Áp Dụng" : "Tạm Dừng")" />
                                         </td>
                                         <td class="text-end">
                                             <div class="btn-group btn-group-sm">
@@ -328,6 +320,13 @@
 
 @code {
     private List<WorkShift> shifts = new();
+    private string searchTerm = string.Empty;
+    private IEnumerable<WorkShift> DisplayShifts => string.IsNullOrWhiteSpace(searchTerm)
+        ? shifts
+        : shifts.Where(s => (s.ShiftCode?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                            (s.ShiftName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+    private void HandleSearch(string term) => searchTerm = term;
+
     private bool isLoading = false;
     private bool isSaving = false;
     private string alertMessage = string.Empty;

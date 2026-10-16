@@ -1,4 +1,5 @@
 @page "/login"
+@using System.ComponentModel.DataAnnotations
 @inject ILoginUseCase LoginUseCase
 @inject IUserSessionService UserSession
 @inject NavigationManager NavManager
@@ -63,24 +64,28 @@
                     </div>
                 }
 
-                <form @onsubmit="HandleLoginAsync">
+                <EditForm Model="@loginModel" OnValidSubmit="HandleLoginAsync">
+                    <DataAnnotationsValidator />
+
                     <div class="mb-3">
-                        <label class="form-label small fw-semibold text-secondary">Tên đăng nhập (Username)</label>
+                        <label class="form-label small fw-semibold text-secondary">Tên đăng nhập (Username) <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-user text-muted"></i></span>
-                            <input type="text" class="form-control border-start-0" placeholder="vd: nhanvien.a, ketoan.thao..." @bind="username" required />
+                            <InputText class="form-control border-start-0" placeholder="vd: nhanvien.a, ketoan.thao..." @bind-Value="loginModel.Username" />
                         </div>
+                        <ValidationMessage For="@(() => loginModel.Username)" class="text-danger small mt-1" />
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label small fw-semibold text-secondary">Mật khẩu (Password)</label>
+                        <label class="form-label small fw-semibold text-secondary">Mật khẩu (Password) <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-key text-muted"></i></span>
-                            <input type="@(showPassword ? "text" : "password")" class="form-control border-start-0 border-end-0" placeholder="••••••••" @bind="password" required />
+                            <InputText type="@(showPassword ? "text" : "password")" class="form-control border-start-0 border-end-0" placeholder="••••••••" @bind-Value="loginModel.Password" />
                             <button type="button" class="btn btn-light border border-start-0" @onclick="() => showPassword = !showPassword">
                                 <i class="fa-solid @(showPassword ? "fa-eye-slash" : "fa-eye") text-muted"></i>
                             </button>
                         </div>
+                        <ValidationMessage For="@(() => loginModel.Password)" class="text-danger small mt-1" />
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100 py-2 shadow-sm mb-3" disabled="@isLoading">
@@ -101,7 +106,7 @@
                             <i class="fa-solid fa-circle-info me-1"></i>Mật khẩu mặc định hệ thống nội bộ: <code>123456</code>
                         </span>
                     </div>
-                </form>
+                </EditForm>
             </div>
         </div>
 
@@ -185,8 +190,18 @@
 </div>
 
 @code {
-    private string username = "nhanvien.a";
-    private string password = "123456";
+    public class LoginViewModel
+    {
+        [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập.")]
+        [StringLength(50, MinimumLength = 3, ErrorMessage = "Tên đăng nhập phải từ 3 đến 50 ký tự.")]
+        public string Username { get; set; } = "nhanvien.a";
+
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
+        [MinLength(4, ErrorMessage = "Mật khẩu tối thiểu 4 ký tự.")]
+        public string Password { get; set; } = "123456";
+    }
+
+    private LoginViewModel loginModel = new();
     private bool showPassword = false;
     private bool isLoading = false;
     private string errorMessage = string.Empty;
@@ -194,8 +209,8 @@
 
     private async Task QuickLoginAsync(string u, string p)
     {
-        username = u;
-        password = p;
+        loginModel.Username = u;
+        loginModel.Password = p;
         await HandleLoginAsync();
     }
 
@@ -207,7 +222,7 @@
 
         try
         {
-            var user = await LoginUseCase.ExecuteAsync(username, password);
+            var user = await LoginUseCase.ExecuteAsync(loginModel.Username, loginModel.Password);
             if (user == null)
             {
                 errorMessage = "Tên đăng nhập hoặc mật khẩu không chính xác, hoặc tài khoản đã bị vô hiệu hóa!";

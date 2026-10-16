@@ -520,3 +520,17 @@
     padding-top: 8px;
     border-top: 1px solid #e2e8f0;
 }
+
+@media (max-width: 576px) {
+    .floating-ai-panel {
+        right: 10px !important;
+        bottom: 58px !important;
+        width: calc(100vw - 20px) !important;
+        max-width: 100vw !important;
+        height: 75vh !important;
+        border-radius: 12px !important;
+    }
+    .floating-ai-panel.expanded-wide {
+        width: calc(100vw - 20px) !important;
+    }
+}

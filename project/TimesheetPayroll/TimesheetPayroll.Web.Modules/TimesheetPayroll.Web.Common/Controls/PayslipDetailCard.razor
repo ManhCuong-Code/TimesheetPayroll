@@ -17,9 +17,15 @@ else
                     <h3 class="h4 mb-0 fw-bold">@Payslip.EmployeeName</h3>
                     <div class="small opacity-75">Mã NV: @Payslip.EmployeeCode | @(Payslip.DepartmentName ?? "Nhân viên chính thức")</div>
                 </div>
-                <div class="text-end">
-                    <div class="small opacity-75">THỰC LĨNH CHUYỂN KHOẢN (NET)</div>
-                    <div class="display-6 fw-bold">@Payslip.NetSalary.ToString("N0") <span class="fs-6">VNĐ</span></div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="text-end">
+                        <div class="small opacity-75">THỰC LĨNH CHUYỂN KHOẢN (NET)</div>
+                        <div class="display-6 fw-bold">@Payslip.NetSalary.ToString("N0") <span class="fs-6">VNĐ</span></div>
+                    </div>
+                    @if (OnClose.HasDelegate)
+                    {
+                        <button type="button" class="btn-close btn-close-white" aria-label="Close" @onclick="() => OnClose.InvokeAsync()"></button>
+                    }
                 </div>
             </div>
         </div>
@@ -87,4 +93,5 @@ else
 
 @code {
     [Parameter] public Payslip? Payslip { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
 }

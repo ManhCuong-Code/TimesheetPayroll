@@ -1,19 +1,33 @@
+using System.ComponentModel.DataAnnotations;
 using TimesheetPayroll.CoreBusiness.Exceptions;
 
 namespace TimesheetPayroll.CoreBusiness.Models;
 
 /// <summary>
 /// Đại diện cho đơn xin nghỉ phép của nhân viên gửi tới phòng nhân sự xét duyệt.
+/// Có tích hợp các DataAnnotations để kiểm thực biểu mẫu EditForm Blazor.
 /// </summary>
 public class LeaveRequest
 {
     public long Id { get; set; }
     public long EmployeeId { get; set; }
     public string? EmployeeName { get; set; }
+
+    [Required(ErrorMessage = "Vui lòng chọn loại hình nghỉ phép.")]
     public LeaveType LeaveType { get; set; } = LeaveType.ANNUAL_LEAVE;
+
+    [Required(ErrorMessage = "Vui lòng chọn ngày bắt đầu nghỉ.")]
     public DateTime StartDate { get; set; } = DateTime.Today;
+
+    [Required(ErrorMessage = "Vui lòng chọn ngày kết thúc nghỉ.")]
     public DateTime EndDate { get; set; } = DateTime.Today;
+
+    [Required(ErrorMessage = "Vui lòng nhập số ngày nghỉ dự kiến.")]
+    [Range(0.5, 30.0, ErrorMessage = "Số ngày nghỉ phải nằm trong khoảng từ 0.5 đến 30 ngày.")]
     public decimal TotalDays { get; set; } = 1.0m;
+
+    [Required(ErrorMessage = "Vui lòng ghi rõ lý do xin nghỉ phép.")]
+    [StringLength(500, MinimumLength = 5, ErrorMessage = "Lý do xin nghỉ phép phải từ 5 đến 500 ký tự.")]
     public string Reason { get; set; } = string.Empty;
     public ApprovalStatus ApprovalStatus { get; set; } = ApprovalStatus.PENDING;
     public string? ApprovedBy { get; set; }
