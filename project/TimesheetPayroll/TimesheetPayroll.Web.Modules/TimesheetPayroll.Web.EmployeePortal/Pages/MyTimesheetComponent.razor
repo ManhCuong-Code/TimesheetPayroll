@@ -1,4 +1,5 @@
 @page "/my-timesheet"
+@attribute [Authorize]
 @implements IDisposable
 @inject IViewMyTimesheetUseCase ViewTimesheetUseCase
 @inject ICheckInCheckOutUseCase CheckInUseCase

@@ -1,4 +1,5 @@
 @page "/my-payslip"
+@attribute [Authorize]
 @inject IViewMyPayslipUseCase ViewPayslipUseCase
 @inject IGetEmployeePayslipHistoryUseCase HistoryUseCase
 @using TimesheetPayroll.Web.Common.Controls
