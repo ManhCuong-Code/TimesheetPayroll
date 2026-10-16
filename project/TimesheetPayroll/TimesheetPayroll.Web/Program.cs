@@ -22,6 +22,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
+builder.Services.AddScoped<IUserSessionService>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
 
 // 2. PLUGINS (SQL DAPPER & STATE STORE)
 builder.Services.AddSingleton<IDataAccess, DataAccess>();

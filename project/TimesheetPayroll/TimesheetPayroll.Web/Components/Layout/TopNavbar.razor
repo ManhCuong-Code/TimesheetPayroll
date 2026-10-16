@@ -1,4 +1,5 @@
-@inject CustomAuthenticationStateProvider AuthStateProvider
+@using TimesheetPayroll.UseCases.Authentication
+@inject IUserSessionService UserSession
 @inject NavigationManager NavManager
 
 <nav class="navbar navbar-expand-lg navbar-dark shadow-sm px-3" style="background-color: #0f172a; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
@@ -119,7 +120,7 @@
 
     private void HandleLogout()
     {
-        AuthStateProvider.SignOut();
+        UserSession.SignOut();
         NavManager.NavigateTo("/login");
     }
 

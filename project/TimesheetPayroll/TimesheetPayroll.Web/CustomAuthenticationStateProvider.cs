@@ -1,11 +1,12 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
 using TimesheetPayroll.CoreBusiness.Models;
+using TimesheetPayroll.UseCases.Authentication;
 using TimesheetPayroll.UseCases.PluginInterfaces.DataStore;
 
 namespace TimesheetPayroll.Web;
 
-public class CustomAuthenticationStateProvider : AuthenticationStateProvider
+public class CustomAuthenticationStateProvider : AuthenticationStateProvider, IUserSessionService
 {
     private readonly IUserAccountRepository _userRepository;
     private ClaimsPrincipal _currentPrincipal = new(new ClaimsIdentity());

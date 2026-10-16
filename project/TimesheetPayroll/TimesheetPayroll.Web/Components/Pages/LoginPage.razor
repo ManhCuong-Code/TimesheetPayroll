@@ -1,6 +1,6 @@
 @page "/login"
 @inject ILoginUseCase LoginUseCase
-@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject IUserSessionService UserSession
 @inject NavigationManager NavManager
 
 <PageTitle>Đăng Nhập - HRMS Pro Enterprise</PageTitle>
@@ -214,7 +214,7 @@
                 return;
             }
 
-            await AuthStateProvider.SignInAsync(user);
+            await UserSession.SignInAsync(user);
             successMessage = $"Đăng nhập thành công! Xin chào {user.FullName ?? user.Username}.";
 
             // Định tuyến trang theo vai trò
