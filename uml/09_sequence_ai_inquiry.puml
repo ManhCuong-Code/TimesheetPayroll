@@ -1,0 +1,86 @@
+@startuml 09_sequence_ai_inquiry
+skinparam dpi 220
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam roundCorner 8
+skinparam shadowing true
+skinparam BoxPadding 10
+autonumber
+
+skinparam titleFontName "Segoe UI"
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #0F172A
+
+title **SƠ ĐỒ TUẦN TỰ 04: NHÂN VIÊN TRA CỨU LƯƠNG & HỎI ĐÁP TRỢ LÝ AI**\n(Bảo mật Ownership-based Authorization chống IDOR & Tích hợp Gemini LLM / Local Fallback)
+
+box "Presentation Tier (TimesheetPayroll.Web)" #EFF6FF
+    actor "Nhân Viên" as Emp #EEF2FF
+    boundary "FloatingAiAssistant.razor\n(hoặc AiSalaryAssistantComponent)" as UI #FFFFFF
+end box
+
+box "Application Tier (TimesheetPayroll.UseCases)" #FAF5FF
+    control "AskSalaryAiUseCase\n(IAskSalaryAiUseCase)" as UseCase #FFFFFF
+    entity "SqlRepositories\n(IPayslipRepository)" as PRepo #FFFFFF
+end box
+
+box "Domain & AI Services (TimesheetPayroll.CoreBusiness)" #EFF6FF
+    control "SalaryAiAssistantService\n(ISalaryAiAssistantService)" as AiService #FFFFFF
+    control "LlmClient\n(ILlmClient)" as LLM #FFFFFF
+    control "Local Grounded Engine\n(Động Cơ Phân Tích Nội Bộ)" as LocalAI #FFFFFF
+end box
+
+box "External Cloud AI Service" #ECFDF5
+    boundary "Google Gemini 2.0 Flash\n(Google AI Studio API)" as GeminiAPI #FFFFFF
+end box
+
+Emp -> UI: Nhập câu hỏi: "Sao lương tháng này của tôi ít hơn tháng trước?"
+activate UI
+
+UI -> UI: Lấy employeeId từ AuthenticationState.User.Claims["EmployeeId"]
+note right of UI #FEF3C7: Cơ chế Ownership-based Authorization:\nChỉ cho phép truy vấn đúng phiếu lương của chính mình (chống IDOR).
+
+UI -> UseCase: ExecuteAsync(employeeId, question, currentPeriodId = 10)
+activate UseCase
+
+UseCase -> PRepo: GetPayslipByPeriodAndEmployeeAsync(10, employeeId)
+activate PRepo
+PRepo --> UseCase: Phiếu lương Tháng 10 (Thực lĩnh 8.540.000đ, 20 công, có phụ cấp ca gãy)
+deactivate PRepo
+
+UseCase -> PRepo: GetPayslipByPeriodAndEmployeeAsync(9, employeeId)
+activate PRepo
+PRepo --> UseCase: Phiếu lương Tháng 9 (Thực lĩnh 9.800.000đ, 22 công, có thưởng)
+deactivate PRepo
+
+UseCase -> AiService: AnswerQuestionAsync(question, payslip10, payslip9, emp, periods)
+activate AiService
+
+AiService -> AiService: ComparePayslips(payslip10, payslip9):\n• Chênh lệch ngày công: 20 vs 22 (-909.000đ)\n• Chênh lệch phụ cấp ca gãy: +100.000đ\n• Chênh lệch khấu trừ BHXH: -45.000đ
+
+alt Có cấu hình Gemini API Key (GEMINI_API_KEY)
+    AiService -> LLM: GenerateResponseAsync(systemPrompt, userPrompt)
+    activate LLM
+    LLM -> GeminiAPI: HTTPS POST /v1beta/models/gemini-2.0-flash:generateContent
+    activate GeminiAPI
+    GeminiAPI --> LLM: Văn bản phản hồi tự nhiên, giải thích rõ ràng từng khoản mục
+    deactivate GeminiAPI
+    LLM --> AiService: return llmReply
+    deactivate LLM
+else Không có mạng / Không có API Key / Hết Quota (Fallback an toàn)
+    AiService -> LocalAI: AnswerQuestionInternal(question, payslip10, payslip9, diff)
+    activate LocalAI
+    LocalAI --> AiService: Văn bản đối soát số liệu chuẩn hóa & giải thích công thức luật
+    deactivate LocalAI
+end
+
+AiService --> UseCase: return AiChatMessage (Text, ComparisonDiff, Suggestions)
+deactivate AiService
+
+UseCase --> UI: return AiChatMessage
+deactivate UseCase
+
+UI --> Emp: Hiển thị phản hồi thông minh trong bong bóng chat:\n"Chào bạn! Sau khi đối soát phiếu lương Tháng 10 so với Tháng 9:\n• Ngày công thực tế ít hơn 2 ngày: -909.000đ\n• Phụ cấp ca gãy phát sinh: +100.000đ\n=> Tổng chênh lệch thực tế là -1.260.000đ!"
+deactivate UI
+
+@enduml

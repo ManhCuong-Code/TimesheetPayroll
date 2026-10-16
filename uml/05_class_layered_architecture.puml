@@ -1,0 +1,151 @@
+@startuml 05_class_layered_architecture
+skinparam dpi 220
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 11
+skinparam roundCorner 8
+skinparam classAttributeIconSize 0
+skinparam shadowing true
+
+skinparam titleFontName "Segoe UI"
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #0F172A
+
+title **SƠ ĐỒ LỚP THIẾT KẾ PHÂN TẦNG CLEAN ARCHITECTURE**\nKiến trúc Clean Architecture 4 tầng .NET 10 (C#) & Blazor Interactive Server
+
+package "1. Presentation Layer (TimesheetPayroll.Web - Blazor Server)" #FAF5FF {
+    class PayrollBatchCalculationPage #FFFFFF {
+        - CalculateUseCase: ICalculatePayrollBatchUseCase
+        - ViewSummaryUseCase: IViewPayrollSummaryUseCase
+        - LockUseCase: ILockPayrollPeriodUseCase
+        - ExportExcelUseCase: IExportPayrollExcelUseCase
+        + HandleCalculateBatchAsync(): Task
+        + HandleLockPeriodAsync(): Task
+        + HandleExportExcelAsync(): Task
+    }
+
+    class MyPayslipComponent #FFFFFF {
+        - ViewPayslipUseCase: IViewMyPayslipUseCase
+        - HistoryUseCase: IGetEmployeePayslipHistoryUseCase
+        + LoadDataAsync(): Task
+    }
+
+    class CustomAuthenticationStateProvider #FFFFFF {
+        - _userRepository: IUserAccountRepository
+        + GetAuthenticationStateAsync(): Task<AuthenticationState>
+        + SignInAsync(user: UserAccount): Task<bool>
+        + SignOut(): void
+    }
+}
+
+package "2. Application Layer (TimesheetPayroll.UseCases)" #F0FDF4 {
+    interface ICalculatePayrollBatchUseCase <<interface>> #FFFFFF {
+        + ExecuteAsync(periodId: long): Task<IEnumerable<Payslip>>
+    }
+
+    class CalculatePayrollBatchUseCase #FFFFFF {
+        - _periodRepo: IPayrollPeriodRepository
+        - _empRepo: IEmployeeRepository
+        - _timesheetRepo: ITimesheetRepository
+        - _rateRepo: IDeductionRateRepository
+        - _payslipRepo: IPayslipRepository
+        - _calcService: IPayrollCalculationService
+        + ExecuteAsync(periodId: long): Task<IEnumerable<Payslip>>
+    }
+
+    interface IViewMyPayslipUseCase <<interface>> #FFFFFF {
+        + ExecuteAsync(periodId: long, employeeId: long): Task<Payslip?>
+    }
+
+    interface IExportPayrollExcelUseCase <<interface>> #FFFFFF {
+        + ExportToExcelHtml(period: PayrollPeriod, payslips: IEnumerable<Payslip>): byte[]
+        + ExportToCsv(period: PayrollPeriod, payslips: IEnumerable<Payslip>): byte[]
+    }
+
+    interface IPayslipRepository <<interface>> #FFFFFF {
+        + GetPayslipsByPeriodAsync(periodId: long): Task<IEnumerable<Payslip>>
+        + GetPayslipByPeriodAndEmployeeAsync(periodId: long, empId: long): Task<Payslip?>
+        + SavePayslipBatchAsync(periodId: long, payslips: IEnumerable<Payslip>): Task
+    }
+
+    interface ITimesheetRepository <<interface>> #FFFFFF {
+        + GetTimesheetsByEmployeeAndMonthAsync(empId: long, m: int, y: int): Task<IEnumerable<Timesheet>>
+        + LockTimesheetsByPeriodAsync(periodId: long): Task
+    }
+
+    interface IPayrollPeriodRepository <<interface>> #FFFFFF {
+        + GetPeriodByIdAsync(id: long): Task<PayrollPeriod?>
+        + LockPeriodAsync(id: long, lockedBy: string): Task<bool>
+    }
+}
+
+package "3. Core Business Layer (TimesheetPayroll.CoreBusiness - Independent)" #EFF6FF {
+    class PayrollCalculationService #FFFFFF {
+        - _formulaEngine: ISalaryFormulaEngine
+        + CalculateEmployeePayslip(emp: Employee, period: PayrollPeriod, ...): Payslip
+    }
+
+    class SalaryFormulaEngine #FFFFFF {
+        + ComputeProratedBaseSalary(baseSalary: decimal, actualDays: decimal, standardDays: decimal): decimal
+        + ComputeGrossSalary(proratedBase: decimal, allowances: decimal, otPay: decimal): decimal
+        + ComputeMandatoryDeductions(gross: decimal, rates: IEnumerable<DeductionRate>): decimal
+        + ComputePersonalIncomeTax(taxableIncome: decimal): decimal
+        + ComputeNetSalary(gross: decimal, deductions: decimal, tax: decimal): decimal
+    }
+
+    class PayrollPeriod #FFFFFF {
+        + Id: long
+        + PeriodCode: string
+        + Status: PeriodStatus
+        + StandardWorkDays: decimal
+        + CanCalculate(): bool
+        + IsLocked(): bool
+    }
+
+    class Payslip #FFFFFF {
+        + Id: long
+        + EmployeeId: long
+        + GrossSalary: decimal
+        + TotalDeductions: decimal
+        + NetSalary: decimal
+        + Lines: List<PayslipLine>
+    }
+}
+
+package "4. Infrastructure & Plugins Layer (TimesheetPayroll.DataStore.SQL.Dapper)" #FFFBEB {
+    class SqlRepositories #FFFFFF {
+        - _connectionString: string
+        + SavePayslipBatchAsync(periodId: long, payslips: IEnumerable<Payslip>): Task
+        + GetPeriodByIdAsync(id: long): Task<PayrollPeriod?>
+        + LockPeriodAsync(id: long, lockedBy: string): Task<bool>
+        + GetTimesheetsByEmployeeAndMonthAsync(empId: long, m: int, y: int): Task<IEnumerable<Timesheet>>
+    }
+
+    class TimesheetStateStore #FFFFFF {
+        + SelectedPeriodId: long
+        + SelectedEmployeeId: long?
+        + OnStateChange: Action
+    }
+}
+
+' Dependency Inversion & Call Relationships
+PayrollBatchCalculationPage ..> ICalculatePayrollBatchUseCase : invokes
+PayrollBatchCalculationPage ..> IExportPayrollExcelUseCase : invokes
+MyPayslipComponent ..> IViewMyPayslipUseCase : invokes
+
+CalculatePayrollBatchUseCase ..|> ICalculatePayrollBatchUseCase : implements
+CalculatePayrollBatchUseCase ..> IPayslipRepository : depends on
+CalculatePayrollBatchUseCase ..> ITimesheetRepository : depends on
+CalculatePayrollBatchUseCase ..> IPayrollPeriodRepository : depends on
+CalculatePayrollBatchUseCase ..> PayrollCalculationService : uses
+
+PayrollCalculationService ..> SalaryFormulaEngine : uses
+PayrollCalculationService ..> Payslip : creates
+PayrollCalculationService ..> PayrollPeriod : reads
+
+SqlRepositories ..|> IPayslipRepository : implements (Dapper)
+SqlRepositories ..|> ITimesheetRepository : implements (Dapper)
+SqlRepositories ..|> IPayrollPeriodRepository : implements (Dapper)
+
+@enduml

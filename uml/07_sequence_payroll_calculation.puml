@@ -1,0 +1,123 @@
+@startuml 07_sequence_payroll_calculation
+skinparam dpi 220
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam roundCorner 8
+skinparam shadowing true
+skinparam BoxPadding 10
+autonumber
+
+skinparam titleFontName "Segoe UI"
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #0F172A
+
+title **SƠ ĐỒ TUẦN TỰ 02: TÍNH LƯƠNG TỰ ĐỘNG HÀNG LOẠT (BATCH CALCULATION & TRANSACTION)**\n(Quy trình tính toán Clean Architecture, nạp tỷ lệ trích nộp động & Transaction an toàn)
+
+box "Presentation Tier (TimesheetPayroll.Web)" #EFF6FF
+    actor "Kế Toán / HR" as HR #EEF2FF
+    boundary "PayrollBatchCalculationPage.razor" as UI #FFFFFF
+end box
+
+box "Application Tier (TimesheetPayroll.UseCases)" #FAF5FF
+    control "CalculatePayrollBatchUseCase" as UseCase #FFFFFF
+end box
+
+box "Domain Tier (TimesheetPayroll.CoreBusiness)" #EFF6FF
+    control "PayrollCalculationService" as CalcService #FFFFFF
+    control "SalaryFormulaEngine" as Formula #FFFFFF
+    entity "PayrollPeriod" as Period #FFFFFF
+end box
+
+box "Infrastructure Tier (TimesheetPayroll.DataStore.SQL.Dapper)" #F0FDF4
+    entity "SqlRepositories" as Repo #FFFFFF
+    database "Microsoft SQL Server\n(BangChamCongDB)" as DB #FFFFFF
+end box
+
+HR -> UI: Bấm nút "Chạy Tính Lương Tự Động"
+activate UI
+
+UI -> UseCase: ExecuteAsync(periodId = 10)
+activate UseCase
+
+UseCase -> Repo: GetPeriodByIdAsync(10)
+activate Repo
+Repo -> DB: SELECT * FROM payroll_periods WHERE id = 10
+DB --> Repo: Trả về PayrollPeriod
+Repo --> UseCase: Period entity
+deactivate Repo
+
+UseCase -> Period: CanCalculate()
+alt Kỳ lương đã bị khóa (Status == LOCKED || PAID) - LUẬT NGHIỆP VỤ 2
+    Period --> UseCase: return false
+    UseCase --> UI: Ném InvalidOperationException("Kỳ lương đã ở trạng thái LOCKED và không được phép tính lại")
+    UI --> HR: Bắt lỗi try-catch, hiện alert đỏ: "[CHẶN VI PHẠM LUẬT NGHIỆP VỤ] ..." (Không crash hệ thống)
+else Kỳ lương hợp lệ (Status == DRAFT || CALCULATED)
+    Period --> UseCase: return true
+
+    UseCase -> Repo: GetActiveRatesAsync() - LUẬT NGHIỆP VỤ 1 (Nạp động, không hardcode)
+    activate Repo
+    Repo -> DB: SELECT * FROM deduction_rates WHERE is_active = 1
+    DB --> Repo: Danh sách tỷ lệ BHXH (8%), BHYT (1.5%), BHTN (1%)
+    Repo --> UseCase: List<DeductionRate>
+    deactivate Repo
+
+    UseCase -> Repo: GetEmployeesAsync()
+    activate Repo
+    Repo -> DB: SELECT * FROM employees WHERE is_active = 1
+    DB --> Repo: Danh sách nhân viên chính thức
+    Repo --> UseCase: List<Employee>
+    deactivate Repo
+
+    loop Lặp qua từng nhân viên đang hoạt động
+        UseCase -> Repo: GetTimesheetsByEmployeeAndMonthAsync(emp.Id, 10, 2026)
+        activate Repo
+        Repo -> DB: SELECT * FROM timesheets WHERE employee_id = @Id AND MONTH = 10
+        DB --> Repo: Danh sách bảng công chi tiết trong tháng
+        Repo --> UseCase: List<Timesheet>
+        deactivate Repo
+
+        UseCase -> CalcService: CalculateEmployeePayslip(emp, period, timesheets, rates)
+        activate CalcService
+
+        CalcService -> Formula: ComputeProratedBaseSalary(base, actualDays, standardDays)
+        CalcService -> Formula: ComputeGrossSalary(proratedBase, allowances, splitShiftPay, otPay)
+        CalcService -> Formula: ComputeMandatoryDeductions(gross, rates)
+        CalcService -> Formula: ComputePersonalIncomeTax(taxableIncome)
+        CalcService -> Formula: ComputeNetSalary(gross, deductions, tax)
+        
+        CalcService --> UseCase: Trả về đối tượng Payslip (kèm tập hợp PayslipLine chi tiết)
+        deactivate CalcService
+    end
+
+    UseCase -> Repo: SavePayslipBatchAsync(periodId, payslips)
+    activate Repo
+    Repo -> DB: conn.BeginTransaction()
+    activate DB
+    Repo -> DB: Xóa dữ liệu cũ nếu có: DELETE FROM payslips WHERE period_id = @PeriodId
+    
+    loop Lưu từng phiếu lương (Header) và dòng chi tiết (Lines)
+        Repo -> DB: INSERT INTO payslips (...) VALUES (...); SELECT SCOPE_IDENTITY();
+        Repo -> DB: INSERT INTO payslip_lines (payslip_id, line_type, amount, ...)
+    end
+
+    alt Ghi dữ liệu thành công không lỗi
+        Repo -> DB: tx.Commit() (Xác nhận lưu toàn bộ CSDL)
+        Repo -> DB: UPDATE payroll_periods SET status = 'CALCULATED'
+        Repo --> UseCase: Hoàn tất lưu CSDL
+        UseCase --> UI: return IEnumerable<Payslip>
+        UI --> HR: Hiển thị alert xanh: "Đã tính toán thành công toàn bộ nhân viên!" + Bảng tổng hợp
+    else Lỗi kết nối / Dữ liệu bất thường
+        Repo -> DB: tx.Rollback() (Hủy bỏ toàn bộ giao dịch, khôi phục CSDL)
+        deactivate DB
+        Repo --> UseCase: Ném Exception
+        deactivate Repo
+        UseCase --> UI: Ném Exception
+        UI --> HR: Hiển thị alert lỗi & CSDL được bảo toàn toàn vẹn 100%
+    end
+end
+
+deactivate UseCase
+deactivate UI
+
+@enduml

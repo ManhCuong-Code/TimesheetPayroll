@@ -1,0 +1,80 @@
+@startuml 06_sequence_login
+skinparam dpi 220
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam roundCorner 8
+skinparam shadowing true
+skinparam BoxPadding 10
+autonumber
+
+skinparam titleFontName "Segoe UI"
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #0F172A
+
+title **SƠ ĐỒ TUẦN TỰ 01: XÁC THỰC ĐĂNG NHẬP & PHÂN QUYỀN (BCRYPT & RBAC)**\n(Kiến trúc .NET 10 Blazor Interactive Server + Dapper SQL Server)
+
+box "Presentation Tier (TimesheetPayroll.Web)" #EFF6FF
+    actor "Người Dùng\n(NV / Kế Toán / Admin)" as User #EEF2FF
+    boundary "LoginPage.razor\n(EditForm & Validation)" as UI #FFFFFF
+    control "CustomAuthenticationStateProvider\n(IUserSessionService)" as AuthState #FFFFFF
+end box
+
+box "Application Tier (TimesheetPayroll.UseCases)" #FAF5FF
+    control "LoginUseCase\n(ILoginUseCase)" as LoginUC #FFFFFF
+    control "BCrypt.Net.BCrypt\n(Password Verification)" as Crypt #FFFFFF
+end box
+
+box "Data Access & Persistence Tier" #F0FDF4
+    entity "SqlRepositories\n(IUserAccountRepository)" as UserRepo #FFFFFF
+    database "Microsoft SQL Server\n(user_accounts table)" as DB #FFFFFF
+end box
+
+User -> UI: Nhập Username & Password -> Bấm "Đăng Nhập Hệ Thống"
+activate UI
+
+UI -> LoginUC: ExecuteAsync(username, password)
+activate LoginUC
+
+LoginUC -> UserRepo: ValidateCredentialsAsync(username, password)
+activate UserRepo
+
+UserRepo -> DB: SELECT * FROM user_accounts WHERE username = @Username AND is_active = 1
+DB --> UserRepo: Trả về bản ghi UserAccount (kèm PasswordHash & Role)
+
+alt Tài khoản không tồn tại hoặc đã bị khóa
+    UserRepo --> LoginUC: return null
+    LoginUC --> UI: return null
+    UI --> User: Hiển thị alert đỏ: "Tên đăng nhập hoặc mật khẩu không chính xác!"
+else Tài khoản hợp lệ
+    UserRepo -> Crypt: Verify(password, user.PasswordHash)
+    activate Crypt
+    Crypt --> UserRepo: Mật khẩu chính xác (true)
+    deactivate Crypt
+
+    UserRepo -> DB: UPDATE user_accounts SET last_login_at = GETDATE() WHERE id = @Id
+    UserRepo --> LoginUC: return UserAccount entity (Id, Username, FullName, Role, EmployeeId)
+    deactivate UserRepo
+
+    LoginUC --> UI: return UserAccount
+
+    UI -> AuthState: SignInAsync(user)
+    activate AuthState
+    AuthState -> AuthState: Tạo ClaimsIdentity (ClaimTypes.Name, ClaimTypes.Role, EmployeeId, DepartmentName)
+    AuthState -> AuthState: Set _currentPrincipal & Gọi NotifyAuthenticationStateChanged()
+    AuthState --> UI: return true
+    deactivate AuthState
+
+    alt Role == 'ROLE_EMPLOYEE'
+        UI -> UI: NavManager.NavigateTo("/my-timesheet")
+        UI --> User: Điều hướng tới Trang cá nhân (Bảng chấm công & Phiếu lương)
+    else Role == 'ROLE_HR_ACCOUNTANT' hoặc 'ROLE_ADMIN'
+        UI -> UI: NavManager.NavigateTo("/admin/payroll-calculation")
+        UI --> User: Điều hướng tới Trang Quản trị lương & Batch Calculation
+    end
+end
+
+deactivate LoginUC
+deactivate UI
+
+@enduml

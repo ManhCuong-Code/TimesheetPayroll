@@ -1,0 +1,88 @@
+@startuml 02_usecase_employee
+skinparam dpi 220
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam packageStyle rectangle
+skinparam shadowing true
+skinparam roundCorner 10
+
+skinparam titleFontName "Segoe UI"
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #0F172A
+
+skinparam actor {
+    BackgroundColor #EEF2FF
+    BorderColor #4338CA
+    FontColor #1E1B4B
+    FontSize 12
+    FontStyle bold
+}
+
+skinparam usecase {
+    BackgroundColor #FFFFFF
+    BorderColor #0284C7
+    FontColor #0F172A
+    FontSize 12
+    ArrowColor #475569
+    ArrowThickness 1.2
+}
+
+skinparam package {
+    BackgroundColor #F8FAFC
+    BorderColor #94A3B8
+    FontColor #0F172A
+    FontStyle bold
+}
+
+left to right direction
+
+title **SƠ ĐỒ USE CASE PHÂN RÃ: PHÂN HỆ NHÂN VIÊN & TRỢ LÝ AI**\n(Employee & AI Subsystem Detailed Use Cases)
+
+actor "Nhân Viên\n(Employee)" as Emp
+actor "Dịch vụ LLM bên ngoài\n(External LLM Service)" as ExtAI <<External System>>
+
+rectangle "Phân Hệ Nhân Viên & Hỗ Trợ Trực Tuyến (Employee Self-Service)" {
+
+    package "1. Xác Thực & Hồ Sơ Cá Nhân" #F0FDF4 {
+        usecase "UC_AUTH_01: Đăng nhập hệ thống" as UC_AUTH_01 #FFFFFF
+        usecase "UC_AUTH_02: Đổi mật khẩu cá nhân" as UC_AUTH_02 #FFFFFF
+    }
+    
+    package "2. Nghiệp Vụ Chấm Công & Nghỉ Phép" #FEF3C7 {
+        usecase "UC_EMP_01: Điểm danh / Check-in hàng ngày" as UC_EMP_01 #FFFFFF
+        usecase "UC_EMP_02: Nộp đơn xin nghỉ phép" as UC_EMP_02 #FFFFFF
+        usecase "UC_EMP_03: Xem lịch sử bảng công cá nhân" as UC_EMP_03 #FFFFFF
+    }
+
+    package "3. Nghiệp Vụ Tra Cứu Thu Nhập & Lương" #EFF6FF {
+        usecase "UC_EMP_04: Xem chi tiết phiếu lương cá nhân" as UC_EMP_04 #FFFFFF
+        usecase "UC_EMP_06: Tải phiếu lương định dạng PDF" as UC_EMP_06 #FFFFFF
+    }
+
+    package "4. Tương Tác Trí Tuệ Nhân Tạo (AI Support)" #ECFDF5 {
+        usecase "UC_AI_01: Hỏi đáp & Giải thích lương với AI" as UC_AI_01 #FFFFFF
+        usecase "UC_AI_02: So sánh biến động lương 2 tháng" as UC_AI_02 #FFFFFF
+        usecase "UC_AI_03: Giải thích công thức trích nộp BHXH/Thuế" as UC_AI_03 #FFFFFF
+    }
+}
+
+' Liên kết Nhân viên
+Emp --> UC_AUTH_01
+Emp --> UC_AUTH_02
+Emp --> UC_EMP_01
+Emp --> UC_EMP_02
+Emp --> UC_EMP_03
+Emp --> UC_EMP_04
+Emp --> UC_AI_01
+
+' Quan hệ <<extend>> nghiệp vụ
+UC_EMP_04 <.. UC_EMP_06 : <<extend>>
+UC_AI_01 <.. UC_AI_02 : <<extend>>
+UC_AI_01 <.. UC_AI_03 : <<extend>>
+
+' Liên kết dịch vụ AI bên ngoài
+UC_AI_01 --> ExtAI : Gửi Prompt & Bóc tách kết quả
+
+@enduml

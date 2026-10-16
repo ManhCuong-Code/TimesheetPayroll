@@ -1,0 +1,86 @@
+@startuml 08_sequence_lock_payroll
+skinparam dpi 220
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam roundCorner 8
+skinparam shadowing true
+skinparam BoxPadding 10
+autonumber
+
+skinparam titleFontName "Segoe UI"
+skinparam titleFontSize 16
+skinparam titleFontStyle bold
+skinparam titleFontColor #0F172A
+
+title **SƠ ĐỒ TUẦN TỰ 03: ĐỐI SOÁT, CHỐT KỲ LƯƠNG & XUẤT BẢNG EXCEL KẾ TOÁN**\n(Quy trình khóa sổ Read-Only bất biến & Xuất file theo Mẫu 02-LĐTL)
+
+box "Presentation Tier (TimesheetPayroll.Web)" #EFF6FF
+    actor "Kế Toán / HR" as HR #EEF2FF
+    boundary "PayrollBatchCalculationPage.razor" as UI #FFFFFF
+    control "IJSRuntime\n(downloadHelper.js)" as JS #FFFFFF
+end box
+
+box "Application Tier (TimesheetPayroll.UseCases)" #FAF5FF
+    control "ViewPayrollSummaryUseCase" as SummaryUC #FFFFFF
+    control "LockPayrollPeriodUseCase" as LockUC #FFFFFF
+    control "ExportPayrollExcelUseCase" as ExcelUC #FFFFFF
+end box
+
+box "Data Access & Database Tier" #F0FDF4
+    entity "SqlRepositories" as Repo #FFFFFF
+    database "Microsoft SQL Server\n(BangChamCongDB)" as DB #FFFFFF
+end box
+
+== Bước 1: Xem Bảng Lương Tổng Hợp & Đối Soát (Preview) ==
+
+HR -> UI: Mở xem "Quản trị tính lương Tháng 10/2026"
+activate UI
+UI -> SummaryUC: ExecuteAsync(periodId = 10)
+activate SummaryUC
+
+SummaryUC -> Repo: GetPeriodByIdAsync(10)
+SummaryUC -> Repo: GetPayslipsByPeriodAsync(10)
+Repo -> DB: SELECT * FROM payslips WHERE period_id = 10\nSELECT * FROM payslip_lines WHERE payslip_id IN (...)
+DB --> Repo: Danh sách phiếu lương và các dòng chi tiết
+Repo --> SummaryUC: IEnumerable<Payslip>
+SummaryUC --> UI: PayrollSummaryResult (Kỳ lương, Danh sách phiếu, Tổng quỹ lương)
+deactivate SummaryUC
+UI --> HR: Hiển thị giao diện đối soát số liệu đầy đủ (PayrollSummaryComponent)
+
+== Bước 2: Chốt Kỳ Lương Khóa Sổ (Immutable Lock - Read-Only) ==
+
+HR -> UI: Bấm nút "Chốt Kỳ Lương (Khóa Sổ)"
+UI -> LockUC: ExecuteAsync(periodId = 10, lockedBy = "ketoan.thao")
+activate LockUC
+
+LockUC -> Repo: LockPeriodAsync(10, "ketoan.thao")
+activate Repo
+Repo -> DB: UPDATE payroll_periods SET status = 'LOCKED', locked_at = GETDATE(), locked_by = @LockedBy WHERE id = 10
+Repo -> Repo: LockTimesheetsByPeriodAsync(10)
+Repo -> DB: UPDATE timesheets SET is_locked = 1 WHERE work_date BETWEEN @StartDate AND @EndDate
+note right of DB #FEF3C7: Bảng công và phiếu lương chuyển sang chế độ CHỈ ĐỌC (Read-Only),\nngăn chặn tuyệt đối mọi hành vi sửa đổi dữ liệu quá khứ.
+Repo --> LockUC: return true
+deactivate Repo
+
+LockUC --> UI: return true
+deactivate LockUC
+UI --> HR: Hiển thị trạng thái KỲ LƯƠNG: ĐÃ KHÓA SỔ (READ-ONLY)
+
+== Bước 3: Xuất File Excel Chuẩn Kế Toán (Mẫu số 02-LĐTL) ==
+
+HR -> UI: Bấm nút "Xuất Excel Bảng Lương"
+UI -> ExcelUC: ExportToExcelHtml(period, payslips)
+activate ExcelUC
+ExcelUC -> ExcelUC: Khởi tạo định dạng HTML Spreadsheet (.xls) kèm CSS kế toán
+ExcelUC -> ExcelUC: Thêm tiêu đề công ty, quốc hiệu, Mẫu 02-LĐTL, định dạng tiền tệ mso-number-format
+ExcelUC --> UI: byte[] excelBytes
+deactivate ExcelUC
+
+UI -> UI: Convert.ToBase64String(excelBytes)
+UI -> JS: InvokeVoidAsync("downloadFileFromBase64", fileName, "application/vnd.ms-excel", base64)
+activate JS
+JS --> HR: Tải xuống tệp 'Bang_Luong_PR-2026-10_20261016.xls'
+deactivate JS
+deactivate UI
+
+@enduml
