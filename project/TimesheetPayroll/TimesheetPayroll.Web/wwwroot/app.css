@@ -4,7 +4,9 @@
    ========================================================================== */
 
 :root {
-    --hrm-font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --hrm-font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --bs-body-font-family: var(--hrm-font-sans);
+    --bs-font-sans-serif: var(--hrm-font-sans);
     --hrm-bg-main: #f8fafc;
     --hrm-bg-card: #ffffff;
     --hrm-slate-900: #0f172a;
@@ -128,25 +130,31 @@ body {
     font-size: 1.25rem;
 }
 
-/* TABLE STYLES */
+/* TABLE STYLES - BẢNG CHẤM CÔNG & DỮ LIỆU */
 .table {
     --bs-table-bg: transparent;
+    font-family: var(--hrm-font-sans);
     font-size: 0.925rem;
+    -webkit-font-smoothing: antialiased;
+}
+
+.table th, .table td {
+    font-family: var(--hrm-font-sans);
 }
 
 .table thead th {
     background-color: #f8fafc;
-    color: var(--hrm-slate-600);
+    color: var(--hrm-slate-700);
     font-weight: 700;
     text-transform: uppercase;
     font-size: 0.75rem;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
     padding: 0.85rem 1rem;
     border-bottom: 2px solid var(--hrm-slate-200);
 }
 
 .table tbody td {
-    padding: 1rem 1rem;
+    padding: 0.95rem 1rem;
     vertical-align: middle;
     border-bottom: 1px solid #f1f5f9;
 }

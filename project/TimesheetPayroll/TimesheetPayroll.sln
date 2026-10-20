@@ -1,0 +1,82 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimesheetPayroll.CoreBusiness", "TimesheetPayroll.CoreBusiness\TimesheetPayroll.CoreBusiness.csproj", "{FF28E2DE-FB65-4A71-A8D7-E1794CE3A8AA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimesheetPayroll.UseCases", "TimesheetPayroll.UseCases\TimesheetPayroll.UseCases.csproj", "{ACCC9DBE-4FDC-435A-A0C6-D4BE0408B8A6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plugins", "Plugins", "{881790E3-599E-4CC9-9F3D-06E56702D19B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimesheetPayroll.StateStore.DI", "Plugins\TimesheetPayroll.StateStore.DI\TimesheetPayroll.StateStore.DI.csproj", "{6D6CB394-22F5-4B74-AD4F-771067FB3915}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimesheetPayroll.DataStore.HandCoded", "Plugins\TimesheetPayroll.DataStore.HandCoded\TimesheetPayroll.DataStore.HandCoded.csproj", "{6982DC3C-A3E4-4BC6-B567-557181E5528B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimesheetPayroll.DataStore.SQL.Dapper", "Plugins\TimesheetPayroll.DataStore.SQL.Dapper\TimesheetPayroll.DataStore.SQL.Dapper.csproj", "{D5E0F673-3A56-42CC-8BD8-5DCB93B385B5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TimesheetPayroll.Web.Modules", "TimesheetPayroll.Web.Modules", "{56E873E3-C98E-40B8-AF40-58D24E3F41B5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimesheetPayroll.Web.Common", "TimesheetPayroll.Web.Modules\TimesheetPayroll.Web.Common\TimesheetPayroll.Web.Common.csproj", "{2D68B784-BDBC-44CA-8E6B-825D6CF92763}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimesheetPayroll.Web.EmployeePortal", "TimesheetPayroll.Web.Modules\TimesheetPayroll.Web.EmployeePortal\TimesheetPayroll.Web.EmployeePortal.csproj", "{0EBC84D3-2DA4-465E-8224-60241B871C89}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimesheetPayroll.Web.AdminPortal", "TimesheetPayroll.Web.Modules\TimesheetPayroll.Web.AdminPortal\TimesheetPayroll.Web.AdminPortal.csproj", "{3B2968E2-D998-4852-9532-65D297876E21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimesheetPayroll.Web", "TimesheetPayroll.Web\TimesheetPayroll.Web.csproj", "{52294B9A-4CA7-4238-81F2-6A2208CAA6E4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FF28E2DE-FB65-4A71-A8D7-E1794CE3A8AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF28E2DE-FB65-4A71-A8D7-E1794CE3A8AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF28E2DE-FB65-4A71-A8D7-E1794CE3A8AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF28E2DE-FB65-4A71-A8D7-E1794CE3A8AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ACCC9DBE-4FDC-435A-A0C6-D4BE0408B8A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ACCC9DBE-4FDC-435A-A0C6-D4BE0408B8A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ACCC9DBE-4FDC-435A-A0C6-D4BE0408B8A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ACCC9DBE-4FDC-435A-A0C6-D4BE0408B8A6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D6CB394-22F5-4B74-AD4F-771067FB3915}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D6CB394-22F5-4B74-AD4F-771067FB3915}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D6CB394-22F5-4B74-AD4F-771067FB3915}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D6CB394-22F5-4B74-AD4F-771067FB3915}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6982DC3C-A3E4-4BC6-B567-557181E5528B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6982DC3C-A3E4-4BC6-B567-557181E5528B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6982DC3C-A3E4-4BC6-B567-557181E5528B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6982DC3C-A3E4-4BC6-B567-557181E5528B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5E0F673-3A56-42CC-8BD8-5DCB93B385B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5E0F673-3A56-42CC-8BD8-5DCB93B385B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5E0F673-3A56-42CC-8BD8-5DCB93B385B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5E0F673-3A56-42CC-8BD8-5DCB93B385B5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D68B784-BDBC-44CA-8E6B-825D6CF92763}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D68B784-BDBC-44CA-8E6B-825D6CF92763}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D68B784-BDBC-44CA-8E6B-825D6CF92763}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D68B784-BDBC-44CA-8E6B-825D6CF92763}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EBC84D3-2DA4-465E-8224-60241B871C89}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EBC84D3-2DA4-465E-8224-60241B871C89}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EBC84D3-2DA4-465E-8224-60241B871C89}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EBC84D3-2DA4-465E-8224-60241B871C89}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B2968E2-D998-4852-9532-65D297876E21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B2968E2-D998-4852-9532-65D297876E21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B2968E2-D998-4852-9532-65D297876E21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B2968E2-D998-4852-9532-65D297876E21}.Release|Any CPU.Build.0 = Release|Any CPU
+		{52294B9A-4CA7-4238-81F2-6A2208CAA6E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{52294B9A-4CA7-4238-81F2-6A2208CAA6E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{52294B9A-4CA7-4238-81F2-6A2208CAA6E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{52294B9A-4CA7-4238-81F2-6A2208CAA6E4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6D6CB394-22F5-4B74-AD4F-771067FB3915} = {881790E3-599E-4CC9-9F3D-06E56702D19B}
+		{6982DC3C-A3E4-4BC6-B567-557181E5528B} = {881790E3-599E-4CC9-9F3D-06E56702D19B}
+		{D5E0F673-3A56-42CC-8BD8-5DCB93B385B5} = {881790E3-599E-4CC9-9F3D-06E56702D19B}
+		{2D68B784-BDBC-44CA-8E6B-825D6CF92763} = {56E873E3-C98E-40B8-AF40-58D24E3F41B5}
+		{0EBC84D3-2DA4-465E-8224-60241B871C89} = {56E873E3-C98E-40B8-AF40-58D24E3F41B5}
+		{3B2968E2-D998-4852-9532-65D297876E21} = {56E873E3-C98E-40B8-AF40-58D24E3F41B5}
+	EndGlobalSection
+EndGlobal

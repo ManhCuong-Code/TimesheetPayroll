@@ -126,7 +126,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStatusCodePagesWithReExecute("/404");
 app.UseAntiforgery();
-app.MapStaticAssets();
+app.UseStaticFiles();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

@@ -499,14 +499,14 @@
                                     <td>
                                         @if (t.ShiftCode == "CA_GAY" || (t.ShiftName != null && t.ShiftName.Contains("Ca Gãy", StringComparison.OrdinalIgnoreCase)))
                                         {
-                                            <span class="badge bg-warning text-dark border border-warning font-monospace px-2 py-1">
+                                            <span class="badge bg-warning text-dark border border-warning px-2 py-1 fw-semibold">
                                                 <i class="fa-solid fa-bolt me-1 text-danger"></i>@(t.ShiftName ?? "Ca Gãy")
                                             </span>
                                             <div class="text-success small fw-semibold" style="font-size: 0.72rem;">+50k phụ cấp ca gãy</div>
                                         }
                                         else if (!string.IsNullOrEmpty(t.ShiftName))
                                         {
-                                            <span class="badge bg-light text-dark border font-monospace px-2 py-1">
+                                            <span class="badge bg-light text-dark border px-2 py-1 fw-semibold">
                                                 <i class="fa-solid fa-clock me-1 text-primary"></i>@t.ShiftName
                                             </span>
                                         }
@@ -1011,7 +1011,7 @@
                     <div class="p-3 bg-light rounded border mb-3">
                         <div class="d-flex justify-content-between mb-1">
                             <span class="text-muted small">Ngày làm việc:</span>
-                            <span class="fw-bold text-primary font-monospace">@changeShiftTargetDate.ToString("dddd, dd/MM/yyyy", new System.Globalization.CultureInfo("vi-VN"))</span>
+                            <span class="fw-bold text-primary">@changeShiftTargetDate.ToString("dddd, dd/MM/yyyy", new System.Globalization.CultureInfo("vi-VN"))</span>
                         </div>
                         <div class="d-flex justify-content-between mb-1">
                             <span class="text-muted small">Nhân sự:</span>
