@@ -1,4 +1,4 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- HRMS PRO - TIMESHEET & PAYROLL ENTERPRISE DATABASE SYSTEM
 -- CƠ SỞ DỮ LIỆU DOANH NGHIỆP: BangChamCongDB (MICROSOFT SQL SERVER)
 -- ============================================================================
@@ -204,7 +204,7 @@ GO
 CREATE TABLE payslip_lines (
     id BIGINT IDENTITY(1,1) PRIMARY KEY,
     payslip_id BIGINT NOT NULL CONSTRAINT fk_lines_payslip REFERENCES payslips(id) ON DELETE CASCADE,
-    line_type NVARCHAR(50) NOT NULL CHECK (line_type IN ('BASE_SALARY_PRORATED', 'MEAL_ALLOWANCE', 'FUEL_ALLOWANCE', 'OVERTIME_PAY', 'BONUS', 'DEDUCTION_BHXH', 'DEDUCTION_BHYT', 'DEDUCTION_BHTN', 'PERSONAL_INCOME_TAX', 'PENALTY')),
+    line_type NVARCHAR(50) NOT NULL CHECK (line_type IN ('BASE_SALARY_PRORATED', 'PAID_LEAVE_PAY', 'MEAL_ALLOWANCE', 'FUEL_ALLOWANCE', 'OVERTIME_PAY', 'BONUS', 'SPLIT_SHIFT_ALLOWANCE', 'DEDUCTION_BHXH', 'DEDUCTION_BHYT', 'DEDUCTION_BHTN', 'PERSONAL_INCOME_TAX', 'PENALTY')),
     line_description NVARCHAR(255) NOT NULL,
     amount DECIMAL(15, 2) NOT NULL CHECK (amount >= 0),
     is_deduction BIT NOT NULL DEFAULT 0,
@@ -285,45 +285,135 @@ GO
 
 SET IDENTITY_INSERT payroll_periods ON;
 INSERT INTO payroll_periods (id, period_code, period_month, period_year, standard_work_days, status, total_gross_amount, total_net_amount) VALUES
-(10, N'PR-2026-10', 10, 2026, 22.00, 'CALCULATED', 59590909.00, 53289090.00);
+(10, N'PR-2026-10', 10, 2026, 22.00, 'CALCULATED', 60377273.00, 54287273.00);
 SET IDENTITY_INSERT payroll_periods OFF;
 GO
 
-;WITH DaysCTE AS (
-    SELECT 0 AS d
-    UNION ALL
-    SELECT d + 1 FROM DaysCTE WHERE d < 19
-)
-INSERT INTO timesheets (employee_id, period_id, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked)
-SELECT 
-    1, 10, DATEADD(DAY, d, '2026-10-01'),
-    '08:00:00', '17:30:00', 8.0, 'PRESENT', 1.0, 0
-FROM DaysCTE;
+-- ============================================================================
+-- NẠP DỮ LIỆU CHẤM CÔNG CHI TIẾT (TIMESHEETS) CHO 4 NHÂN VIÊN THÁNG 10/2026
+-- ============================================================================
 
-INSERT INTO timesheets (employee_id, period_id, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked, note) VALUES
-(1, 10, '2026-10-21', NULL, NULL, 0.0, 'ABSENT_WITH_PERMISSION', 0.0, 0, N'Nghỉ việc riêng có phép'),
-(1, 10, '2026-10-22', NULL, NULL, 0.0, 'ABSENT_WITH_PERMISSION', 0.0, 0, N'Nghỉ việc riêng có phép');
+-- 1. Nhân viên EMP001 (Nguyễn Văn A): 20 ngày đi làm chuẩn, 2 ngày nghỉ phép
+;WITH DaysCTE_EMP1 AS (
+    SELECT 0 AS d UNION ALL SELECT d + 1 FROM DaysCTE_EMP1 WHERE d < 19
+)
+INSERT INTO timesheets (employee_id, period_id, shift_id, shift_code, shift_name, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked)
+SELECT 
+    1, 10, 1, 'CA_HANH_CHINH', N'Ca Hành Chính (08:00 - 17:30)',
+    DATEADD(DAY, d, '2026-10-01'),
+    '08:00:00', '17:30:00', 8.0, 'PRESENT', 1.0, 0
+FROM DaysCTE_EMP1;
+
+INSERT INTO timesheets (employee_id, period_id, shift_id, shift_code, shift_name, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked, note) VALUES
+(1, 10, 1, 'CA_HANH_CHINH', N'Ca Hành Chính (08:00 - 17:30)', '2026-10-21', NULL, NULL, 0.0, 'ABSENT_WITH_PERMISSION', 0.0, 0, N'Nghỉ việc riêng có phép'),
+(1, 10, 1, 'CA_HANH_CHINH', N'Ca Hành Chính (08:00 - 17:30)', '2026-10-22', NULL, NULL, 0.0, 'ABSENT_WITH_PERMISSION', 0.0, 0, N'Nghỉ việc riêng có phép');
+
+-- 2. Kế toán EMP002 (Lê Thị Thu Thảo): 22/22 ngày công chuẩn, đúng giờ 100%
+;WITH DaysCTE_EMP2 AS (
+    SELECT 0 AS d UNION ALL SELECT d + 1 FROM DaysCTE_EMP2 WHERE d < 21
+)
+INSERT INTO timesheets (employee_id, period_id, shift_id, shift_code, shift_name, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked, note)
+SELECT 
+    2, 10, 1, 'CA_HANH_CHINH', N'Ca Hành Chính (08:00 - 17:30)',
+    DATEADD(DAY, d, '2026-10-01'),
+    '07:55:00', '17:30:00', 8.0, 'PRESENT', 1.0, 0, N'Đúng giờ tiêu chuẩn'
+FROM DaysCTE_EMP2;
+
+-- 3. Quản trị viên EMP003 (Trần Đình Trọng): 22/22 ngày công, chuyên cần
+;WITH DaysCTE_EMP3 AS (
+    SELECT 0 AS d UNION ALL SELECT d + 1 FROM DaysCTE_EMP3 WHERE d < 21
+)
+INSERT INTO timesheets (employee_id, period_id, shift_id, shift_code, shift_name, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked, note)
+SELECT 
+    3, 10, 1, 'CA_HANH_CHINH', N'Ca Hành Chính (08:00 - 17:30)',
+    DATEADD(DAY, d, '2026-10-01'),
+    '07:50:00', '18:00:00', 8.0, 'PRESENT', 1.0, 0, N'Hoàn thành xuất sắc nhiệm vụ'
+FROM DaysCTE_EMP3;
+
+-- 4. Nhân viên Kinh Doanh EMP004 (Hoàng Minh Tuấn): Đi muộn 1 lần, 3 ca gãy, 1 ngày phép
+;WITH DaysCTE_EMP4_Part1 AS (
+    SELECT 0 AS d UNION ALL SELECT d + 1 FROM DaysCTE_EMP4_Part1 WHERE d < 9
+)
+INSERT INTO timesheets (employee_id, period_id, shift_id, shift_code, shift_name, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked)
+SELECT 
+    4, 10, 1, 'CA_HANH_CHINH', N'Ca Hành Chính (08:00 - 17:30)',
+    DATEADD(DAY, d, '2026-10-01'),
+    '08:00:00', '17:30:00', 8.0, 'PRESENT', 1.0, 0
+FROM DaysCTE_EMP4_Part1;
+
+INSERT INTO timesheets (employee_id, period_id, shift_id, shift_code, shift_name, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked, note) VALUES
+(4, 10, 1, 'CA_HANH_CHINH', N'Ca Hành Chính (08:00 - 17:30)', '2026-10-11', '08:25:00', '17:30:00', 7.5, 'LATE', 1.0, 0, N'Đi muộn 25 phút do tắc đường'),
+(4, 10, 6, 'CA_GAY', N'Ca Gãy (10:00 - 14:00 & 17:00 - 21:00)', '2026-10-12', '10:00:00', '21:00:00', 8.0, 'PRESENT', 1.0, 0, N'Ca gãy hỗ trợ sự kiện khách hàng'),
+(4, 10, 6, 'CA_GAY', N'Ca Gãy (10:00 - 14:00 & 17:00 - 21:00)', '2026-10-13', '10:00:00', '21:00:00', 8.0, 'PRESENT', 1.0, 0, N'Ca gãy hỗ trợ sự kiện khách hàng'),
+(4, 10, 6, 'CA_GAY', N'Ca Gãy (10:00 - 14:00 & 17:00 - 21:00)', '2026-10-14', '10:00:00', '21:00:00', 8.0, 'PRESENT', 1.0, 0, N'Ca gãy hỗ trợ sự kiện khách hàng'),
+(4, 10, 1, 'CA_HANH_CHINH', N'Ca Hành Chính (08:00 - 17:30)', '2026-10-15', NULL, NULL, 0.0, 'ABSENT_WITH_PERMISSION', 0.0, 0, N'Nghỉ phép năm thường niên');
+
+;WITH DaysCTE_EMP4_Part2 AS (
+    SELECT 15 AS d UNION ALL SELECT d + 1 FROM DaysCTE_EMP4_Part2 WHERE d < 21
+)
+INSERT INTO timesheets (employee_id, period_id, shift_id, shift_code, shift_name, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked)
+SELECT 
+    4, 10, 1, 'CA_HANH_CHINH', N'Ca Hành Chính (08:00 - 17:30)',
+    DATEADD(DAY, d, '2026-10-01'),
+    '08:00:00', '17:30:00', 8.0, 'PRESENT', 1.0, 0
+FROM DaysCTE_EMP4_Part2;
 GO
 
+-- ============================================================================
+-- NẠP ĐƠN NGHỈ PHÉP (LEAVE REQUESTS)
+-- ============================================================================
 SET IDENTITY_INSERT leave_requests ON;
 INSERT INTO leave_requests (id, employee_id, leave_type, start_date, end_date, total_days, reason, approval_status, approved_by, approved_at) VALUES
-(1, 1, 'UNPAID_LEAVE', '2026-10-21', '2026-10-22', 2.0, N'Giải quyết việc gia đình', 'APPROVED', N'Lê Thị Thu Thảo', '2026-10-20 15:30:00');
+(1, 1, 'UNPAID_LEAVE', '2026-10-21', '2026-10-22', 2.0, N'Giải quyết việc gia đình', 'APPROVED', N'Lê Thị Thu Thảo', '2026-10-20 15:30:00'),
+(2, 4, 'ANNUAL_LEAVE', '2026-10-15', '2026-10-15', 1.0, N'Nghỉ phép thường niên', 'APPROVED', N'Lê Thị Thu Thảo', '2026-10-14 09:00:00'),
+(3, 1, 'SICK_LEAVE', '2026-10-28', '2026-10-29', 2.0, N'Điều trị cảm sốt theo chỉ định bác sĩ', 'PENDING', NULL, NULL);
 SET IDENTITY_INSERT leave_requests OFF;
 GO
 
+-- ============================================================================
+-- NẠP BẢNG LƯƠNG & DÒNG LƯƠNG CHI TIẾT (PAYSLIPS & PAYSLIP LINES) CHO 4 NV
+-- ============================================================================
 SET IDENTITY_INSERT payslips ON;
 INSERT INTO payslips (id, period_id, employee_id, actual_work_days, paid_leave_days, overtime_hours, gross_salary, total_deductions, net_salary) VALUES
-(101, 10, 1, 20.0, 0.0, 0.0, 9590909.00, 1050000.00, 8540909.00);
+(101, 10, 1, 20.0, 0.0, 0.0, 9590909.00, 1050000.00, 8540909.00),
+(102, 10, 2, 22.0, 0.0, 0.0, 16000000.00, 1575000.00, 14425000.00),
+(103, 10, 3, 22.0, 0.0, 0.0, 26500000.00, 2625000.00, 23875000.00),
+(104, 10, 4, 21.0, 0.0, 0.0, 8286364.00, 840000.00, 7446364.00);
 SET IDENTITY_INSERT payslips OFF;
 GO
 
 SET IDENTITY_INSERT payslip_lines ON;
 INSERT INTO payslip_lines (id, payslip_id, line_type, line_description, amount, is_deduction) VALUES
+-- EMP001 (Nguyễn Văn A)
 (1, 101, 'BASE_SALARY_PRORATED', N'Lương ngày công thực tế (20/22 ngày)', 9090909.00, 0),
 (2, 101, 'MEAL_ALLOWANCE', N'Phụ cấp tiền ăn trưa', 500000.00, 0),
 (3, 101, 'DEDUCTION_BHXH', N'Trích nộp BHXH (8.0%)', 800000.00, 1),
 (4, 101, 'DEDUCTION_BHYT', N'Trích nộp BHYT (1.5%)', 150000.00, 1),
-(5, 101, 'DEDUCTION_BHTN', N'Trích nộp BHTN (1.0%)', 100000.00, 1);
+(5, 101, 'DEDUCTION_BHTN', N'Trích nộp BHTN (1.0%)', 100000.00, 1),
+
+-- EMP002 (Lê Thị Thu Thảo)
+(6, 102, 'BASE_SALARY_PRORATED', N'Lương cơ bản (22/22 ngày công)', 15000000.00, 0),
+(7, 102, 'MEAL_ALLOWANCE', N'Phụ cấp tiền ăn trưa', 500000.00, 0),
+(8, 102, 'FUEL_ALLOWANCE', N'Phụ cấp xăng xe & đi lại', 500000.00, 0),
+(9, 102, 'DEDUCTION_BHXH', N'Trích nộp BHXH (8.0%)', 1200000.00, 1),
+(10, 102, 'DEDUCTION_BHYT', N'Trích nộp BHYT (1.5%)', 225000.00, 1),
+(11, 102, 'DEDUCTION_BHTN', N'Trích nộp BHTN (1.0%)', 150000.00, 1),
+
+-- EMP003 (Trần Đình Trọng)
+(12, 103, 'BASE_SALARY_PRORATED', N'Lương cơ bản (22/22 ngày công)', 25000000.00, 0),
+(13, 103, 'MEAL_ALLOWANCE', N'Phụ cấp tiền ăn trưa', 500000.00, 0),
+(14, 103, 'FUEL_ALLOWANCE', N'Phụ cấp xăng xe & công tác', 1000000.00, 0),
+(15, 103, 'DEDUCTION_BHXH', N'Trích nộp BHXH (8.0%)', 2000000.00, 1),
+(16, 103, 'DEDUCTION_BHYT', N'Trích nộp BHYT (1.5%)', 375000.00, 1),
+(17, 103, 'DEDUCTION_BHTN', N'Trích nộp BHTN (1.0%)', 250000.00, 1),
+
+-- EMP004 (Hoàng Minh Tuấn)
+(18, 104, 'BASE_SALARY_PRORATED', N'Lương ngày công thực tế (21/22 ngày)', 7636364.00, 0),
+(19, 104, 'MEAL_ALLOWANCE', N'Phụ cấp tiền ăn trưa', 500000.00, 0),
+(20, 104, 'SPLIT_SHIFT_ALLOWANCE', N'Phụ cấp ca gãy (3 ca x 50.000đ)', 150000.00, 0),
+(21, 104, 'DEDUCTION_BHXH', N'Trích nộp BHXH (8.0%)', 640000.00, 1),
+(22, 104, 'DEDUCTION_BHYT', N'Trích nộp BHYT (1.5%)', 120000.00, 1),
+(23, 104, 'DEDUCTION_BHTN', N'Trích nộp BHTN (1.0%)', 80000.00, 1);
 SET IDENTITY_INSERT payslip_lines OFF;
 GO
 
