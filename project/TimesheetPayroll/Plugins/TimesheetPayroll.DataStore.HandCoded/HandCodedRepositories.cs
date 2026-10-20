@@ -147,6 +147,9 @@ public class HandCodedRepositories :
     #endregion
 
     #region Leave Request Repository
+    public Task<IEnumerable<LeaveRequest>> GetAllLeaveRequestsAsync() => 
+        Task.FromResult<IEnumerable<LeaveRequest>>(_leaveRequests.OrderByDescending(r => r.StartDate));
+
     public Task<IEnumerable<LeaveRequest>> GetPendingLeaveRequestsAsync() => 
         Task.FromResult<IEnumerable<LeaveRequest>>(_leaveRequests.Where(r => r.ApprovalStatus == ApprovalStatus.PENDING));
 

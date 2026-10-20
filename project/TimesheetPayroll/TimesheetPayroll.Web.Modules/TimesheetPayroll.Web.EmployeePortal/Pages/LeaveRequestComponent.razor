@@ -3,83 +3,255 @@
 @inject ICreateLeaveRequestUseCase CreateLeaveUseCase
 @using TimesheetPayroll.CoreBusiness.Models
 
-<div class="container py-3">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card border-0 shadow-sm p-4">
-                <h4 class="fw-bold mb-3 text-dark">
-                    <i class="fa-solid fa-envelope-open-text text-primary me-2"></i>Tạo Đơn Xin Nghỉ Phép
-                </h4>
-                <p class="text-muted small mb-4">Gửi yêu cầu nghỉ phép tới người quản lý hoặc bộ phận Nhân sự để xét duyệt.</p>
+<div class="container-fluid py-4 px-md-4">
+    <!-- Header banner -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark d-flex align-items-center">
+                <i class="fa-solid fa-calendar-check text-primary me-2"></i>Nghỉ Phép Trực Tuyến
+            </h3>
+            <p class="text-muted small mb-0">Nộp đơn xin nghỉ phép, theo dõi tiến độ phê duyệt và tự động tính số ngày công.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
+            <span class="badge bg-light text-secondary border px-3 py-2 fs-6">
+                <i class="fa-solid fa-user me-1 text-primary"></i>Nhân viên: <strong class="text-dark">#@currentEmployeeId</strong>
+            </span>
+        </div>
+    </div>
 
-                @if (isSuccess)
-                {
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fa-solid fa-circle-check me-2"></i>Đơn xin nghỉ phép của bạn đã được gửi thành công!
-                        <button type="button" class="btn-close" @onclick="() => isSuccess = false"></button>
-                    </div>
-                }
-
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fa-solid fa-triangle-exclamation me-2"></i>@errorMessage
-                        <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
-                    </div>
-                }
-
-                <EditForm Model="@request" OnValidSubmit="HandleSubmitAsync">
-                    <DataAnnotationsValidator />
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Loại Nghỉ Phép <span class="text-danger">*</span></label>
-                        <InputSelect class="form-select" @bind-Value="request.LeaveType">
-                            <option value="@LeaveType.ANNUAL_LEAVE">Nghỉ phép năm (Có hưởng lương)</option>
-                            <option value="@LeaveType.SICK_LEAVE">Nghỉ ốm đau (Hưởng chế độ BHXH)</option>
-                            <option value="@LeaveType.MATERNITY_LEAVE">Nghỉ thai sản</option>
-                            <option value="@LeaveType.UNPAID_LEAVE">Nghỉ việc riêng (Không hưởng lương)</option>
-                        </InputSelect>
-                        <ValidationMessage For="@(() => request.LeaveType)" class="text-danger small mt-1" />
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Từ Ngày <span class="text-danger">*</span></label>
-                            <InputDate class="form-control" @bind-Value="request.StartDate" />
-                            <ValidationMessage For="@(() => request.StartDate)" class="text-danger small mt-1" />
+    <div class="row g-4">
+        <!-- FORM TẠO ĐƠN NGHỈ PHÉP (Bên Trái) -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="fw-bold mb-0 text-dark d-flex align-items-center">
+                        <i class="fa-solid fa-file-pen text-primary me-2"></i>Tạo Đơn Xin Nghỉ Mới
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    @if (isSuccess)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                            <div class="d-flex align-items-center">
+                                <i class="fa-solid fa-circle-check fs-4 me-2 text-success"></i>
+                                <div>
+                                    <strong>Nộp đơn thành công!</strong> Đơn nghỉ phép của bạn đã được chuyển đến bộ phận Nhân sự để xét duyệt.
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" @onclick="() => isSuccess = false"></button>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Đến Ngày <span class="text-danger">*</span></label>
-                            <InputDate class="form-control" @bind-Value="request.EndDate" />
-                            <ValidationMessage For="@(() => request.EndDate)" class="text-danger small mt-1" />
+                    }
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                            <div class="d-flex align-items-center">
+                                <i class="fa-solid fa-triangle-exclamation fs-4 me-2 text-danger"></i>
+                                <div>@errorMessage</div>
+                            </div>
+                            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
                         </div>
-                    </div>
+                    }
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Số Ngày Nghỉ Dự Kiến <span class="text-danger">*</span></label>
-                        <InputNumber class="form-control" @bind-Value="request.TotalDays" step="0.5" />
-                        <ValidationMessage For="@(() => request.TotalDays)" class="text-danger small mt-1" />
-                    </div>
+                    <EditForm Model="@request" OnValidSubmit="HandleSubmitAsync">
+                        <DataAnnotationsValidator />
 
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Lý Do Xin Nghỉ <span class="text-danger">*</span></label>
-                        <InputTextArea class="form-control" rows="3" placeholder="Nhập lý do cụ thể (tối thiểu 5 ký tự)..." @bind-Value="request.Reason" />
-                        <ValidationMessage For="@(() => request.Reason)" class="text-danger small mt-1" />
-                    </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-secondary small">
+                                LOẠI NGHỈ PHÉP <span class="text-danger">*</span>
+                            </label>
+                            <InputSelect class="form-select form-select-lg fs-6" @bind-Value="request.LeaveType">
+                                <option value="@LeaveType.ANNUAL_LEAVE">🌴 Nghỉ phép năm (Có hưởng lương)</option>
+                                <option value="@LeaveType.SICK_LEAVE">🏥 Nghỉ ốm đau (Hưởng BHXH)</option>
+                                <option value="@LeaveType.MATERNITY_LEAVE">👶 Nghỉ thai sản</option>
+                                <option value="@LeaveType.UNPAID_LEAVE">💼 Nghỉ việc riêng (Không hưởng lương)</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => request.LeaveType)" class="text-danger small mt-1" />
+                        </div>
 
-                    <button type="submit" class="btn btn-primary px-4 shadow-sm" disabled="@isSubmitting">
-                        @if (isSubmitting)
-                        {
-                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                            <span>Đang gửi đơn...</span>
-                        }
-                        else
-                        {
-                            <i class="fa-solid fa-paper-plane me-1"></i>
-                            <span>Nộp Đơn Nghỉ Phép</span>
-                        }
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary small">
+                                    TỪ NGÀY <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="fa-regular fa-calendar"></i></span>
+                                    <InputDate class="form-control" @bind-Value="request.StartDate" @bind-Value:after="OnStartDateChanged" />
+                                </div>
+                                <ValidationMessage For="@(() => request.StartDate)" class="text-danger small mt-1" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary small">
+                                    ĐẾN NGÀY <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="fa-regular fa-calendar-check"></i></span>
+                                    <InputDate class="form-control" @bind-Value="request.EndDate" @bind-Value:after="OnEndDateChanged" />
+                                </div>
+                                <ValidationMessage For="@(() => request.EndDate)" class="text-danger small mt-1" />
+                            </div>
+                        </div>
+
+                        <!-- Tự động tính số ngày nghỉ -->
+                        <div class="mb-3 p-3 bg-light rounded-3 border">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label fw-semibold text-dark mb-0 small">
+                                    <i class="fa-solid fa-calculator text-primary me-1"></i>SỐ NGÀY NGHỈ DỰ KIẾN <span class="text-danger">*</span>
+                                </label>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Tự động tính ngày làm việc</span>
+                            </div>
+                            <div class="input-group mb-2 mt-2">
+                                <InputNumber class="form-control form-control-lg fw-bold text-primary" @bind-Value="request.TotalDays" step="0.5" min="0.5" />
+                                <span class="input-group-text fw-bold bg-white">Ngày</span>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-1">
+                                <span class="small text-muted me-1">Chọn nhanh:</span>
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 0.75rem;" @onclick="() => SetDays(0.5m)">
+                                    Nửa buổi (0.5)
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 0.75rem;" @onclick="() => SetDays(1.0m)">
+                                    1 ngày (1.0)
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size: 0.75rem;" @onclick="RecalculateDays">
+                                    <i class="fa-solid fa-arrows-rotate me-1"></i>Tính lại
+                                </button>
+                            </div>
+                            <div class="form-text text-muted mt-2" style="font-size: 0.75rem;">
+                                <i class="fa-solid fa-circle-info me-1 text-info"></i>Hệ thống tự động tính ngày làm việc thực tế (Thứ 2 - Thứ 6, bỏ qua cuối tuần).
+                            </div>
+                            <ValidationMessage For="@(() => request.TotalDays)" class="text-danger small mt-1" />
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-secondary small">
+                                LÝ DO NGHỈ PHÉP <span class="text-danger">*</span>
+                            </label>
+                            <InputTextArea class="form-control" rows="3" placeholder="Nhập lý do cụ thể gửi người duyệt..." @bind-Value="request.Reason" />
+                            <ValidationMessage For="@(() => request.Reason)" class="text-danger small mt-1" />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Đang xử lý gửi đơn...</span>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-paper-plane me-2"></i>
+                                <span>Gửi Đơn Xin Nghỉ Phép</span>
+                            }
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        <!-- DANH SÁCH LỊCH SỬ NGHỈ PHÉP (Bên Phải) -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-3 h-100">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0 text-dark d-flex align-items-center">
+                        <i class="fa-solid fa-clock-rotate-left text-primary me-2"></i>Lịch Sử Đơn Nghỉ Phép Của Bạn
+                    </h5>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="LoadLeaveHistoryAsync" title="Làm mới danh sách">
+                        <i class="fa-solid fa-rotate-right me-1"></i>Tải lại
                     </button>
-                </EditForm>
+                </div>
+                <div class="card-body p-0">
+                    @if (isLoadingHistory)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="text-muted small mt-2">Đang tải lịch sử đơn nghỉ phép...</p>
+                        </div>
+                    }
+                    else if (!myLeaveRequests.Any())
+                    {
+                        <div class="text-center py-5 text-muted">
+                            <i class="fa-regular fa-calendar-xmark fs-1 text-secondary opacity-50 mb-3 d-block"></i>
+                            <h6 class="fw-semibold">Chưa có đơn xin nghỉ phép nào</h6>
+                            <p class="small">Khi bạn gửi đơn, danh sách và tiến độ xét duyệt sẽ hiển thị tại đây.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light text-secondary small">
+                                    <tr>
+                                        <th class="ps-3">Thời Gian Nghỉ</th>
+                                        <th>Loại Phép</th>
+                                        <th class="text-center">Số Ngày</th>
+                                        <th>Lý Do</th>
+                                        <th class="text-center pe-3">Trạng Thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in myLeaveRequests)
+                                    {
+                                        <tr>
+                                            <td class="ps-3">
+                                                <div class="fw-semibold text-dark">
+                                                    @item.StartDate.ToString("dd/MM/yyyy")
+                                                    @if (item.StartDate.Date != item.EndDate.Date)
+                                                    {
+                                                        <span class="text-muted fw-normal"> &rarr; @item.EndDate.ToString("dd/MM/yyyy")</span>
+                                                    }
+                                                </div>
+                                                <div class="text-muted" style="font-size: 0.75rem;">
+                                                    @item.StartDate.ToString("dddd", new System.Globalization.CultureInfo("vi-VN"))
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge @GetLeaveTypeBadgeClass(item.LeaveType)">
+                                                    @GetLeaveTypeDisplayName(item.LeaveType)
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="fw-bold text-primary">@item.TotalDays.ToString("0.#")</span>
+                                                <span class="text-muted small"> n</span>
+                                            </td>
+                                            <td style="max-width: 200px;">
+                                                <div class="text-truncate text-dark small" title="@item.Reason">@item.Reason</div>
+                                            </td>
+                                            <td class="text-center pe-3">
+                                                @if (item.ApprovalStatus == ApprovalStatus.APPROVED)
+                                                {
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                        <i class="fa-solid fa-check-circle me-1"></i>Đã Duyệt
+                                                    </span>
+                                                    @if (!string.IsNullOrEmpty(item.ApprovedBy))
+                                                    {
+                                                        <div class="text-muted" style="font-size: 0.7rem;">Bởi: @item.ApprovedBy</div>
+                                                    }
+                                                }
+                                                else if (item.ApprovalStatus == ApprovalStatus.REJECTED)
+                                                {
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                                        <i class="fa-solid fa-circle-xmark me-1"></i>Từ Chối
+                                                    </span>
+                                                    @if (!string.IsNullOrEmpty(item.RejectReason))
+                                                    {
+                                                        <div class="text-danger" style="font-size: 0.7rem;" title="@item.RejectReason">
+                                                            @item.RejectReason
+                                                        </div>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                                        <i class="fa-regular fa-clock me-1"></i>Chờ Duyệt
+                                                    </span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     </div>
@@ -98,6 +270,8 @@
         TotalDays = 1.0m,
         LeaveType = LeaveType.ANNUAL_LEAVE
     };
+    private List<LeaveRequest> myLeaveRequests = new();
+    private bool isLoadingHistory = true;
     private bool isSubmitting = false;
     private bool isSuccess = false;
     private string errorMessage = string.Empty;
@@ -113,6 +287,70 @@
                 currentEmployeeId = id;
                 request.EmployeeId = currentEmployeeId;
             }
+        }
+
+        RecalculateDays();
+        await LoadLeaveHistoryAsync();
+    }
+
+    private void OnStartDateChanged()
+    {
+        if (request.EndDate < request.StartDate)
+        {
+            request.EndDate = request.StartDate;
+        }
+        RecalculateDays();
+    }
+
+    private void OnEndDateChanged()
+    {
+        if (request.EndDate < request.StartDate)
+        {
+            request.StartDate = request.EndDate;
+        }
+        RecalculateDays();
+    }
+
+    private void RecalculateDays()
+    {
+        if (request.EndDate < request.StartDate)
+        {
+            request.EndDate = request.StartDate;
+        }
+
+        int workingDays = 0;
+        for (var date = request.StartDate.Date; date <= request.EndDate.Date; date = date.AddDays(1))
+        {
+            if (date.DayOfWeek != DayOfWeek.Saturday && date.DayOfWeek != DayOfWeek.Sunday)
+            {
+                workingDays++;
+            }
+        }
+
+        // Tối thiểu 1 ngày làm việc nếu chỉ chọn 1 ngày hoặc rơi vào cuối tuần
+        request.TotalDays = Math.Max(1m, workingDays);
+    }
+
+    private void SetDays(decimal days)
+    {
+        request.TotalDays = days;
+    }
+
+    private async Task LoadLeaveHistoryAsync()
+    {
+        try
+        {
+            isLoadingHistory = true;
+            var list = await CreateLeaveUseCase.GetMyRequestsAsync(currentEmployeeId);
+            myLeaveRequests = list.OrderByDescending(r => r.StartDate).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading leave history: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingHistory = false;
         }
     }
 
@@ -133,12 +371,20 @@
             return;
         }
 
+        if (request.TotalDays <= 0)
+        {
+            errorMessage = "Số ngày nghỉ phép phải lớn hơn 0.";
+            return;
+        }
+
         isSubmitting = true;
         try
         {
             request.EmployeeId = currentEmployeeId;
             await CreateLeaveUseCase.ExecuteAsync(request);
             isSuccess = true;
+            
+            // Khởi tạo lại form mặc định
             request = new LeaveRequest
             {
                 EmployeeId = currentEmployeeId,
@@ -147,6 +393,10 @@
                 TotalDays = 1.0m,
                 LeaveType = LeaveType.ANNUAL_LEAVE
             };
+            RecalculateDays();
+
+            // Làm mới danh sách lịch sử nghỉ phép
+            await LoadLeaveHistoryAsync();
         }
         catch (Exception ex)
         {
@@ -157,4 +407,22 @@
             isSubmitting = false;
         }
     }
+
+    private string GetLeaveTypeBadgeClass(LeaveType type) => type switch
+    {
+        LeaveType.ANNUAL_LEAVE => "bg-primary text-white",
+        LeaveType.SICK_LEAVE => "bg-info text-dark",
+        LeaveType.MATERNITY_LEAVE => "bg-purple text-white bg-opacity-75",
+        LeaveType.UNPAID_LEAVE => "bg-secondary text-white",
+        _ => "bg-light text-dark"
+    };
+
+    private string GetLeaveTypeDisplayName(LeaveType type) => type switch
+    {
+        LeaveType.ANNUAL_LEAVE => "Phép Năm",
+        LeaveType.SICK_LEAVE => "Nghỉ Ốm",
+        LeaveType.MATERNITY_LEAVE => "Thai Sản",
+        LeaveType.UNPAID_LEAVE => "Việc Riêng",
+        _ => type.ToString()
+    };
 }

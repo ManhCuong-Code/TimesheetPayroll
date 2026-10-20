@@ -260,6 +260,7 @@ public class ViewTimesheetSummaryUseCase : IViewTimesheetSummaryUseCase
 /// </summary>
 public interface IProcessLeaveRequestUseCase
 {
+    Task<IEnumerable<LeaveRequest>> GetAllRequestsAsync();
     Task<IEnumerable<LeaveRequest>> GetPendingRequestsAsync();
     Task ApproveAsync(long requestId, string reviewer);
     Task RejectAsync(long requestId, string reviewer);
@@ -272,6 +273,11 @@ public class ProcessLeaveRequestUseCase : IProcessLeaveRequestUseCase
     public ProcessLeaveRequestUseCase(ILeaveRequestRepository leaveRepo)
     {
         _leaveRepo = leaveRepo;
+    }
+
+    public async Task<IEnumerable<LeaveRequest>> GetAllRequestsAsync()
+    {
+        return await _leaveRepo.GetAllLeaveRequestsAsync();
     }
 
     public async Task<IEnumerable<LeaveRequest>> GetPendingRequestsAsync()

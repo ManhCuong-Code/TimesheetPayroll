@@ -169,6 +169,11 @@ public interface IDeductionRateRepository
 public interface ILeaveRequestRepository
 {
     /// <summary>
+    /// Lấy toàn bộ danh sách đơn nghỉ phép của toàn công ty.
+    /// </summary>
+    Task<IEnumerable<LeaveRequest>> GetAllLeaveRequestsAsync();
+
+    /// <summary>
     /// Lấy danh sách các đơn nghỉ phép đang chờ phòng nhân sự xét duyệt.
     /// </summary>
     Task<IEnumerable<LeaveRequest>> GetPendingLeaveRequestsAsync();

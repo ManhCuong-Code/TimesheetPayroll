@@ -72,6 +72,7 @@ public class ViewMyTimesheetUseCase : IViewMyTimesheetUseCase
 public interface ICreateLeaveRequestUseCase
 {
     Task ExecuteAsync(LeaveRequest request);
+    Task<IEnumerable<LeaveRequest>> GetMyRequestsAsync(long employeeId);
 }
 
 public class CreateLeaveRequestUseCase : ICreateLeaveRequestUseCase
@@ -98,6 +99,11 @@ public class CreateLeaveRequestUseCase : ICreateLeaveRequestUseCase
 
         request.ApprovalStatus = ApprovalStatus.PENDING;
         await _leaveRepo.CreateLeaveRequestAsync(request);
+    }
+
+    public async Task<IEnumerable<LeaveRequest>> GetMyRequestsAsync(long employeeId)
+    {
+        return await _leaveRepo.GetLeaveRequestsByEmployeeAsync(employeeId);
     }
 }
 

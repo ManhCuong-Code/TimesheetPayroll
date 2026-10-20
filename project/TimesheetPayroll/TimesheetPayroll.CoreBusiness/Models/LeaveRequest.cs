@@ -11,7 +11,9 @@ public class LeaveRequest
 {
     public long Id { get; set; }
     public long EmployeeId { get; set; }
+    public string? EmployeeCode { get; set; }
     public string? EmployeeName { get; set; }
+    public string? DepartmentName { get; set; }
 
     [Required(ErrorMessage = "Vui lòng chọn loại hình nghỉ phép.")]
     public LeaveType LeaveType { get; set; } = LeaveType.ANNUAL_LEAVE;

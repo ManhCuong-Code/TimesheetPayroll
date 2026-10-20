@@ -580,16 +580,32 @@ public class LeaveRequestRepository : ILeaveRequestRepository
     private readonly IDataAccess _db;
     public LeaveRequestRepository(IDataAccess db) => _db = db;
 
-    public async Task<IEnumerable<LeaveRequest>> GetPendingLeaveRequestsAsync()
+    public async Task<IEnumerable<LeaveRequest>> GetAllLeaveRequestsAsync()
     {
         using var conn = _db.CreateConnection();
         const string sql = @"
-            SELECT l.id AS Id, l.employee_id AS EmployeeId, e.full_name AS EmployeeName,
+            SELECT l.id AS Id, l.employee_id AS EmployeeId, e.employee_code AS EmployeeCode, e.full_name AS EmployeeName, d.department_name AS DepartmentName,
                    l.leave_type AS LeaveType, l.start_date AS StartDate, l.end_date AS EndDate,
                    l.total_days AS TotalDays, l.reason AS Reason, l.approval_status AS ApprovalStatus,
                    l.approved_by AS ApprovedBy, l.approved_at AS ApprovedAt
             FROM leave_requests l
             JOIN employees e ON l.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            ORDER BY l.start_date DESC;";
+        return await conn.QueryAsync<LeaveRequest>(sql);
+    }
+
+    public async Task<IEnumerable<LeaveRequest>> GetPendingLeaveRequestsAsync()
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT l.id AS Id, l.employee_id AS EmployeeId, e.employee_code AS EmployeeCode, e.full_name AS EmployeeName, d.department_name AS DepartmentName,
+                   l.leave_type AS LeaveType, l.start_date AS StartDate, l.end_date AS EndDate,
+                   l.total_days AS TotalDays, l.reason AS Reason, l.approval_status AS ApprovalStatus,
+                   l.approved_by AS ApprovedBy, l.approved_at AS ApprovedAt
+            FROM leave_requests l
+            JOIN employees e ON l.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
             WHERE l.approval_status = 'PENDING'
             ORDER BY l.start_date ASC;";
         return await conn.QueryAsync<LeaveRequest>(sql);
@@ -637,6 +653,43 @@ public class LeaveRequestRepository : ILeaveRequestRepository
                 updated_at = GETDATE()
             WHERE id = @RequestId;";
         await conn.ExecuteAsync(sql, new { RequestId = requestId, Status = status.ToString(), Reviewer = reviewer });
+
+        if (status == ApprovalStatus.APPROVED)
+        {
+            const string getReqSql = "SELECT * FROM leave_requests WHERE id = @RequestId;";
+            var req = await conn.QueryFirstOrDefaultAsync<LeaveRequest>(getReqSql, new { RequestId = requestId });
+            if (req != null)
+            {
+                for (var d = req.StartDate.Date; d <= req.EndDate.Date; d = d.AddDays(1))
+                {
+                    if (d.DayOfWeek == DayOfWeek.Sunday) continue;
+
+                    const string checkSql = "SELECT COUNT(*) FROM timesheets WHERE employee_id = @EmpId AND work_date = @WorkDate;";
+                    var count = await conn.ExecuteScalarAsync<int>(checkSql, new { EmpId = req.EmployeeId, WorkDate = d });
+                    var note = $"Nghỉ phép: {req.Reason}";
+                    var workUnits = req.LeaveType == LeaveType.ANNUAL_LEAVE ? 1.0m : 0.0m;
+
+                    if (count > 0)
+                    {
+                        const string updSql = @"
+                            UPDATE timesheets 
+                            SET work_shift_status = 'ABSENT_WITH_PERMISSION',
+                                work_units = @WorkUnits,
+                                note = @Note,
+                                updated_at = GETDATE()
+                            WHERE employee_id = @EmpId AND work_date = @WorkDate;";
+                        await conn.ExecuteAsync(updSql, new { EmpId = req.EmployeeId, WorkDate = d, WorkUnits = workUnits, Note = note });
+                    }
+                    else
+                    {
+                        const string insSql = @"
+                            INSERT INTO timesheets (employee_id, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked, note)
+                            VALUES (@EmpId, @WorkDate, NULL, NULL, 0.0, 'ABSENT_WITH_PERMISSION', @WorkUnits, 0, @Note);";
+                        await conn.ExecuteAsync(insSql, new { EmpId = req.EmployeeId, WorkDate = d, WorkUnits = workUnits, Note = note });
+                    }
+                }
+            }
+        }
     }
 }
 

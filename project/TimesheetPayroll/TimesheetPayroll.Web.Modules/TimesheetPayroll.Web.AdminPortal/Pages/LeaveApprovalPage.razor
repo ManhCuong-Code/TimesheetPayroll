@@ -1,0 +1,408 @@
+@page "/admin/leave-approval"
+@attribute [Authorize(Roles = "ROLE_HR_ACCOUNTANT, ROLE_ADMIN")]
+@inject IProcessLeaveRequestUseCase ProcessLeaveUseCase
+@using Microsoft.AspNetCore.Components.Authorization
+@using TimesheetPayroll.UseCases.AdminPortal
+@using TimesheetPayroll.CoreBusiness.Models
+
+<div class="container-fluid py-3">
+    <!-- TIÊU ĐỀ TRANG & NÚT LÀM MỚI -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2 border-bottom pb-3">
+        <div>
+            <h2 class="h4 mb-1 text-dark fw-bold">
+                <i class="fa-solid fa-clipboard-check text-primary me-2"></i>Xét Duyệt Đơn Xin Nghỉ Phép
+            </h2>
+            <p class="text-muted small mb-0">
+                Phân hệ dành cho <strong>Kế toán / Quản trị viên</strong>: Kiểm tra, phê duyệt hoặc từ chối các yêu cầu nghỉ phép và tự động đồng bộ vào bảng chấm công.
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary btn-sm shadow-sm" @onclick="LoadRequestsAsync" disabled="@isLoading" title="Tải lại danh sách">
+                <i class="fa-solid fa-arrows-rotate me-1 @(isLoading ? "fa-spin" : "")"></i>Làm Mới
+            </button>
+        </div>
+    </div>
+
+    <!-- THÔNG BÁO HỆ THỐNG -->
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert alert-@statusType alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fa-solid @(statusType == "success" ? "fa-circle-check" : "fa-triangle-exclamation") me-2"></i>
+            @statusMessage
+            <button type="button" class="btn-close" @onclick="() => statusMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- THỐNG KÊ TỔNG QUAN (KPI CARDS) -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm p-3 border-start border-4 border-warning bg-white h-100" style="cursor: pointer;" @onclick='() => SetFilterStatus("PENDING")'>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-muted fw-semibold text-uppercase">ĐANG CHỜ DUYỆT</div>
+                        <div class="fs-3 fw-bold text-warning-emphasis mt-1">@pendingCount đơn</div>
+                        <div class="small text-muted">Cần xử lý ngay</div>
+                    </div>
+                    <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3 fs-4">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm p-3 border-start border-4 border-success bg-white h-100" style="cursor: pointer;" @onclick='() => SetFilterStatus("APPROVED")'>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-muted fw-semibold text-uppercase">ĐÃ PHÊ DUYỆT</div>
+                        <div class="fs-3 fw-bold text-success mt-1">@approvedCount đơn</div>
+                        <div class="small text-muted">Đã ghi nhận ngày công</div>
+                    </div>
+                    <div class="bg-success bg-opacity-10 text-success rounded-circle p-3 fs-4">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm p-3 border-start border-4 border-danger bg-white h-100" style="cursor: pointer;" @onclick='() => SetFilterStatus("REJECTED")'>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-muted fw-semibold text-uppercase">ĐÃ TỪ CHỐI</div>
+                        <div class="fs-3 fw-bold text-danger mt-1">@rejectedCount đơn</div>
+                        <div class="small text-muted">Không chấp thuận nghỉ</div>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3 fs-4">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm p-3 border-start border-4 border-primary bg-white h-100" style="cursor: pointer;" @onclick='() => SetFilterStatus("ALL")'>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-muted fw-semibold text-uppercase">TỔNG TOÀN BỘ ĐƠN</div>
+                        <div class="fs-3 fw-bold text-primary mt-1">@allRequests.Count đơn</div>
+                        <div class="small text-muted">Xem tất cả lịch sử</div>
+                    </div>
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 fs-4">
+                        <i class="fa-solid fa-envelope-open-text"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BỘ LỌC TÌM KIẾM -->
+    <div class="card border-0 shadow-sm mb-4 bg-light">
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0 shadow-none" 
+                               placeholder="Tìm theo tên nhân viên, mã NV hoặc lý do..." 
+                               @bind="searchTerm" @bind:event="oninput" />
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small fw-semibold text-nowrap">Trạng thái:</span>
+                        <select class="form-select shadow-none" value="@filterStatus" @onchange="OnFilterChanged">
+                            <option value="ALL">Tất Cả (@allRequests.Count)</option>
+                            <option value="PENDING">Chờ Duyệt (@pendingCount)</option>
+                            <option value="APPROVED">Đã Duyệt (@approvedCount)</option>
+                            <option value="REJECTED">Đã Từ Chối (@rejectedCount)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-4 text-md-end text-start">
+                    <span class="text-muted small">
+                        Hiển thị <strong>@FilteredRequests.Count()</strong> / @allRequests.Count đơn xin nghỉ
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BẢNG DANH SÁCH ĐƠN NGHỈ PHÉP -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th scope="col" style="width: 60px;" class="text-center">STT</th>
+                        <th scope="col" style="width: 220px;">Nhân Viên</th>
+                        <th scope="col" style="width: 170px;">Loại Nghỉ Phép</th>
+                        <th scope="col" style="width: 200px;">Thời Gian Nghỉ</th>
+                        <th scope="col" class="text-center" style="width: 100px;">Số Ngày</th>
+                        <th scope="col">Lý Do Nghỉ Phép</th>
+                        <th scope="col" class="text-center" style="width: 140px;">Trạng Thái</th>
+                        <th scope="col" style="width: 180px;">Người Duyệt</th>
+                        <th scope="col" class="text-center" style="width: 170px;">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (isLoading)
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status"></div>
+                                <div class="mt-2 text-muted">Đang nạp danh sách đơn xin nghỉ phép...</div>
+                            </td>
+                        </tr>
+                    }
+                    else if (!FilteredRequests.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="fa-regular fa-folder-open fs-2 d-block mb-2 text-secondary"></i>
+                                Không tìm thấy đơn xin nghỉ phép nào phù hợp với điều kiện lọc.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        int stt = 1;
+                        @foreach (var r in FilteredRequests)
+                        {
+                            <tr>
+                                <td class="text-center text-muted small fw-semibold">@(stt++)</td>
+                                <td>
+                                    <div class="fw-bold text-dark">@(r.EmployeeName ?? $"Nhân viên #{r.EmployeeId}")</div>
+                                    <div class="small text-muted">
+                                        <span class="badge bg-light text-primary border me-1 font-monospace">@(r.EmployeeCode ?? $"EMP00{r.EmployeeId}")</span>
+                                        @(r.DepartmentName ?? "Nhân viên chính thức")
+                                    </div>
+                                </td>
+                                <td>
+                                    @switch (r.LeaveType)
+                                    {
+                                        case LeaveType.ANNUAL_LEAVE:
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                <i class="fa-solid fa-umbrella-beach me-1"></i>Phép Năm (Hưởng lương)
+                                            </span>
+                                            break;
+                                        case LeaveType.SICK_LEAVE:
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                                                <i class="fa-solid fa-notes-medical me-1"></i>Nghỉ Ốm (BHXH)
+                                            </span>
+                                            break;
+                                        case LeaveType.MATERNITY_LEAVE:
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                                <i class="fa-solid fa-baby me-1"></i>Nghỉ Thai Sản
+                                            </span>
+                                            break;
+                                        case LeaveType.UNPAID_LEAVE:
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
+                                                <i class="fa-solid fa-user-clock me-1"></i>Nghỉ Không Lương
+                                            </span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">
+                                        @r.StartDate.ToString("dd/MM/yyyy") <i class="fa-solid fa-arrow-right-long text-muted mx-1 small"></i> @r.EndDate.ToString("dd/MM/yyyy")
+                                    </div>
+                                    <div class="text-muted small">
+                                        @r.StartDate.ToString("dddd", new System.Globalization.CultureInfo("vi-VN"))
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark border px-2 py-1 fw-bold fs-6">
+                                        @r.TotalDays.ToString("0.##") ngày
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="text-dark small">@r.Reason</span>
+                                </td>
+                                <td class="text-center">
+                                    @switch (r.ApprovalStatus)
+                                    {
+                                        case ApprovalStatus.PENDING:
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1">
+                                                <i class="fa-solid fa-clock me-1"></i>Chờ Duyệt
+                                            </span>
+                                            break;
+                                        case ApprovalStatus.APPROVED:
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                <i class="fa-solid fa-circle-check me-1"></i>Đã Duyệt
+                                            </span>
+                                            break;
+                                        case ApprovalStatus.REJECTED:
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                                <i class="fa-solid fa-circle-xmark me-1"></i>Từ Chối
+                                            </span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(r.ApprovedBy))
+                                    {
+                                        <div class="small fw-semibold text-dark">@r.ApprovedBy</div>
+                                        <div class="small text-muted" style="font-size: 0.75rem;">
+                                            @(r.ApprovedAt?.ToString("dd/MM/yyyy HH:mm") ?? "")
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">--</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (r.ApprovalStatus == ApprovalStatus.PENDING)
+                                    {
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-success fw-semibold py-1 px-2 shadow-sm" 
+                                                    @onclick="() => HandleApproveAsync(r.Id)"
+                                                    title="Chấp thuận đơn xin nghỉ phép này">
+                                                <i class="fa-solid fa-check me-1"></i>Duyệt
+                                            </button>
+                                            <button class="btn btn-outline-danger fw-semibold py-1 px-2" 
+                                                    @onclick="() => HandleRejectAsync(r.Id)"
+                                                    title="Từ chối đơn xin nghỉ phép này">
+                                                <i class="fa-solid fa-xmark me-1"></i>Từ Chối
+                                            </button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Đã xử lý xong</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private List<LeaveRequest> allRequests = new();
+    private bool isLoading = true;
+    private string searchTerm = string.Empty;
+    private string filterStatus = "PENDING";
+    private string statusMessage = string.Empty;
+    private string statusType = "success";
+    private string reviewerName = "Kế toán / Quản trị viên";
+
+    private int pendingCount => allRequests.Count(r => r.ApprovalStatus == ApprovalStatus.PENDING);
+    private int approvedCount => allRequests.Count(r => r.ApprovalStatus == ApprovalStatus.APPROVED);
+    private int rejectedCount => allRequests.Count(r => r.ApprovalStatus == ApprovalStatus.REJECTED);
+
+    private IEnumerable<LeaveRequest> FilteredRequests
+    {
+        get
+        {
+            var query = allRequests.AsEnumerable();
+
+            if (filterStatus != "ALL")
+            {
+                if (Enum.TryParse<ApprovalStatus>(filterStatus, out var st))
+                {
+                    query = query.Where(r => r.ApprovalStatus == st);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var term = searchTerm.Trim().ToLower();
+                query = query.Where(r => 
+                    (r.EmployeeName != null && r.EmployeeName.ToLower().Contains(term)) ||
+                    (r.EmployeeCode != null && r.EmployeeCode.ToLower().Contains(term)) ||
+                    (r.Reason != null && r.Reason.ToLower().Contains(term))
+                );
+            }
+
+            return query;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthStateTask != null)
+        {
+            var auth = await AuthStateTask;
+            reviewerName = auth.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value 
+                ?? auth.User.Identity?.Name 
+                ?? "Kế toán / Quản trị viên";
+        }
+        await LoadRequestsAsync();
+    }
+
+    private async Task LoadRequestsAsync()
+    {
+        isLoading = true;
+        statusMessage = string.Empty;
+        try
+        {
+            var data = await ProcessLeaveUseCase.GetAllRequestsAsync();
+            allRequests = data.ToList();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Lỗi khi nạp dữ liệu: {ex.Message}";
+            statusType = "danger";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SetFilterStatus(string status)
+    {
+        filterStatus = status;
+    }
+
+    private void OnFilterChanged(ChangeEventArgs e)
+    {
+        filterStatus = e.Value?.ToString() ?? "ALL";
+    }
+
+    private async Task HandleApproveAsync(long requestId)
+    {
+        statusMessage = string.Empty;
+        try
+        {
+            await ProcessLeaveUseCase.ApproveAsync(requestId, reviewerName);
+            statusMessage = "Đã phê duyệt đơn xin nghỉ phép thành công! Hệ thống đã tự động đồng bộ vào bảng chấm công.";
+            statusType = "success";
+            await LoadRequestsAsync();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Không thể phê duyệt đơn: {ex.Message}";
+            statusType = "danger";
+        }
+    }
+
+    private async Task HandleRejectAsync(long requestId)
+    {
+        statusMessage = string.Empty;
+        try
+        {
+            await ProcessLeaveUseCase.RejectAsync(requestId, reviewerName);
+            statusMessage = "Đã từ chối đơn xin nghỉ phép.";
+            statusType = "warning";
+            await LoadRequestsAsync();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Không thể từ chối đơn: {ex.Message}";
+            statusType = "danger";
+        }
+    }
+}
