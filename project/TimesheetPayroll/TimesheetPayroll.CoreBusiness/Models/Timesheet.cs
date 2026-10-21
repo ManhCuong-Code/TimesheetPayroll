@@ -27,6 +27,8 @@ public class Timesheet
     public bool IsEarlyLeave => WorkShiftStatus == WorkShiftStatus.EARLY_LEAVE;
     public decimal WorkUnits { get; set; } = 1.0m;
     public bool IsLocked { get; set; } = false;
+    public string AttendanceSource { get; set; } = "FACE_RECOGNITION";
+    public bool IsConfirmed { get; set; } = true;
     public string? Note { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

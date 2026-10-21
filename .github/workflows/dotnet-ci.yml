@@ -1,0 +1,28 @@
+name: .NET Core CI & Build Validation
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Validate Solution
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore Dependencies
+      run: dotnet restore project/TimesheetPayroll/TimesheetPayroll.sln
+
+    - name: Build Release
+      run: dotnet build project/TimesheetPayroll/TimesheetPayroll.sln -c Release --no-restore

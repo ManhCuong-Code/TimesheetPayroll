@@ -2,27 +2,49 @@
 @attribute [Authorize(Roles = "ROLE_HR_ACCOUNTANT, ROLE_ADMIN")]
 @inject IGetWorkShiftsUseCase GetWorkShiftsUseCase
 @inject IManageWorkShiftUseCase ManageWorkShiftUseCase
+@inject IGetShiftAssignmentsUseCase GetShiftAssignmentsUseCase
+@inject IManageShiftAssignmentUseCase ManageShiftAssignmentUseCase
+@inject IEmployeeRepository EmployeeRepo
+@inject IUserSessionService UserSession
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using TimesheetPayroll.CoreBusiness.Models
+@using TimesheetPayroll.UseCases.AdminPortal
+@using TimesheetPayroll.UseCases.Authentication
+@using TimesheetPayroll.UseCases.PluginInterfaces.DataStore
+@using TimesheetPayroll.Web.Common.Controls
+
+<PageTitle>Quản Lý Ca Làm Việc & Phân Ca - HỆ THỐNG QUẢN LÝ NHÂN SỰ – CHẤM CÔNG – TÍNH LƯƠNG</PageTitle>
 
 <AuthorizeView Roles="ROLE_HR_ACCOUNTANT, ROLE_ADMIN">
     <Authorized>
         <div class="container-fluid py-3">
             <!-- HEADER -->
-            <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom gap-2">
                 <div>
                     <h2 class="h4 mb-1 text-dark fw-bold">
-                        <i class="fa-solid fa-business-time text-primary me-2"></i>Quản Lý Ca Làm Việc (Work Shift Management)
+                        <i class="fa-solid fa-business-time text-primary me-2"></i>Quản Lý Ca Làm Việc & Lịch Phân Ca
                     </h2>
-                    <p class="text-muted small mb-0">Cấu hình khung giờ điểm danh, thời gian ân hạn vào trễ/về sớm và hệ số quy đổi ngày công theo chuẩn Luật Lao động.</p>
+                    <p class="text-muted small mb-0">
+                        Cấu hình ca chuẩn, cửa sổ điểm danh sớm/muộn và thiết lập lịch phân ca nhân sự phục vụ hệ thống tự động nhận diện ca.
+                    </p>
                 </div>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary" @onclick="LoadShiftsAsync" disabled="@isLoading">
+                    <button class="btn btn-outline-primary" @onclick="HandleRefreshAsync" disabled="@isLoading">
                         <i class="fa-solid fa-arrows-rotate me-1 @(isLoading ? "fa-spin" : "")"></i>Làm mới
                     </button>
-                    <button class="btn btn-primary shadow-sm" @onclick="OpenAddModal">
-                        <i class="fa-solid fa-plus me-1"></i>Thêm Ca Làm Việc
-                    </button>
+                    @if (activeTab == "SHIFTS")
+                    {
+                        <button class="btn btn-primary shadow-sm" @onclick="OpenAddModal">
+                            <i class="fa-solid fa-plus me-1"></i>Thêm Ca Mới
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success shadow-sm" @onclick="OpenAssignModal">
+                            <i class="fa-solid fa-calendar-plus me-1"></i>Phân Ca Nhân Viên
+                        </button>
+                    }
                 </div>
             </div>
 
@@ -34,165 +56,265 @@
                 </div>
             }
 
-            <!-- THỐNG KÊ NHANH -->
-            <div class="row g-3 mb-4">
-                <div class="col-md-3">
-                    <div class="card border-0 shadow-sm p-3 border-start border-4 border-primary">
-                        <div class="text-muted small fw-semibold text-uppercase">Tổng Số Ca Cấu Hình</div>
-                        <div class="fs-4 fw-bold text-dark mt-1">@shifts.Count ca</div>
-                        <div class="small text-muted">Toàn bộ định nghĩa ca trong DB</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-0 shadow-sm p-3 border-start border-4 border-success">
-                        <div class="text-muted small fw-semibold text-uppercase">Ca Đang Áp Dụng</div>
-                        <div class="fs-4 fw-bold text-success mt-1">@shifts.Count(s => s.IsActive) ca</div>
-                        <div class="small text-muted">Nhân viên có thể chọn khi điểm danh</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-0 shadow-sm p-3 border-start border-4 border-dark">
-                        <div class="text-muted small fw-semibold text-uppercase">Ca Đêm (Phụ Cấp +30%)</div>
-                        <div class="fs-4 fw-bold text-dark mt-1">@shifts.Count(s => s.IsNightShift) ca</div>
-                        <div class="small text-muted">Áp dụng khung 22:00 - 06:00</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border-0 shadow-sm p-3 border-start border-4 border-info">
-                        <div class="text-muted small fw-semibold text-uppercase">Ca Nửa Ngày (0.5 Công)</div>
-                        <div class="fs-4 fw-bold text-info mt-1">@shifts.Count(s => s.WorkUnits < 1.0m) ca</div>
-                        <div class="small text-muted">Ca sáng / ca chiều / ca tối lẻ</div>
-                    </div>
-                </div>
-            </div>
+            <!-- TAB NAVIGATION -->
+            <ul class="nav nav-pills mb-4 gap-2">
+                <li class="nav-item">
+                    <button class="nav-link @(activeTab == "SHIFTS" ? "active" : "") fw-bold px-4 py-2" @onclick='() => SetTab("SHIFTS")'>
+                        <i class="fa-solid fa-list-check me-2"></i>Danh Mục Ca Làm Việc (@shifts.Count)
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link @(activeTab == "ASSIGNMENTS" ? "active" : "") fw-bold px-4 py-2" @onclick='() => SetTab("ASSIGNMENTS")'>
+                        <i class="fa-solid fa-calendar-days me-2"></i>Lịch Phân Ca Nhân Viên (@dateAssignments.Count)
+                    </button>
+                </li>
+            </ul>
 
-            <!-- DANH SÁCH CA LÀM VIỆC -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <h5 class="card-title h6 mb-0 fw-bold">
-                        <i class="fa-solid fa-list-check text-primary me-2"></i>Danh Mục Ca Chấm Công Hệ Thống
-                    </h5>
-                    <div class="d-flex align-items-center gap-2" style="min-width: 280px;">
-                        <SearchBarComponent Placeholder="Tìm nhanh ca..." OnSearch="HandleSearch" />
-                        <span class="badge bg-primary-subtle text-primary fw-medium px-2 py-2 text-nowrap">
-                            @DisplayShifts.Count() ca làm việc
-                        </span>
+            @if (activeTab == "SHIFTS")
+            {
+                <!-- THỐNG KÊ NHANH -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm p-3 border-start border-4 border-primary">
+                            <div class="text-muted small fw-semibold text-uppercase">Tổng Số Ca Cấu Hình</div>
+                            <div class="fs-4 fw-bold text-dark mt-1">@shifts.Count ca</div>
+                            <div class="small text-muted">Toàn bộ ca trong hệ thống</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm p-3 border-start border-4 border-success">
+                            <div class="text-muted small fw-semibold text-uppercase">Ca Đang Áp Dụng</div>
+                            <div class="fs-4 fw-bold text-success mt-1">@shifts.Count(s => s.IsActive) ca</div>
+                            <div class="small text-muted">Sẵn sàng để tự động phân giải</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm p-3 border-start border-4 border-dark">
+                            <div class="text-muted small fw-semibold text-uppercase">Ca Đêm / Xuyên Ngày</div>
+                            <div class="fs-4 fw-bold text-dark mt-1">@shifts.Count(s => s.IsNightShift || s.IsOvernight) ca</div>
+                            <div class="small text-muted">Hỗ trợ qua 24:00 (+30% lương)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm p-3 border-start border-4 border-info">
+                            <div class="text-muted small fw-semibold text-uppercase">Ca Nửa Ngày (0.5 Công)</div>
+                            <div class="fs-4 fw-bold text-info mt-1">@shifts.Count(s => s.WorkUnits < 1.0m) ca</div>
+                            <div class="small text-muted">Ca sáng / ca chiều lẻ</div>
+                        </div>
                     </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light text-muted small text-uppercase">
-                            <tr>
-                                <th scope="col" style="width: 140px;">Mã Ca</th>
-                                <th scope="col">Tên Ca & Mô Tả</th>
-                                <th scope="col" class="text-center">Khung Giờ</th>
-                                <th scope="col" class="text-center">Nghỉ Ca</th>
-                                <th scope="col" class="text-center">Giờ Chuẩn</th>
-                                <th scope="col" class="text-center">Ngày Công</th>
-                                <th scope="col" class="text-center">Ân Hạn</th>
-                                <th scope="col" class="text-center">Loại Ca</th>
-                                <th scope="col" class="text-center">Trạng Thái</th>
-                                <th scope="col" class="text-end" style="width: 150px;">Thao Tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if (shifts.Count == 0)
-                            {
+
+                <!-- DANH SÁCH CA LÀM VIỆC -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <h5 class="card-title h6 mb-0 fw-bold">
+                            <i class="fa-solid fa-list-check text-primary me-2"></i>Danh Mục Ca Chấm Công Hệ Thống
+                        </h5>
+                        <div class="d-flex align-items-center gap-2" style="min-width: 280px;">
+                            <SearchBarComponent Placeholder="Tìm nhanh ca..." OnSearch="HandleSearch" />
+                            <span class="badge bg-primary-subtle text-primary fw-medium px-2 py-2 text-nowrap">
+                                @DisplayShifts.Count() ca làm việc
+                            </span>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted small text-uppercase">
                                 <tr>
-                                    <td colspan="10" class="text-center py-4 text-muted">
-                                        <i class="fa-regular fa-folder-open fs-3 d-block mb-2 text-secondary"></i>
-                                        Chưa có ca làm việc nào được cấu hình. Bấm "Thêm Ca Làm Việc" để khởi tạo.
-                                    </td>
+                                    <th scope="col" style="width: 140px;">Mã Ca</th>
+                                    <th scope="col">Tên Ca & Mô Tả</th>
+                                    <th scope="col" class="text-center">Khung Giờ</th>
+                                    <th scope="col" class="text-center">Cửa Sổ Mở/Đóng</th>
+                                    <th scope="col" class="text-center">Giờ Chuẩn</th>
+                                    <th scope="col" class="text-center">Ngày Công</th>
+                                    <th scope="col" class="text-center">Ân Hạn</th>
+                                    <th scope="col" class="text-center">Đặc Thù</th>
+                                    <th scope="col" class="text-center">Trạng Thái</th>
+                                    <th scope="col" class="text-end" style="width: 150px;">Thao Tác</th>
                                 </tr>
-                            }
-                            else
-                            {
-                                @foreach (var shift in DisplayShifts)
+                            </thead>
+                            <tbody>
+                                @if (shifts.Count == 0)
                                 {
-                                    <tr class="@(!shift.IsActive ? "table-light text-muted opacity-75" : "")">
-                                        <td>
-                                            <span class="badge font-monospace @(shift.IsActive ? "bg-light text-dark border" : "bg-secondary text-white")">
-                                                @shift.ShiftCode
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <div class="fw-bold text-dark">@shift.ShiftName</div>
-                                            @if (!string.IsNullOrWhiteSpace(shift.Description))
-                                            {
-                                                <div class="text-muted small" style="max-width: 320px;">@shift.Description</div>
-                                            }
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-semibold font-monospace">
-                                                @shift.StartTime.ToString(@"hh\:mm") - @shift.EndTime.ToString(@"hh\:mm")
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            @if (shift.LunchBreakHours > 0)
-                                            {
-                                                <span class="badge bg-secondary-subtle text-secondary">@shift.LunchBreakHours giờ</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted small">Không</span>
-                                            }
-                                        </td>
-                                        <td class="text-center fw-semibold">
-                                            @shift.TargetHours giờ
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge @(shift.WorkUnits >= 1.0m ? "bg-success" : "bg-info") text-white px-2 py-1">
-                                                @shift.WorkUnits công
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="small text-muted">@shift.GracePeriodMinutes phút</span>
-                                        </td>
-                                        <td class="text-center">
-                                            @if (shift.IsSplitShift || shift.ShiftCode == "CA_GAY")
-                                            {
-                                                <span class="badge bg-warning text-dark border border-warning px-2 py-1">
-                                                    <i class="fa-solid fa-bolt me-1 text-danger"></i>Ca Gãy (+50k)
-                                                </span>
-                                            }
-                                            else if (shift.IsNightShift)
-                                            {
-                                                <span class="badge bg-dark text-warning border px-2 py-1">
-                                                    <i class="fa-solid fa-moon me-1"></i>Ca Đêm
-                                                </span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-light text-warning-emphasis border px-2 py-1">
-                                                    <i class="fa-solid fa-sun me-1 text-warning"></i>Ca Ngày (8h)
-                                                </span>
-                                            }
-                                        </td>
-                                        <td class="text-center">
-                                            <StatusBadgeComponent Status="@(shift.IsActive ? "APPROVED" : "REJECTED")" Label="@(shift.IsActive ? "Áp Dụng" : "Tạm Dừng")" />
-                                        </td>
-                                        <td class="text-end">
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-primary" title="Chỉnh sửa ca" @onclick="() => OpenEditModal(shift)">
-                                                    <i class="fa-solid fa-pen-to-square"></i>
-                                                </button>
-                                                <button class="btn @(shift.IsActive ? "btn-outline-warning" : "btn-outline-success")" 
-                                                        title="@(shift.IsActive ? "Tạm dừng ca này" : "Kích hoạt ca này")"
-                                                        @onclick="() => HandleToggleStatusAsync(shift.Id)">
-                                                    <i class="fa-solid @(shift.IsActive ? "fa-ban" : "fa-check")"></i>
-                                                </button>
-                                                <button class="btn btn-outline-danger" title="Xóa ca" @onclick="() => HandleDeleteAsync(shift)">
-                                                    <i class="fa-solid fa-trash-can"></i>
-                                                </button>
-                                            </div>
+                                    <tr>
+                                        <td colspan="10" class="text-center py-4 text-muted">
+                                            <i class="fa-regular fa-folder-open fs-3 d-block mb-2 text-secondary"></i>
+                                            Chưa có ca làm việc nào được cấu hình. Bấm "Thêm Ca Mới" để khởi tạo.
                                         </td>
                                     </tr>
                                 }
-                            }
-                        </tbody>
-                    </table>
+                                else
+                                {
+                                    @foreach (var shift in DisplayShifts)
+                                    {
+                                        <tr class="@(!shift.IsActive ? "table-light text-muted opacity-75" : "")">
+                                            <td>
+                                                <span class="badge font-monospace @(shift.IsActive ? "bg-light text-dark border" : "bg-secondary text-white")">
+                                                    @shift.ShiftCode
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-dark">@shift.ShiftName</div>
+                                                @if (!string.IsNullOrWhiteSpace(shift.Description))
+                                                {
+                                                    <div class="text-muted small" style="max-width: 320px;">@shift.Description</div>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-semibold font-monospace">
+                                                    @shift.StartTime.ToString(@"hh\:mm") - @shift.EndTime.ToString(@"hh\:mm")
+                                                </span>
+                                            </td>
+                                            <td class="text-center small">
+                                                <span class="text-success fw-semibold">-@shift.EarlyCheckInMinutes ph</span> / 
+                                                <span class="text-danger fw-semibold">+@shift.LateCheckOutMinutes ph</span>
+                                            </td>
+                                            <td class="text-center fw-semibold">
+                                                @shift.TargetHours giờ
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge @(shift.WorkUnits >= 1.0m ? "bg-success" : "bg-info") text-white px-2 py-1">
+                                                    @shift.WorkUnits công
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="small text-muted">@shift.GracePeriodMinutes phút</span>
+                                            </td>
+                                            <td class="text-center">
+                                                @if (shift.IsSplitShift || shift.ShiftCode == "CA_GAY")
+                                                {
+                                                    <span class="badge bg-warning text-dark border border-warning px-2 py-1">
+                                                        <i class="fa-solid fa-bolt me-1 text-danger"></i>Ca Gãy (+50k)
+                                                    </span>
+                                                }
+                                                else if (shift.IsNightShift || shift.IsOvernight)
+                                                {
+                                                    <span class="badge bg-dark text-warning border px-2 py-1">
+                                                        <i class="fa-solid fa-moon me-1"></i>Ca Đêm (Xuyên ngày)
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-light text-warning-emphasis border px-2 py-1">
+                                                        <i class="fa-solid fa-sun me-1 text-warning"></i>Ca Ngày (8h)
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                <StatusBadgeComponent Status="@(shift.IsActive ? "APPROVED" : "REJECTED")" Label="@(shift.IsActive ? "Áp Dụng" : "Tạm Dừng")" />
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary" title="Chỉnh sửa ca" @onclick="() => OpenEditModal(shift)">
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </button>
+                                                    <button class="btn @(shift.IsActive ? "btn-outline-warning" : "btn-outline-success")" 
+                                                            title="@(shift.IsActive ? "Tạm dừng ca này" : "Kích hoạt ca này")"
+                                                            @onclick="() => HandleToggleStatusAsync(shift.Id)">
+                                                        <i class="fa-solid @(shift.IsActive ? "fa-ban" : "fa-check")"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger" title="Xóa ca" @onclick="() => HandleDeleteAsync(shift)">
+                                                        <i class="fa-solid fa-trash-can"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            }
+            else
+            {
+                <!-- TAB LỊCH PHÂN CA NHÂN VIÊN -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <h5 class="card-title h6 mb-0 fw-bold">
+                                <i class="fa-solid fa-calendar-check text-success me-2"></i>Lịch Phân Ca Ngày:
+                            </h5>
+                            <input type="date" class="form-control form-control-sm shadow-none fw-semibold" style="width: 170px;" 
+                                   value="@selectedAssignmentDate.ToString("yyyy-MM-dd")" 
+                                   @onchange="HandleDateChange" />
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="text" class="form-control form-control-sm" placeholder="Tìm theo tên/mã NV..." 
+                                   @bind="assignmentSearchTerm" @bind:event="oninput" style="width: 220px;" />
+                            <span class="badge bg-success-subtle text-success fw-medium px-2 py-2 text-nowrap">
+                                @FilteredAssignments.Count() phân công
+                            </span>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted small text-uppercase">
+                                <tr>
+                                    <th scope="col" style="width: 100px;">Mã NV</th>
+                                    <th scope="col">Họ Và Tên</th>
+                                    <th scope="col">Phòng Ban</th>
+                                    <th scope="col">Ca Được Phân Công</th>
+                                    <th scope="col" class="text-center">Khung Giờ</th>
+                                    <th scope="col" class="text-center">Trạng Thái</th>
+                                    <th scope="col">Người Phân Công & Ghi Chú</th>
+                                    <th scope="col" class="text-end" style="width: 100px;">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (FilteredAssignments.Count() == 0)
+                                {
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4 text-muted">
+                                            <i class="fa-regular fa-calendar-xmark fs-3 d-block mb-2 text-secondary"></i>
+                                            Không có phân công ca nào cho ngày @selectedAssignmentDate.ToString("dd/MM/yyyy"). Bấm "Phân Ca Nhân Viên" để tạo mới.
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var a in FilteredAssignments)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-light text-dark border font-monospace">@a.EmployeeCode</span>
+                                            </td>
+                                            <td class="fw-bold text-dark">@a.EmployeeName</td>
+                                            <td class="text-muted small">@a.DepartmentName</td>
+                                            <td>
+                                                <span class="fw-semibold text-primary">@a.ShiftName</span>
+                                                @if (a.IsOvernight)
+                                                {
+                                                    <span class="badge bg-dark text-warning ms-1">Đêm</span>
+                                                }
+                                            </td>
+                                            <td class="text-center font-monospace small">
+                                                <span class="badge bg-light text-dark border">
+                                                    @a.StartTime.ToString(@"hh\:mm") - @a.EndTime.ToString(@"hh\:mm")
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge @(a.Status == "ACTIVE" ? "bg-success" : "bg-secondary")">
+                                                    @a.Status
+                                                </span>
+                                            </td>
+                                            <td class="small text-muted">
+                                                <div>@a.AssignedBy</div>
+                                                <div class="text-secondary small">@a.Notes</div>
+                                            </td>
+                                            <td class="text-end">
+                                                <button class="btn btn-outline-danger btn-sm" title="Hủy phân công" @onclick="() => HandleDeleteAssignmentAsync(a.Id)">
+                                                    <i class="fa-solid fa-trash-can"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
         </div>
 
         <!-- MODAL THÊM / SỬA CA LÀM VIỆC -->
@@ -221,59 +343,63 @@
                                     <label class="form-label small fw-bold text-dark">Mã Ca Làm Việc <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control font-monospace" placeholder="VD: CA_HANH_CHINH, CA_SANG..." 
                                            @bind="modalShift.ShiftCode" disabled="@isEditing" />
-                                    <div class="form-text" style="font-size: 0.75rem;">Mã duy nhất, viết hoa, không dấu (ví dụ: CA_HANH_CHINH).</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-dark">Tên Ca Làm Việc <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" placeholder="VD: Ca Hành Chính (08:00 - 17:30)" 
                                            @bind="modalShift.ShiftName" />
-                                    <div class="form-text" style="font-size: 0.75rem;">Tên hiển thị để nhân viên nhận biết khi chọn ca.</div>
                                 </div>
 
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-dark">Giờ Bắt Đầu Ca <span class="text-danger">*</span></label>
                                     <input type="time" class="form-control" @bind="startTime" />
-                                    <div class="form-text" style="font-size: 0.75rem;">Mốc giờ điểm danh Check-In chuẩn.</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-dark">Giờ Kết Thúc Ca <span class="text-danger">*</span></label>
                                     <input type="time" class="form-control" @bind="endTime" />
-                                    <div class="form-text" style="font-size: 0.75rem;">Mốc giờ điểm danh Check-Out chuẩn.</div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-dark">Mở Cửa Sổ Sớm (phút)</label>
+                                    <input type="number" min="0" max="180" class="form-control" @bind="modalShift.EarlyCheckInMinutes" />
+                                    <div class="form-text" style="font-size: 0.75rem;">Cho phép chấm công sớm trước ca (vd: 60 ph).</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-dark">Đóng Cửa Sổ Muộn (phút)</label>
+                                    <input type="number" min="0" max="240" class="form-control" @bind="modalShift.LateCheckOutMinutes" />
+                                    <div class="form-text" style="font-size: 0.75rem;">Cho phép chấm công muộn sau ca (vd: 120 ph).</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-dark">Thời Gian Ân Hạn (phút)</label>
+                                    <input type="number" min="0" max="60" class="form-control" @bind="modalShift.GracePeriodMinutes" />
+                                    <div class="form-text" style="font-size: 0.75rem;">Ân hạn đi muộn/về sớm không phạt.</div>
                                 </div>
 
                                 <div class="col-md-4">
                                     <label class="form-label small fw-bold text-dark">Giờ Nghỉ Giữa Ca (giờ)</label>
-                                    <input type="number" step="0.5" min="0" max="8" class="form-control" 
-                                           @bind="modalShift.LunchBreakHours" />
-                                    <div class="form-text" style="font-size: 0.75rem;">Nghỉ trưa trừ khỏi tổng giờ (vd: 1.5h).</div>
+                                    <input type="number" step="0.5" min="0" max="8" class="form-control" @bind="modalShift.LunchBreakHours" />
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small fw-bold text-dark">Số Giờ Chuẩn Của Ca (giờ)</label>
-                                    <input type="number" step="0.5" min="1" max="24" class="form-control" 
-                                           @bind="modalShift.TargetHours" />
-                                    <div class="form-text" style="font-size: 0.75rem;">Mục tiêu giờ làm (vd: 8.0h hoặc 4.0h).</div>
+                                    <input type="number" step="0.5" min="1" max="24" class="form-control" @bind="modalShift.TargetHours" />
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small fw-bold text-dark">Đơn Vị Ngày Công (công)</label>
-                                    <input type="number" step="0.1" min="0.1" max="2.0" class="form-control" 
-                                           @bind="modalShift.WorkUnits" />
-                                    <div class="form-text" style="font-size: 0.75rem;">Hệ số ngày công (vd: 1.0 hoặc 0.5).</div>
+                                    <input type="number" step="0.1" min="0.1" max="2.0" class="form-control" @bind="modalShift.WorkUnits" />
                                 </div>
 
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold text-dark">Thời Gian Ân Hạn (phút)</label>
-                                    <input type="number" min="0" max="60" class="form-control" 
-                                           @bind="modalShift.GracePeriodMinutes" />
-                                    <div class="form-text" style="font-size: 0.75rem;">Số phút cho phép đến muộn/về sớm không tính phạt.</div>
-                                </div>
-                                <div class="col-md-6 d-flex align-items-center pt-3 gap-3 flex-wrap">
+                                <div class="col-md-12 d-flex align-items-center pt-2 gap-3 flex-wrap">
                                     <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" id="checkSplitShift" @bind="modalShift.IsSplitShift" />
-                                        <label class="form-check-label small fw-bold text-warning-emphasis" for="checkSplitShift">Ca Gãy (+50k/ca)</label>
+                                        <input class="form-check-input" type="checkbox" id="checkOvernight" @bind="modalShift.IsOvernight" />
+                                        <label class="form-check-label small fw-bold text-dark" for="checkOvernight">Ca Qua Đêm (Xuyên 24h)</label>
                                     </div>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="checkNightShift" @bind="modalShift.IsNightShift" />
-                                        <label class="form-check-label small fw-bold" for="checkNightShift">Ca Đêm (+30%)</label>
+                                        <label class="form-check-label small fw-bold" for="checkNightShift">Phụ Cấp Đêm (+30%)</label>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="checkSplitShift" @bind="modalShift.IsSplitShift" />
+                                        <label class="form-check-label small fw-bold text-warning-emphasis" for="checkSplitShift">Ca Gãy (+50k/ca)</label>
                                     </div>
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" id="checkActive" @bind="modalShift.IsActive" />
@@ -307,6 +433,69 @@
                 </div>
             </div>
         }
+
+        <!-- MODAL PHÂN CA NHÂN VIÊN -->
+        @if (showAssignModal)
+        {
+            <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.55);" role="dialog">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content shadow-lg border-0">
+                        <div class="modal-header bg-success text-white py-3">
+                            <h5 class="modal-title h6 fw-bold">
+                                <i class="fa-solid fa-calendar-plus me-2"></i>Phân Ca Làm Việc Cho Nhân Viên
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" @onclick="() => showAssignModal = false"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            @if (!string.IsNullOrEmpty(assignError))
+                            {
+                                <div class="alert alert-danger py-2 mb-3 small" role="alert">
+                                    <i class="fa-solid fa-triangle-exclamation me-2"></i>@assignError
+                                </div>
+                            }
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-dark">Chọn Nhân Viên <span class="text-danger">*</span></label>
+                                <select class="form-select" @bind="newAssignmentEmployeeId">
+                                    @foreach (var emp in allEmployees)
+                                    {
+                                        <option value="@emp.Id">[@emp.EmployeeCode] @emp.FullName (@emp.DepartmentName)</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-dark">Chọn Ca Làm Việc <span class="text-danger">*</span></label>
+                                <select class="form-select" @bind="newAssignmentShiftId">
+                                    @foreach (var s in shifts.Where(s => s.IsActive))
+                                    {
+                                        <option value="@s.Id">@s.ShiftName (@s.StartTime.ToString(@"hh\:mm") - @s.EndTime.ToString(@"hh\:mm"))</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-dark">Ngày Làm Việc <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" 
+                                       value="@newAssignmentDate.ToString("yyyy-MM-dd")" 
+                                       @onchange="(ChangeEventArgs e) => newAssignmentDate = DateTime.TryParse(e.Value?.ToString(), out var d) ? d : newAssignmentDate" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-dark">Ghi Chú Phân Công</label>
+                                <input type="text" class="form-control" placeholder="Ghi chú phân công..." @bind="newAssignmentNotes" />
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light py-2">
+                            <button type="button" class="btn btn-secondary btn-sm" @onclick="() => showAssignModal = false">Hủy</button>
+                            <button type="button" class="btn btn-success btn-sm px-3 shadow-sm" @onclick="SaveAssignmentAsync" disabled="@isSaving">
+                                <i class="fa-solid fa-check me-1"></i>Lưu Phân Ca
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     </Authorized>
     <NotAuthorized>
         <div class="container py-5 text-center">
@@ -320,12 +509,26 @@
 </AuthorizeView>
 
 @code {
+    private string activeTab = "SHIFTS";
     private List<WorkShift> shifts = new();
+    private List<ShiftAssignment> dateAssignments = new();
+    private List<Employee> allEmployees = new();
+
     private string searchTerm = string.Empty;
+    private string assignmentSearchTerm = string.Empty;
+    private DateTime selectedAssignmentDate = DateTime.Today;
+
     private IEnumerable<WorkShift> DisplayShifts => string.IsNullOrWhiteSpace(searchTerm)
         ? shifts
         : shifts.Where(s => (s.ShiftCode?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
                             (s.ShiftName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private IEnumerable<ShiftAssignment> FilteredAssignments => string.IsNullOrWhiteSpace(assignmentSearchTerm)
+        ? dateAssignments
+        : dateAssignments.Where(a => (a.EmployeeCode?.Contains(assignmentSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                                     (a.EmployeeName?.Contains(assignmentSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                                     (a.ShiftName?.Contains(assignmentSearchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+
     private void HandleSearch(string term) => searchTerm = term;
 
     private bool isLoading = false;
@@ -333,7 +536,7 @@
     private string alertMessage = string.Empty;
     private string alertType = "success";
 
-    // Modal state
+    // Shift modal
     private bool showModal = false;
     private bool isEditing = false;
     private string modalError = string.Empty;
@@ -341,9 +544,39 @@
     private TimeOnly startTime = new(8, 0);
     private TimeOnly endTime = new(17, 30);
 
+    // Assignment modal
+    private bool showAssignModal = false;
+    private string assignError = string.Empty;
+    private long newAssignmentEmployeeId = 1;
+    private long newAssignmentShiftId = 1;
+    private DateTime newAssignmentDate = DateTime.Today;
+    private string newAssignmentNotes = "Phân công định kỳ";
+
     protected override async Task OnInitializedAsync()
     {
         await LoadShiftsAsync();
+        try
+        {
+            allEmployees = (await EmployeeRepo.GetEmployeesAsync()).ToList();
+            if (allEmployees.Any()) newAssignmentEmployeeId = allEmployees.First().Id;
+            if (shifts.Any()) newAssignmentShiftId = shifts.First().Id;
+        }
+        catch { }
+    }
+
+    private void SetTab(string tab)
+    {
+        activeTab = tab;
+        if (tab == "ASSIGNMENTS")
+        {
+            _ = LoadAssignmentsAsync();
+        }
+    }
+
+    private async Task HandleRefreshAsync()
+    {
+        if (activeTab == "SHIFTS") await LoadShiftsAsync();
+        else await LoadAssignmentsAsync();
     }
 
     private async Task LoadShiftsAsync()
@@ -365,24 +598,47 @@
         }
     }
 
+    private async Task LoadAssignmentsAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var res = await GetShiftAssignmentsUseCase.ExecuteByDateAsync(selectedAssignmentDate);
+            dateAssignments = res.ToList();
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Lỗi khi tải lịch phân ca: {ex.Message}";
+            alertType = "danger";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleDateChange(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var parsed))
+        {
+            selectedAssignmentDate = parsed;
+            await LoadAssignmentsAsync();
+        }
+    }
+
     private void OpenAddModal()
     {
         isEditing = false;
         modalError = string.Empty;
         modalShift = new WorkShift
         {
-            ShiftCode = "",
-            ShiftName = "",
-            StartTime = new TimeSpan(8, 0, 0),
-            EndTime = new TimeSpan(17, 30, 0),
-            LunchBreakHours = 1.5m,
             TargetHours = 8.0m,
             WorkUnits = 1.0m,
+            LunchBreakHours = 1.5m,
             GracePeriodMinutes = 15,
-            IsNightShift = false,
-            IsSplitShift = false,
-            IsActive = true,
-            Description = ""
+            EarlyCheckInMinutes = 60,
+            LateCheckOutMinutes = 120,
+            IsActive = true
         };
         startTime = new TimeOnly(8, 0);
         endTime = new TimeOnly(17, 30);
@@ -404,7 +660,12 @@
             TargetHours = shift.TargetHours,
             WorkUnits = shift.WorkUnits,
             GracePeriodMinutes = shift.GracePeriodMinutes,
+            EarlyCheckInMinutes = shift.EarlyCheckInMinutes,
+            LateCheckOutMinutes = shift.LateCheckOutMinutes,
             IsNightShift = shift.IsNightShift,
+            IsOvernight = shift.IsOvernight,
+            IsSplitShift = shift.IsSplitShift,
+            SplitShiftAllowance = shift.SplitShiftAllowance,
             IsActive = shift.IsActive,
             Description = shift.Description
         };
@@ -416,50 +677,45 @@
     private void CloseModal()
     {
         showModal = false;
-        modalError = string.Empty;
     }
 
     private async Task SaveShiftAsync()
     {
-        modalError = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(modalShift.ShiftCode))
+        if (string.IsNullOrWhiteSpace(modalShift.ShiftCode) || string.IsNullOrWhiteSpace(modalShift.ShiftName))
         {
-            modalError = "Vui lòng nhập Mã ca làm việc.";
-            return;
-        }
-        if (string.IsNullOrWhiteSpace(modalShift.ShiftName))
-        {
-            modalError = "Vui lòng nhập Tên ca làm việc.";
+            modalError = "Vui lòng nhập đầy đủ Mã ca và Tên ca làm việc.";
             return;
         }
 
         modalShift.StartTime = startTime.ToTimeSpan();
         modalShift.EndTime = endTime.ToTimeSpan();
 
+        if (modalShift.EndTime < modalShift.StartTime)
+        {
+            modalShift.IsOvernight = true;
+        }
+
         isSaving = true;
         try
         {
-            modalShift.ShiftCode = modalShift.ShiftCode.Trim().ToUpperInvariant();
-            modalShift.ShiftName = modalShift.ShiftName.Trim();
-
             if (isEditing)
             {
                 await ManageWorkShiftUseCase.UpdateAsync(modalShift);
-                alertMessage = $"Đã cập nhật thành công ca làm việc '{modalShift.ShiftName}'.";
+                alertMessage = $"Cập nhật thành công ca [{modalShift.ShiftCode}] - {modalShift.ShiftName}.";
             }
             else
             {
                 await ManageWorkShiftUseCase.CreateAsync(modalShift);
-                alertMessage = $"Đã tạo thành công ca làm việc mới '{modalShift.ShiftName}'.";
+                alertMessage = $"Thêm mới thành công ca [{modalShift.ShiftCode}] - {modalShift.ShiftName}.";
             }
+
             alertType = "success";
-            CloseModal();
+            showModal = false;
             await LoadShiftsAsync();
         }
         catch (Exception ex)
         {
-            modalError = ex.Message;
+            modalError = $"Lỗi khi lưu ca: {ex.Message}";
         }
         finally
         {
@@ -471,14 +727,18 @@
     {
         try
         {
-            await ManageWorkShiftUseCase.ToggleStatusAsync(shiftId);
-            await LoadShiftsAsync();
-            alertMessage = "Đã cập nhật trạng thái hoạt động của ca.";
-            alertType = "success";
+            var shift = shifts.FirstOrDefault(s => s.Id == shiftId);
+            if (shift != null)
+            {
+                shift.IsActive = !shift.IsActive;
+                await ManageWorkShiftUseCase.UpdateAsync(shift);
+                alertMessage = $"Đã {(shift.IsActive ? "kích hoạt" : "tạm dừng")} ca [{shift.ShiftCode}].";
+                alertType = "success";
+            }
         }
         catch (Exception ex)
         {
-            alertMessage = $"Không thể cập nhật trạng thái: {ex.Message}";
+            alertMessage = $"Lỗi khi thay đổi trạng thái ca: {ex.Message}";
             alertType = "danger";
         }
     }
@@ -488,13 +748,68 @@
         try
         {
             await ManageWorkShiftUseCase.DeleteAsync(shift.Id);
-            await LoadShiftsAsync();
-            alertMessage = $"Đã xóa thành công ca làm việc '{shift.ShiftName}'.";
+            alertMessage = $"Đã xóa thành công ca [{shift.ShiftCode}].";
             alertType = "success";
+            await LoadShiftsAsync();
         }
         catch (Exception ex)
         {
-            alertMessage = $"Không thể xóa ca làm việc: {ex.Message}";
+            alertMessage = $"Không thể xóa ca [{shift.ShiftCode}]: {ex.Message}. Nếu ca đã có phân công hoặc chấm công, vui lòng chọn Tạm dừng thay vì xóa.";
+            alertType = "warning";
+        }
+    }
+
+    private void OpenAssignModal()
+    {
+        assignError = string.Empty;
+        newAssignmentDate = selectedAssignmentDate;
+        showAssignModal = true;
+    }
+
+    private async Task SaveAssignmentAsync()
+    {
+        isSaving = true;
+        assignError = string.Empty;
+        try
+        {
+            var assignment = new ShiftAssignment
+            {
+                EmployeeId = newAssignmentEmployeeId,
+                ShiftId = newAssignmentShiftId,
+                WorkDate = newAssignmentDate,
+                Status = "ACTIVE",
+                AssignedBy = UserSession.CurrentUser?.Username ?? "ADMIN",
+                Notes = newAssignmentNotes
+            };
+
+            await ManageShiftAssignmentUseCase.AssignAsync(assignment);
+            alertMessage = "Phân ca cho nhân viên thành công.";
+            alertType = "success";
+            showAssignModal = false;
+            await LoadAssignmentsAsync();
+        }
+        catch (Exception ex)
+        {
+            assignError = $"Lỗi khi lưu phân ca: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task HandleDeleteAssignmentAsync(long id)
+    {
+        try
+        {
+            await ManageShiftAssignmentUseCase.DeleteAsync(id);
+            alertMessage = "Đã xóa phân ca thành công.";
+            alertType = "success";
+            await LoadAssignmentsAsync();
+        }
+        catch (Exception ex)
+        {
+            alertMessage = $"Lỗi khi xóa phân ca: {ex.Message}";
             alertType = "danger";
         }
     }

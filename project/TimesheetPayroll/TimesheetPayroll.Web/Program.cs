@@ -43,10 +43,12 @@ builder.Services.AddScoped<IFaceProfileRepository, FaceProfileRepository>();
 builder.Services.AddScoped<IFaceAuditLogRepository, FaceAuditLogRepository>();
 builder.Services.AddScoped<ITimesheetAuditLogRepository, TimesheetAuditLogRepository>();
 builder.Services.AddScoped<IAttendanceRequestRepository, AttendanceRequestRepository>();
+builder.Services.AddScoped<IShiftAssignmentRepository, ShiftAssignmentRepository>();
 
 // 3. CORE SERVICES & AI ASSISTANT
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IFaceBiometricService, FaceBiometricService>();
+builder.Services.AddTransient<IAttendanceShiftResolver, AttendanceShiftResolver>();
 builder.Services.AddSingleton<IAiKnowledgeBaseService>(sp =>
 {
     var kb = new AiKnowledgeBaseService();
@@ -119,6 +121,8 @@ builder.Services.AddTransient<IFaceManagementUseCases, FaceManagementUseCases>()
 builder.Services.AddTransient<IExportTimesheetExcelUseCase, ExportTimesheetExcelUseCase>();
 builder.Services.AddTransient<IManageTimesheetUseCase, ManageTimesheetUseCase>();
 builder.Services.AddTransient<IProcessAttendanceRequestUseCase, ProcessAttendanceRequestUseCase>();
+builder.Services.AddTransient<IGetShiftAssignmentsUseCase, GetShiftAssignmentsUseCase>();
+builder.Services.AddTransient<IManageShiftAssignmentUseCase, ManageShiftAssignmentUseCase>();
 
 // 6. EMPLOYEE PORTAL USE CASES
 builder.Services.AddTransient<IViewMyPayslipUseCase, ViewMyPayslipUseCase>();

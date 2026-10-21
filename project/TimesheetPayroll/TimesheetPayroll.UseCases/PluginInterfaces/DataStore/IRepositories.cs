@@ -307,4 +307,22 @@ public interface IAttendanceRequestRepository
     Task<int> CountPendingAttendanceRequestsAsync();
 }
 
+/// <summary>
+/// Cổng giao tiếp dữ liệu phân công ca làm việc và các thủ tục xử lý chấm công tự động trong SQL Server.
+/// </summary>
+public interface IShiftAssignmentRepository
+{
+    Task<IEnumerable<ShiftAssignment>> GetAssignmentsByEmployeeAsync(long employeeId, DateTime startDate, DateTime endDate);
+    Task<IEnumerable<ShiftAssignment>> GetAssignmentsByDateAsync(DateTime date);
+    Task<IEnumerable<ShiftAssignment>> GetAssignmentsByMonthAsync(int month, int year);
+    Task<long> AssignShiftAsync(ShiftAssignment assignment);
+    Task AssignShiftBatchAsync(IEnumerable<ShiftAssignment> assignments);
+    Task DeleteAssignmentAsync(long id);
+    Task<AttendanceShiftResolutionResult> ResolveAttendanceShiftViaSpAsync(long employeeId, DateTime punchDateTime);
+    Task<FacePunchDbResult> ProcessFaceAttendanceViaSpAsync(long employeeId, long shiftId, DateTime workDate, DateTime punchDateTime, string punchAction, string? deviceInfo, string performedBy, decimal confidence, double distance);
+    Task<IEnumerable<AttendanceStatusDto>> GetAttendanceStatusViaSpAsync(long employeeId, DateTime targetDate);
+    Task<IEnumerable<dynamic>> GetMonthlyAttendanceSummaryViaSpAsync(int month, int year, long? employeeId = null);
+}
+
+
 

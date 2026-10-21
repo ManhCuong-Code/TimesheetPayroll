@@ -232,7 +232,12 @@ public class WorkShiftRepository : IWorkShiftRepository
                 target_hours AS TargetHours,
                 work_units AS WorkUnits,
                 grace_period_minutes AS GracePeriodMinutes,
+                early_checkin_minutes AS EarlyCheckInMinutes,
+                late_checkout_minutes AS LateCheckOutMinutes,
                 is_night_shift AS IsNightShift,
+                is_overnight AS IsOvernight,
+                is_split_shift AS IsSplitShift,
+                split_shift_allowance AS SplitShiftAllowance,
                 is_active AS IsActive,
                 description AS Description,
                 created_at AS CreatedAt,
@@ -250,7 +255,10 @@ public class WorkShiftRepository : IWorkShiftRepository
                 id AS Id, shift_code AS ShiftCode, shift_name AS ShiftName,
                 start_time AS StartTime, end_time AS EndTime, lunch_break_hours AS LunchBreakHours,
                 target_hours AS TargetHours, work_units AS WorkUnits, grace_period_minutes AS GracePeriodMinutes,
-                is_night_shift AS IsNightShift, is_active AS IsActive, description AS Description,
+                early_checkin_minutes AS EarlyCheckInMinutes, late_checkout_minutes AS LateCheckOutMinutes,
+                is_night_shift AS IsNightShift, is_overnight AS IsOvernight,
+                is_split_shift AS IsSplitShift, split_shift_allowance AS SplitShiftAllowance,
+                is_active AS IsActive, description AS Description,
                 created_at AS CreatedAt, updated_at AS UpdatedAt
             FROM work_shifts
             WHERE id = @Id;";
@@ -265,7 +273,10 @@ public class WorkShiftRepository : IWorkShiftRepository
                 id AS Id, shift_code AS ShiftCode, shift_name AS ShiftName,
                 start_time AS StartTime, end_time AS EndTime, lunch_break_hours AS LunchBreakHours,
                 target_hours AS TargetHours, work_units AS WorkUnits, grace_period_minutes AS GracePeriodMinutes,
-                is_night_shift AS IsNightShift, is_active AS IsActive, description AS Description,
+                early_checkin_minutes AS EarlyCheckInMinutes, late_checkout_minutes AS LateCheckOutMinutes,
+                is_night_shift AS IsNightShift, is_overnight AS IsOvernight,
+                is_split_shift AS IsSplitShift, split_shift_allowance AS SplitShiftAllowance,
+                is_active AS IsActive, description AS Description,
                 created_at AS CreatedAt, updated_at AS UpdatedAt
             FROM work_shifts
             WHERE shift_code = @Code;";
@@ -276,8 +287,8 @@ public class WorkShiftRepository : IWorkShiftRepository
     {
         using var conn = _db.CreateConnection();
         const string sql = @"
-            INSERT INTO work_shifts (shift_code, shift_name, start_time, end_time, lunch_break_hours, target_hours, work_units, grace_period_minutes, is_night_shift, is_active, description)
-            VALUES (@ShiftCode, @ShiftName, @StartTime, @EndTime, @LunchBreakHours, @TargetHours, @WorkUnits, @GracePeriodMinutes, @IsNightShift, @IsActive, @Description);
+            INSERT INTO work_shifts (shift_code, shift_name, start_time, end_time, lunch_break_hours, target_hours, work_units, grace_period_minutes, early_checkin_minutes, late_checkout_minutes, is_night_shift, is_overnight, is_split_shift, split_shift_allowance, is_active, description)
+            VALUES (@ShiftCode, @ShiftName, @StartTime, @EndTime, @LunchBreakHours, @TargetHours, @WorkUnits, @GracePeriodMinutes, @EarlyCheckInMinutes, @LateCheckOutMinutes, @IsNightShift, @IsOvernight, @IsSplitShift, @SplitShiftAllowance, @IsActive, @Description);
             SELECT CAST(SCOPE_IDENTITY() as BIGINT);";
         return await conn.ExecuteScalarAsync<long>(sql, shift);
     }
@@ -295,7 +306,12 @@ public class WorkShiftRepository : IWorkShiftRepository
                 target_hours = @TargetHours,
                 work_units = @WorkUnits,
                 grace_period_minutes = @GracePeriodMinutes,
+                early_checkin_minutes = @EarlyCheckInMinutes,
+                late_checkout_minutes = @LateCheckOutMinutes,
                 is_night_shift = @IsNightShift,
+                is_overnight = @IsOvernight,
+                is_split_shift = @IsSplitShift,
+                split_shift_allowance = @SplitShiftAllowance,
                 is_active = @IsActive,
                 description = @Description,
                 updated_at = GETDATE()
@@ -1360,5 +1376,187 @@ public class TimesheetAuditLogRepository : ITimesheetAuditLogRepository
         return await conn.QueryAsync<TimesheetAuditLog>(sql, new { Limit = limit });
     }
 }
+
+public class ShiftAssignmentRepository : IShiftAssignmentRepository
+{
+    private readonly IDataAccess _db;
+    public ShiftAssignmentRepository(IDataAccess db) => _db = db;
+
+    public async Task<IEnumerable<ShiftAssignment>> GetAssignmentsByEmployeeAsync(long employeeId, DateTime startDate, DateTime endDate)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                sa.id AS Id, sa.employee_id AS EmployeeId, e.employee_code AS EmployeeCode, e.full_name AS EmployeeName,
+                d.department_name AS DepartmentName, sa.shift_id AS ShiftId, ws.shift_code AS ShiftCode, ws.shift_name AS ShiftName,
+                ws.start_time AS StartTime, ws.end_time AS EndTime, ws.is_night_shift AS IsNightShift, ws.is_overnight AS IsOvernight,
+                ws.work_units AS WorkUnits, sa.work_date AS WorkDate, sa.status AS Status, sa.assigned_by AS AssignedBy,
+                sa.notes AS Notes, sa.created_at AS CreatedAt, sa.updated_at AS UpdatedAt
+            FROM shift_assignments sa
+            JOIN employees e ON sa.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            JOIN work_shifts ws ON sa.shift_id = ws.id
+            WHERE sa.employee_id = @EmployeeId AND sa.work_date BETWEEN @StartDate AND @EndDate
+            ORDER BY sa.work_date ASC, ws.start_time ASC;";
+        return await conn.QueryAsync<ShiftAssignment>(sql, new { EmployeeId = employeeId, StartDate = startDate.Date, EndDate = endDate.Date });
+    }
+
+    public async Task<IEnumerable<ShiftAssignment>> GetAssignmentsByDateAsync(DateTime date)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                sa.id AS Id, sa.employee_id AS EmployeeId, e.employee_code AS EmployeeCode, e.full_name AS EmployeeName,
+                d.department_name AS DepartmentName, sa.shift_id AS ShiftId, ws.shift_code AS ShiftCode, ws.shift_name AS ShiftName,
+                ws.start_time AS StartTime, ws.end_time AS EndTime, ws.is_night_shift AS IsNightShift, ws.is_overnight AS IsOvernight,
+                ws.work_units AS WorkUnits, sa.work_date AS WorkDate, sa.status AS Status, sa.assigned_by AS AssignedBy,
+                sa.notes AS Notes, sa.created_at AS CreatedAt, sa.updated_at AS UpdatedAt
+            FROM shift_assignments sa
+            JOIN employees e ON sa.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            JOIN work_shifts ws ON sa.shift_id = ws.id
+            WHERE sa.work_date = @Date
+            ORDER BY e.employee_code ASC, ws.start_time ASC;";
+        return await conn.QueryAsync<ShiftAssignment>(sql, new { Date = date.Date });
+    }
+
+    public async Task<IEnumerable<ShiftAssignment>> GetAssignmentsByMonthAsync(int month, int year)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                sa.id AS Id, sa.employee_id AS EmployeeId, e.employee_code AS EmployeeCode, e.full_name AS EmployeeName,
+                d.department_name AS DepartmentName, sa.shift_id AS ShiftId, ws.shift_code AS ShiftCode, ws.shift_name AS ShiftName,
+                ws.start_time AS StartTime, ws.end_time AS EndTime, ws.is_night_shift AS IsNightShift, ws.is_overnight AS IsOvernight,
+                ws.work_units AS WorkUnits, sa.work_date AS WorkDate, sa.status AS Status, sa.assigned_by AS AssignedBy,
+                sa.notes AS Notes, sa.created_at AS CreatedAt, sa.updated_at AS UpdatedAt
+            FROM shift_assignments sa
+            JOIN employees e ON sa.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            JOIN work_shifts ws ON sa.shift_id = ws.id
+            WHERE MONTH(sa.work_date) = @Month AND YEAR(sa.work_date) = @Year
+            ORDER BY sa.work_date ASC, e.employee_code ASC;";
+        return await conn.QueryAsync<ShiftAssignment>(sql, new { Month = month, Year = year });
+    }
+
+    public async Task<long> AssignShiftAsync(ShiftAssignment a)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            MERGE shift_assignments AS target
+            USING (SELECT @EmployeeId AS emp_id, @ShiftId AS s_id, @WorkDate AS w_date) AS source
+            ON (target.employee_id = source.emp_id AND target.shift_id = source.s_id AND target.work_date = source.w_date)
+            WHEN MATCHED THEN
+                UPDATE SET status = @Status, assigned_by = @AssignedBy, notes = @Notes, updated_at = GETDATE()
+            WHEN NOT MATCHED THEN
+                INSERT (employee_id, shift_id, work_date, status, assigned_by, notes, created_at, updated_at)
+                VALUES (@EmployeeId, @ShiftId, @WorkDate, @Status, @AssignedBy, @Notes, GETDATE(), GETDATE());
+            SELECT id FROM shift_assignments WHERE employee_id = @EmployeeId AND shift_id = @ShiftId AND work_date = @WorkDate;";
+        return await conn.ExecuteScalarAsync<long>(sql, new {
+            a.EmployeeId,
+            a.ShiftId,
+            WorkDate = a.WorkDate.Date,
+            Status = string.IsNullOrWhiteSpace(a.Status) ? "ACTIVE" : a.Status,
+            a.AssignedBy,
+            a.Notes
+        });
+    }
+
+    public async Task AssignShiftBatchAsync(IEnumerable<ShiftAssignment> assignments)
+    {
+        using var conn = _db.CreateConnection();
+        if (conn.State != ConnectionState.Open) conn.Open();
+        using var tx = conn.BeginTransaction();
+        try
+        {
+            const string sql = @"
+                MERGE shift_assignments AS target
+                USING (SELECT @EmployeeId AS emp_id, @ShiftId AS s_id, @WorkDate AS w_date) AS source
+                ON (target.employee_id = source.emp_id AND target.shift_id = source.s_id AND target.work_date = source.w_date)
+                WHEN MATCHED THEN
+                    UPDATE SET status = @Status, assigned_by = @AssignedBy, notes = @Notes, updated_at = GETDATE()
+                WHEN NOT MATCHED THEN
+                    INSERT (employee_id, shift_id, work_date, status, assigned_by, notes, created_at, updated_at)
+                    VALUES (@EmployeeId, @ShiftId, @WorkDate, @Status, @AssignedBy, @Notes, GETDATE(), GETDATE());";
+            foreach (var a in assignments)
+            {
+                await conn.ExecuteAsync(sql, new {
+                    a.EmployeeId,
+                    a.ShiftId,
+                    WorkDate = a.WorkDate.Date,
+                    Status = string.IsNullOrWhiteSpace(a.Status) ? "ACTIVE" : a.Status,
+                    a.AssignedBy,
+                    a.Notes
+                }, tx);
+            }
+            tx.Commit();
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
+    }
+
+    public async Task DeleteAssignmentAsync(long id)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = "DELETE FROM shift_assignments WHERE id = @Id;";
+        await conn.ExecuteAsync(sql, new { Id = id });
+    }
+
+    public async Task<AttendanceShiftResolutionResult> ResolveAttendanceShiftViaSpAsync(long employeeId, DateTime punchDateTime)
+    {
+        using var conn = _db.CreateConnection();
+        var result = await conn.QueryFirstOrDefaultAsync<AttendanceShiftResolutionResult>(
+            "sp_ResolveAttendanceShift",
+            new { EmployeeId = employeeId, PunchDateTime = punchDateTime },
+            commandType: CommandType.StoredProcedure);
+
+        return result ?? AttendanceShiftResolutionResult.NoShift();
+    }
+
+    public async Task<FacePunchDbResult> ProcessFaceAttendanceViaSpAsync(
+        long employeeId, long shiftId, DateTime workDate, DateTime punchDateTime,
+        string punchAction, string? deviceInfo, string performedBy, decimal confidence, double distance)
+    {
+        using var conn = _db.CreateConnection();
+        var result = await conn.QueryFirstOrDefaultAsync<FacePunchDbResult>(
+            "sp_ProcessFaceAttendance",
+            new {
+                EmployeeId = employeeId,
+                ShiftId = shiftId,
+                WorkDate = workDate.Date,
+                PunchDateTime = punchDateTime,
+                PunchAction = punchAction,
+                DeviceInfo = deviceInfo ?? "Trạm Camera Điểm Danh Văn Phòng",
+                PerformedBy = performedBy,
+                Confidence = confidence,
+                Distance = (decimal)distance
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return result ?? new FacePunchDbResult { Success = false, ResultCode = "NO_RESPONSE", Message = "Không nhận được phản hồi từ cơ sở dữ liệu." };
+    }
+
+    public async Task<IEnumerable<AttendanceStatusDto>> GetAttendanceStatusViaSpAsync(long employeeId, DateTime targetDate)
+    {
+        using var conn = _db.CreateConnection();
+        return await conn.QueryAsync<AttendanceStatusDto>(
+            "sp_GetAttendanceStatus",
+            new { EmployeeId = employeeId, TargetDate = targetDate.Date },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<IEnumerable<dynamic>> GetMonthlyAttendanceSummaryViaSpAsync(int month, int year, long? employeeId = null)
+    {
+        using var conn = _db.CreateConnection();
+        return await conn.QueryAsync<dynamic>(
+            "sp_GetMonthlyAttendanceSummary",
+            new { Month = month, Year = year, EmployeeId = employeeId },
+            commandType: CommandType.StoredProcedure);
+    }
+}
+
 
 

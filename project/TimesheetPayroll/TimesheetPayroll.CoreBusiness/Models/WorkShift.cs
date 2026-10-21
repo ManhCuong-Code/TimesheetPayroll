@@ -50,6 +50,24 @@ public class WorkShift
     public int GracePeriodMinutes { get; set; } = 15;
 
     /// <summary>
+    /// Số phút cho phép chấm công sớm trước khi ca bắt đầu (mặc định 60 phút).
+    /// </summary>
+    public int EarlyCheckInMinutes { get; set; } = 60;
+    public int ChoPhepChamCongSomPhut { get => EarlyCheckInMinutes; set => EarlyCheckInMinutes = value; }
+
+    /// <summary>
+    /// Số phút cho phép chấm công muộn sau khi ca kết thúc (mặc định 120 phút).
+    /// </summary>
+    public int LateCheckOutMinutes { get; set; } = 120;
+    public int ChoPhepChamCongMuonPhut { get => LateCheckOutMinutes; set => LateCheckOutMinutes = value; }
+
+    /// <summary>
+    /// Xác định ca làm việc xuyên đêm qua 24h (Qua ngày).
+    /// </summary>
+    public bool IsOvernight { get; set; } = false;
+    public bool QuaNgay { get => IsOvernight || IsNightShift || (EndTime < StartTime); set => IsOvernight = value; }
+
+    /// <summary>
     /// Đánh dấu là ca đêm (từ 22:00 đến 06:00 sáng hôm sau, được hưởng phụ cấp ca đêm 30% theo Bộ luật Lao động).
     /// </summary>
     public bool IsNightShift { get; set; } = false;

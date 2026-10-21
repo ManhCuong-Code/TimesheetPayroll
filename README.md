@@ -1,5 +1,4 @@
-# ĐỒ ÁN MÔN HỌC: LẬP TRÌNH ỨNG DỤNG WEB
-# HỆ THỐNG CHẤM CÔNG & TÍNH LƯƠNG TỰ ĐỘNG (TIMESHEET & PAYROLL SYSTEM)
+# HỆ THỐNG QUẢN LÝ NHÂN SỰ – CHẤM CÔNG – TÍNH LƯƠNG
 
 ---
 
@@ -10,8 +9,9 @@
 * **Khoa:** **Hệ thống Thông tin Kinh tế**
 * **Ngành học:** **Tin học Kinh tế**
 * **Học phần:** **Lập trình Ứng dụng Web**
-* **Tên đề tài:** **Hệ Thống Chấm Công & Tính Lương Tự Động (Timesheet & Payroll System)**
+* **Tên đề tài:** **Hệ Thống Quản Lý Nhân Sự – Chấm Công – Tính Lương**
 * **Kho lưu trữ (Repository):** [https://github.com/ManhCuong-Code/TimesheetPayroll.git](https://github.com/ManhCuong-Code/TimesheetPayroll.git)
+* **Đường dẫn GitHub Pages:** [https://manhcuong-code.github.io/TimesheetPayroll/](https://manhcuong-code.github.io/TimesheetPayroll/)
 * **Cơ sở dữ liệu:** **Microsoft SQL Server (`BangChamCongDB`)**
 * **Nền tảng công nghệ:** **.NET 10 Blazor Interactive Server + Dapper Micro-ORM + Clean Architecture**
 * **Trí tuệ Nhân tạo (AI):** **Trợ Lý Lương AI & Widget Nổi Toàn Hệ Thống (Google Gemini / OpenAI / Động Cơ Nội Bộ)**

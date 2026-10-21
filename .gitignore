@@ -3,11 +3,11 @@
 *.pdf
 *.png
 *.html
+!docs/**
 *.html.bak
 *.bak
 style.css
 script.js
-BANG_QUY_DOI_TEN_DU_AN.md
 
 # Build and binary outputs
 [Bb]in/

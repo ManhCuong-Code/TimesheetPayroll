@@ -2,20 +2,29 @@ using System.Text.Json;
 using TimesheetPayroll.CoreBusiness.Exceptions;
 using TimesheetPayroll.CoreBusiness.Models;
 using TimesheetPayroll.CoreBusiness.Services;
+using TimesheetPayroll.CoreBusiness.Services.Interfaces;
 using TimesheetPayroll.UseCases.PluginInterfaces.DataStore;
 
 namespace TimesheetPayroll.UseCases.EmployeePortal;
 
+/// <summary>
+/// Yêu cầu chấm công bằng khuôn mặt gửi từ camera trạm.
+/// Nhân viên KHÔNG cần chọn mã nhân viên, họ tên, hoặc ca làm việc.
+/// Tất cả đều được trích xuất tự động từ mẫu đặc trưng sinh trắc học và lịch phân công.
+/// </summary>
 public class FacePunchRequest
 {
     public float[] Descriptor { get; set; } = Array.Empty<float>();
     public decimal LivenessScore { get; set; } = 0.85m;
-    public string? PreferredPunchType { get; set; } = "AUTO"; // AUTO, CHECK_IN, CHECK_OUT
-    public long? ShiftId { get; set; }
     public string? DeviceInfo { get; set; }
     public string PerformedBy { get; set; } = "SYSTEM_KIOSK";
+    // Tùy chọn giả lập thử nghiệm danh tính khi môi trường không có webcam
+    public long? SimulatedEmployeeId { get; set; }
 }
 
+/// <summary>
+/// Kết quả phản hồi sau khi nhận diện danh tính và xử lý ca làm việc.
+/// </summary>
 public class FacePunchResult
 {
     public bool IsSuccess { get; set; }
@@ -25,10 +34,15 @@ public class FacePunchResult
     public TimeSpan? PunchTime { get; set; }
     public WorkShiftStatus? Status { get; set; }
     public decimal? WorkUnits { get; set; }
+    public decimal? ActualHours { get; set; }
     public double? Distance { get; set; }
     public double? Confidence { get; set; }
     public string? ShiftName { get; set; }
+    public TimeSpan? ShiftStartTime { get; set; }
+    public TimeSpan? ShiftEndTime { get; set; }
+    public bool IsOvernight { get; set; }
     public DateTime WorkDate { get; set; } = DateTime.Today;
+    public string? ResolutionStatus { get; set; }
 }
 
 public interface IFaceCheckInUseCase
@@ -41,41 +55,48 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
     private readonly IFaceProfileRepository _faceProfileRepo;
     private readonly IFaceAuditLogRepository _faceAuditRepo;
     private readonly IEmployeeRepository _employeeRepo;
+    private readonly IShiftAssignmentRepository _shiftAssignmentRepo;
     private readonly ITimesheetRepository _timesheetRepo;
     private readonly IWorkShiftRepository _shiftRepo;
     private readonly ITimesheetAuditLogRepository _timesheetAuditRepo;
     private readonly IFaceBiometricService _biometricService;
+    private readonly IAttendanceShiftResolver _shiftResolver;
 
     public FaceCheckInUseCase(
         IFaceProfileRepository faceProfileRepo,
         IFaceAuditLogRepository faceAuditRepo,
         IEmployeeRepository employeeRepo,
+        IShiftAssignmentRepository shiftAssignmentRepo,
         ITimesheetRepository timesheetRepo,
         IWorkShiftRepository shiftRepo,
         ITimesheetAuditLogRepository timesheetAuditRepo,
-        IFaceBiometricService biometricService)
+        IFaceBiometricService biometricService,
+        IAttendanceShiftResolver shiftResolver)
     {
         _faceProfileRepo = faceProfileRepo;
         _faceAuditRepo = faceAuditRepo;
         _employeeRepo = employeeRepo;
+        _shiftAssignmentRepo = shiftAssignmentRepo;
         _timesheetRepo = timesheetRepo;
         _shiftRepo = shiftRepo;
         _timesheetAuditRepo = timesheetAuditRepo;
         _biometricService = biometricService;
+        _shiftResolver = shiftResolver;
     }
 
     public async Task<FacePunchResult> ExecuteAsync(FacePunchRequest request)
     {
+        // 1. Kiểm tra tính toàn vẹn của dữ liệu sinh trắc học
         if (request.Descriptor == null || request.Descriptor.Length == 0)
         {
             return new FacePunchResult
             {
                 IsSuccess = false,
-                Message = "Không nhận được dữ liệu mẫu khuôn mặt từ camera. Vui lòng thử lại."
+                Message = "Không nhận được dữ liệu mẫu khuôn mặt từ camera. Vui lòng căn chỉnh thẳng khung hình và thử lại."
             };
         }
 
-        // 1. Kiểm tra tính sống (Anti-spoofing / Liveness Check)
+        // 2. Kiểm tra tính sống (Anti-Spoofing / Liveness Check)
         if (request.LivenessScore < 0.50m)
         {
             await _faceAuditRepo.LogActionAsync(new FaceAuditLog
@@ -91,11 +112,11 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             return new FacePunchResult
             {
                 IsSuccess = false,
-                Message = "Cảnh báo chống giả mạo: Hệ thống chưa phát hiện đủ cử động tính sống tự nhiên (chớp mắt hoặc chuyển động đầu). Vui lòng đứng trước camera và chớp mắt nhẹ."
+                Message = "Cảnh báo chống giả mạo: Hệ thống chưa phát hiện đủ cử động tính sống tự nhiên (chớp mắt hoặc thở nhẹ). Vui lòng nhìn thẳng và giữ yên."
             };
         }
 
-        // 2. Tìm kiếm khuôn mặt khớp nhất trong danh sách các hồ sơ đang kích hoạt
+        // 3. Tìm kiếm hồ sơ khuôn mặt khớp nhất trong danh sách các hồ sơ đang kích hoạt
         var activeProfiles = (await _faceProfileRepo.GetAllActiveProfilesAsync()).ToList();
         if (!activeProfiles.Any())
         {
@@ -106,7 +127,24 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             };
         }
 
-        var (bestMatch, distance, confidence) = _biometricService.FindBestMatch(request.Descriptor, activeProfiles, maxDistanceThreshold: 0.55);
+        EmployeeFaceProfile? bestMatch = null;
+        double distance = 1.0;
+        double confidence = 0.0;
+
+        // Nếu có cờ giả lập thử nghiệm (Sandbox Demo không camera)
+        if (request.SimulatedEmployeeId.HasValue)
+        {
+            bestMatch = activeProfiles.FirstOrDefault(p => p.EmployeeId == request.SimulatedEmployeeId.Value);
+            distance = 0.12;
+            confidence = 96.5;
+        }
+        else
+        {
+            var matchResult = _biometricService.FindBestMatch(request.Descriptor, activeProfiles, maxDistanceThreshold: 0.55);
+            bestMatch = matchResult.MatchedProfile;
+            distance = matchResult.Distance;
+            confidence = matchResult.Confidence;
+        }
 
         if (bestMatch == null)
         {
@@ -129,7 +167,7 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             };
         }
 
-        // 3. Lấy thông tin nhân viên
+        // 4. Lấy thông tin nhân viên từ ID sinh trắc học đáng tin cậy
         var employee = await _employeeRepo.GetEmployeeByIdAsync(bestMatch.EmployeeId);
         if (employee == null || employee.Status != "ACTIVE")
         {
@@ -141,7 +179,7 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
                 PerformedBy = request.PerformedBy,
                 DeviceInfo = request.DeviceInfo,
                 IsSuccess = false,
-                FailureReason = "Nhân viên không tồn tại hoặc đã tạm dừng công tác / nghỉ việc."
+                FailureReason = "Nhân viên không tồn tại hoặc tài khoản không ở trạng thái ACTIVE."
             });
 
             return new FacePunchResult
@@ -151,138 +189,87 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             };
         }
 
-        // 4. Lấy ca làm việc
-        WorkShift? shift = null;
-        if (request.ShiftId.HasValue)
+        // 5. Tự động xác định ca làm việc từ lịch phân công bằng Stored Procedure SQL Server
+        DateTime now = DateTime.Now;
+        var resolution = await _shiftAssignmentRepo.ResolveAttendanceShiftViaSpAsync(employee.Id, now);
+
+        if (!resolution.IsSuccess || !resolution.ShiftId.HasValue)
         {
-            shift = await _shiftRepo.GetWorkShiftByIdAsync(request.ShiftId.Value);
-        }
-        if (shift == null)
-        {
-            shift = await _shiftRepo.GetWorkShiftByCodeAsync("CA_HANH_CHINH") 
-                 ?? (await _shiftRepo.GetWorkShiftsAsync()).FirstOrDefault();
-        }
-
-        // 5. Kiểm tra bảng chấm công hôm nay
-        var today = DateTime.Today;
-        var monthTimesheets = (await _timesheetRepo.GetTimesheetsByEmployeeAndMonthAsync(employee.Id, today.Month, today.Year)).ToList();
-        var todayTimesheet = monthTimesheets.FirstOrDefault(t => t.WorkDate.Date == today);
-
-        var nowTime = DateTime.Now.TimeOfDay;
-
-        // 6. Kiểm tra chống chấm công trùng lặp (Cooldown 3 phút)
-        if (todayTimesheet != null)
-        {
-            TimeSpan? lastPunch = todayTimesheet.CheckOutTime ?? todayTimesheet.CheckInTime;
-            if (lastPunch.HasValue)
-            {
-                var diff = Math.Abs((nowTime - lastPunch.Value).TotalMinutes);
-                if (diff < 3.0)
-                {
-                    await _faceAuditRepo.LogActionAsync(new FaceAuditLog
-                    {
-                        EmployeeId = employee.Id,
-                        ActionType = "PUNCH_REJECT_COOLDOWN",
-                        SimilarityScore = (decimal)confidence,
-                        PerformedBy = request.PerformedBy,
-                        DeviceInfo = request.DeviceInfo,
-                        IsSuccess = false,
-                        FailureReason = $"Thao tác trùng lặp trong khoảng thời gian {diff:F1} phút"
-                    });
-
-                    return new FacePunchResult
-                    {
-                        IsSuccess = false,
-                        Employee = employee,
-                        Confidence = confidence,
-                        Distance = distance,
-                        Message = $"Bạn vừa chấm công lúc {lastPunch.Value:hh\\:mm\\:ss} ({Math.Round(diff, 1)} phút trước). Vui lòng không quét liên tục để tránh dữ liệu trùng lặp."
-                    };
-                }
-            }
-        }
-
-        // 7. Xác định loại chấm công (CHECK_IN hay CHECK_OUT)
-        string punchAction;
-        string beforeJson = todayTimesheet != null ? JsonSerializer.Serialize(todayTimesheet) : "null";
-
-        if (todayTimesheet == null)
-        {
-            // Lần đầu trong ngày => Check-In
-            todayTimesheet = new Timesheet
+            // Ghi log kiểm toán thất bại phân ca
+            await _faceAuditRepo.LogActionAsync(new FaceAuditLog
             {
                 EmployeeId = employee.Id,
-                WorkDate = today,
-                ShiftId = shift?.Id,
-                ShiftCode = shift?.ShiftCode,
-                ShiftName = shift?.ShiftName,
-                CheckInTime = nowTime,
-                IsLocked = false
+                ActionType = "SHIFT_RESOLVE_FAIL",
+                SimilarityScore = (decimal)confidence,
+                PerformedBy = request.PerformedBy,
+                DeviceInfo = request.DeviceInfo,
+                IsSuccess = false,
+                FailureReason = resolution.Message
+            });
+
+            return new FacePunchResult
+            {
+                IsSuccess = false,
+                Employee = employee,
+                Confidence = confidence,
+                Distance = distance,
+                ResolutionStatus = resolution.ResolutionStatus,
+                Message = resolution.Message
             };
-            todayTimesheet.EvaluateCheckIn(shift);
-            punchAction = "CHECK_IN";
-        }
-        else if (!todayTimesheet.CheckInTime.HasValue)
-        {
-            todayTimesheet.ShiftId = shift?.Id ?? todayTimesheet.ShiftId;
-            todayTimesheet.ShiftCode = shift?.ShiftCode ?? todayTimesheet.ShiftCode;
-            todayTimesheet.ShiftName = shift?.ShiftName ?? todayTimesheet.ShiftName;
-            todayTimesheet.CheckInTime = nowTime;
-            todayTimesheet.EvaluateCheckIn(shift);
-            punchAction = "CHECK_IN";
-        }
-        else
-        {
-            // Đã có Check-In => Ghi nhận Check-Out (Hết ca)
-            todayTimesheet.CheckOutTime = nowTime;
-            todayTimesheet.EvaluateShift(shift);
-            punchAction = "CHECK_OUT";
         }
 
-        // 8. Lưu vào cơ sở dữ liệu
-        await _timesheetRepo.AddOrUpdateTimesheetAsync(todayTimesheet);
+        // 6. Thực hiện ghi nhận chấm công thông qua Stored Procedure giao dịch SQL Server an toàn
+        var dbResult = await _shiftAssignmentRepo.ProcessFaceAttendanceViaSpAsync(
+            employee.Id,
+            resolution.ShiftId.Value,
+            resolution.WorkDate,
+            now,
+            resolution.PunchAction ?? "AUTO",
+            request.DeviceInfo,
+            request.PerformedBy,
+            (decimal)confidence,
+            distance
+        );
 
-        // 9. Ghi log kiểm toán khuôn mặt
-        await _faceAuditRepo.LogActionAsync(new FaceAuditLog
+        if (!dbResult.Success)
         {
-            EmployeeId = employee.Id,
-            ActionType = punchAction == "CHECK_IN" ? "PUNCH_CHECK_IN" : "PUNCH_CHECK_OUT",
-            SimilarityScore = (decimal)confidence,
-            PerformedBy = request.PerformedBy,
-            DeviceInfo = request.DeviceInfo,
-            IsSuccess = true,
-            FailureReason = null
-        });
+            return new FacePunchResult
+            {
+                IsSuccess = false,
+                Employee = employee,
+                Confidence = confidence,
+                Distance = distance,
+                ShiftName = dbResult.ShiftName ?? resolution.ShiftName,
+                WorkDate = resolution.WorkDate,
+                Message = dbResult.Message
+            };
+        }
 
-        // 10. Ghi log lịch sử chấm công
-        string afterJson = JsonSerializer.Serialize(todayTimesheet);
-        await _timesheetAuditRepo.LogAuditAsync(new TimesheetAuditLog
+        // 7. Chuyển đổi trạng thái sang enum hiển thị
+        WorkShiftStatus status = WorkShiftStatus.PRESENT;
+        if (!string.IsNullOrWhiteSpace(dbResult.WorkShiftStatus))
         {
-            TimesheetId = todayTimesheet.Id,
-            EmployeeId = employee.Id,
-            Action = punchAction == "CHECK_IN" ? "FACE_CHECK_IN" : "FACE_CHECK_OUT",
-            BeforeData = beforeJson,
-            AfterData = afterJson,
-            ModifiedBy = $"{employee.FullName} (Camera Face ID)",
-            Reason = $"Xác thực khuôn mặt tự động (Độ tin cậy: {confidence:F1}%, Khoảng cách: {distance:F3})"
-        });
-
-        string punchDisplay = punchAction == "CHECK_IN" ? "VÀO CA (Check-In)" : "HẾT CA (Check-Out)";
-        string timeDisplay = DateTime.Today.Add(nowTime).ToString("HH:mm:ss");
+            Enum.TryParse(dbResult.WorkShiftStatus, out status);
+        }
 
         return new FacePunchResult
         {
             IsSuccess = true,
             Employee = employee,
-            PunchType = punchAction,
-            PunchTime = nowTime,
-            Status = todayTimesheet.WorkShiftStatus,
-            WorkUnits = todayTimesheet.WorkUnits,
-            ShiftName = todayTimesheet.ShiftName ?? shift?.ShiftName,
+            PunchType = dbResult.PunchType,
+            PunchTime = dbResult.PunchTime,
+            Status = status,
+            WorkUnits = dbResult.WorkUnits,
+            ActualHours = dbResult.ActualHours,
+            ShiftName = dbResult.ShiftName ?? resolution.ShiftName,
+            ShiftStartTime = resolution.StartTime,
+            ShiftEndTime = resolution.EndTime,
+            IsOvernight = resolution.IsOvernight,
             Confidence = confidence,
             Distance = distance,
-            WorkDate = today,
-            Message = $"Ghi nhận {punchDisplay} thành công cho nhân viên [{employee.EmployeeCode}] {employee.FullName} lúc {timeDisplay}."
+            WorkDate = resolution.WorkDate,
+            ResolutionStatus = resolution.ResolutionStatus,
+            Message = dbResult.Message
         };
     }
 }

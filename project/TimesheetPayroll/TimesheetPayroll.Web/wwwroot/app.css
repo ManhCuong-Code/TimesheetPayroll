@@ -4,7 +4,7 @@
    ========================================================================== */
 
 :root {
-    --hrm-font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --bs-body-font-family: var(--hrm-font-sans);
     --bs-font-sans-serif: var(--hrm-font-sans);
     --hrm-bg-main: #f8fafc;
@@ -49,6 +49,12 @@ body {
     line-height: 1.6;
     letter-spacing: -0.011em;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+body, button, input, select, textarea, .btn, .form-control, .form-select, .table, .dropdown-menu {
+    font-family: var(--hrm-font-sans);
 }
 
 /* CARDS & CONTAINERS */
