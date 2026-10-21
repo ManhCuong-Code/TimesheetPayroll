@@ -1,9 +1,9 @@
-@startuml 09_sequence_ai_inquiry
+﻿@startuml 09_sequence_ai_inquiry
 skinparam dpi 220
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
 skinparam roundCorner 8
-skinparam shadowing true
+skinparam shadowing false
 skinparam BoxPadding 10
 autonumber
 
@@ -84,3 +84,4 @@ UI --> Emp: Hiển thị phản hồi thông minh trong bong bóng chat:\n"Chào
 deactivate UI
 
 @enduml
+

@@ -1,9 +1,9 @@
-@startuml 08_sequence_lock_payroll
+﻿@startuml 08_sequence_lock_payroll
 skinparam dpi 220
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
 skinparam roundCorner 8
-skinparam shadowing true
+skinparam shadowing false
 skinparam BoxPadding 10
 autonumber
 
@@ -84,3 +84,4 @@ deactivate JS
 deactivate UI
 
 @enduml
+

@@ -912,3 +912,183 @@ public class UserAccountRepository : IUserAccountRepository
     }
 }
 
+public class FaceProfileRepository : IFaceProfileRepository
+{
+    private readonly IDataAccess _db;
+    public FaceProfileRepository(IDataAccess db) => _db = db;
+
+    public async Task<EmployeeFaceProfile?> GetByEmployeeIdAsync(long employeeId)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                f.id AS Id, f.employee_id AS EmployeeId, e.employee_code AS EmployeeCode,
+                e.full_name AS FullName, d.department_name AS DepartmentName,
+                f.face_descriptor_json AS FaceDescriptorJson,
+                f.registered_at AS RegisteredAt, f.registered_by AS RegisteredBy,
+                f.is_active AS IsActive, f.liveness_threshold AS LivenessThreshold,
+                f.notes AS Notes, f.updated_at AS UpdatedAt
+            FROM employee_face_profiles f
+            JOIN employees e ON f.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            WHERE f.employee_id = @EmployeeId;";
+        return await conn.QueryFirstOrDefaultAsync<EmployeeFaceProfile>(sql, new { EmployeeId = employeeId });
+    }
+
+    public async Task<IEnumerable<EmployeeFaceProfile>> GetAllActiveProfilesAsync()
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                f.id AS Id, f.employee_id AS EmployeeId, e.employee_code AS EmployeeCode,
+                e.full_name AS FullName, d.department_name AS DepartmentName,
+                f.face_descriptor_json AS FaceDescriptorJson,
+                f.registered_at AS RegisteredAt, f.registered_by AS RegisteredBy,
+                f.is_active AS IsActive, f.liveness_threshold AS LivenessThreshold,
+                f.notes AS Notes, f.updated_at AS UpdatedAt
+            FROM employee_face_profiles f
+            JOIN employees e ON f.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            WHERE f.is_active = 1 AND e.status = 'ACTIVE';";
+        return await conn.QueryAsync<EmployeeFaceProfile>(sql);
+    }
+
+    public async Task<IEnumerable<EmployeeFaceProfile>> GetAllProfilesWithEmployeeDetailsAsync()
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT 
+                ISNULL(f.id, 0) AS Id, e.id AS EmployeeId, e.employee_code AS EmployeeCode,
+                e.full_name AS FullName, d.department_name AS DepartmentName,
+                ISNULL(f.face_descriptor_json, '') AS FaceDescriptorJson,
+                ISNULL(f.registered_at, '2000-01-01') AS RegisteredAt,
+                ISNULL(f.registered_by, '') AS RegisteredBy,
+                ISNULL(f.is_active, 0) AS IsActive,
+                ISNULL(f.liveness_threshold, 0.70) AS LivenessThreshold,
+                f.notes AS Notes,
+                ISNULL(f.updated_at, '2000-01-01') AS UpdatedAt
+            FROM employees e
+            LEFT JOIN departments d ON e.department_id = d.id
+            LEFT JOIN employee_face_profiles f ON e.id = f.employee_id
+            WHERE e.status = 'ACTIVE'
+            ORDER BY e.employee_code;";
+        return await conn.QueryAsync<EmployeeFaceProfile>(sql);
+    }
+
+    public async Task SaveProfileAsync(EmployeeFaceProfile profile)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            MERGE employee_face_profiles AS target
+            USING (SELECT @EmployeeId AS employee_id) AS source
+            ON (target.employee_id = source.employee_id)
+            WHEN MATCHED THEN
+                UPDATE SET 
+                    face_descriptor_json = @FaceDescriptorJson,
+                    registered_by = @RegisteredBy,
+                    is_active = 1,
+                    liveness_threshold = @LivenessThreshold,
+                    notes = @Notes,
+                    updated_at = GETDATE()
+            WHEN NOT MATCHED THEN
+                INSERT (employee_id, face_descriptor_json, registered_at, registered_by, is_active, liveness_threshold, notes, updated_at)
+                VALUES (@EmployeeId, @FaceDescriptorJson, GETDATE(), @RegisteredBy, 1, @LivenessThreshold, @Notes, GETDATE());";
+        await conn.ExecuteAsync(sql, profile);
+    }
+
+    public async Task DeleteProfileAsync(long employeeId)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = "DELETE FROM employee_face_profiles WHERE employee_id = @EmployeeId;";
+        await conn.ExecuteAsync(sql, new { EmployeeId = employeeId });
+    }
+
+    public async Task ToggleStatusAsync(long employeeId, bool isActive)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            UPDATE employee_face_profiles
+            SET is_active = @IsActive, updated_at = GETDATE()
+            WHERE employee_id = @EmployeeId;";
+        await conn.ExecuteAsync(sql, new { EmployeeId = employeeId, IsActive = isActive });
+    }
+}
+
+public class FaceAuditLogRepository : IFaceAuditLogRepository
+{
+    private readonly IDataAccess _db;
+    public FaceAuditLogRepository(IDataAccess db) => _db = db;
+
+    public async Task LogActionAsync(FaceAuditLog log)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            INSERT INTO face_audit_logs (employee_id, action_type, similarity_score, performed_by, device_info, is_success, failure_reason, created_at)
+            VALUES (@EmployeeId, @ActionType, @SimilarityScore, @PerformedBy, @DeviceInfo, @IsSuccess, @FailureReason, GETDATE());";
+        await conn.ExecuteAsync(sql, log);
+    }
+
+    public async Task<IEnumerable<FaceAuditLog>> GetLogsAsync(int limit = 100)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT TOP (@Limit)
+                l.id AS Id, l.employee_id AS EmployeeId, e.employee_code AS EmployeeCode,
+                e.full_name AS FullName, l.action_type AS ActionType,
+                l.similarity_score AS SimilarityScore, l.performed_by AS PerformedBy,
+                l.device_info AS DeviceInfo, l.is_success AS IsSuccess,
+                l.failure_reason AS FailureReason, l.created_at AS CreatedAt
+            FROM face_audit_logs l
+            LEFT JOIN employees e ON l.employee_id = e.id
+            ORDER BY l.created_at DESC;";
+        return await conn.QueryAsync<FaceAuditLog>(sql, new { Limit = limit });
+    }
+}
+
+public class TimesheetAuditLogRepository : ITimesheetAuditLogRepository
+{
+    private readonly IDataAccess _db;
+    public TimesheetAuditLogRepository(IDataAccess db) => _db = db;
+
+    public async Task LogAuditAsync(TimesheetAuditLog log)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            INSERT INTO timesheet_audit_logs (timesheet_id, employee_id, action, before_data, after_data, modified_by, modified_at, reason)
+            VALUES (@TimesheetId, @EmployeeId, @Action, @BeforeData, @AfterData, @ModifiedBy, GETDATE(), @Reason);";
+        await conn.ExecuteAsync(sql, log);
+    }
+
+    public async Task<IEnumerable<TimesheetAuditLog>> GetLogsByEmployeeAsync(long employeeId, int limit = 50)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT TOP (@Limit)
+                l.id AS Id, l.timesheet_id AS TimesheetId, l.employee_id AS EmployeeId,
+                e.employee_code AS EmployeeCode, e.full_name AS EmployeeName,
+                l.action AS Action, l.before_data AS BeforeData, l.after_data AS AfterData,
+                l.modified_by AS ModifiedBy, l.modified_at AS ModifiedAt, l.reason AS Reason
+            FROM timesheet_audit_logs l
+            JOIN employees e ON l.employee_id = e.id
+            WHERE l.employee_id = @EmployeeId
+            ORDER BY l.modified_at DESC;";
+        return await conn.QueryAsync<TimesheetAuditLog>(sql, new { EmployeeId = employeeId, Limit = limit });
+    }
+
+    public async Task<IEnumerable<TimesheetAuditLog>> GetRecentLogsAsync(int limit = 100)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT TOP (@Limit)
+                l.id AS Id, l.timesheet_id AS TimesheetId, l.employee_id AS EmployeeId,
+                e.employee_code AS EmployeeCode, e.full_name AS EmployeeName,
+                l.action AS Action, l.before_data AS BeforeData, l.after_data AS AfterData,
+                l.modified_by AS ModifiedBy, l.modified_at AS ModifiedAt, l.reason AS Reason
+            FROM timesheet_audit_logs l
+            JOIN employees e ON l.employee_id = e.id
+            ORDER BY l.modified_at DESC;";
+        return await conn.QueryAsync<TimesheetAuditLog>(sql, new { Limit = limit });
+    }
+}
+
+

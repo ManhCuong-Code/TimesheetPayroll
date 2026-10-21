@@ -1,10 +1,10 @@
-@startuml 12_state_payroll_period
+﻿@startuml 12_state_payroll_period
 skinparam dpi 220
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
 skinparam defaultFontSize 12
 skinparam roundCorner 10
-skinparam shadowing true
+skinparam shadowing false
 
 skinparam titleFontName "Segoe UI"
 skinparam titleFontSize 16
@@ -71,3 +71,4 @@ state PAID #DCFCE7 {
 PAID --> [*] : Kết thúc chu kỳ quyết toán kỳ lương
 
 @enduml
+

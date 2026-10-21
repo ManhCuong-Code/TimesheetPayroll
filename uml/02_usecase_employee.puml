@@ -1,10 +1,10 @@
-@startuml 02_usecase_employee
+﻿@startuml 02_usecase_employee
 skinparam dpi 220
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
 skinparam defaultFontSize 12
 skinparam packageStyle rectangle
-skinparam shadowing true
+skinparam shadowing false
 skinparam roundCorner 10
 
 skinparam titleFontName "Segoe UI"
@@ -86,3 +86,4 @@ UC_AI_01 <.. UC_AI_03 : <<extend>>
 UC_AI_01 --> ExtAI : Gửi Prompt & Bóc tách kết quả
 
 @enduml
+

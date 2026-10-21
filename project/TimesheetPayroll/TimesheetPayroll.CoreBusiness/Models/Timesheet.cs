@@ -20,7 +20,11 @@ public class Timesheet
     public TimeSpan? CheckInTime { get; set; }
     public TimeSpan? CheckOutTime { get; set; }
     public decimal ActualHoursWorked { get; set; } = 8.0m;
+    public decimal ActualHours => ActualHoursWorked;
+    public decimal OvertimeHours => Math.Max(0m, ActualHoursWorked - 8.0m);
     public WorkShiftStatus WorkShiftStatus { get; set; } = WorkShiftStatus.PRESENT;
+    public bool IsLate => WorkShiftStatus == WorkShiftStatus.LATE;
+    public bool IsEarlyLeave => WorkShiftStatus == WorkShiftStatus.EARLY_LEAVE;
     public decimal WorkUnits { get; set; } = 1.0m;
     public bool IsLocked { get; set; } = false;
     public string? Note { get; set; }

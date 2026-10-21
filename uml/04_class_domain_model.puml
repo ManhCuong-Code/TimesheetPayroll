@@ -1,4 +1,4 @@
-@startuml 04_class_domain_model
+﻿@startuml 04_class_domain_model
 skinparam dpi 220
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
@@ -6,7 +6,7 @@ skinparam defaultFontSize 11
 skinparam roundCorner 8
 skinparam classAttributeIconSize 0
 skinparam linetype ortho
-skinparam shadowing true
+skinparam shadowing false
 
 skinparam titleFontName "Segoe UI"
 skinparam titleFontSize 16
@@ -207,3 +207,4 @@ PayrollPeriod ..> PeriodStatus
 PayslipLine ..> PayslipLineType
 
 @enduml
+

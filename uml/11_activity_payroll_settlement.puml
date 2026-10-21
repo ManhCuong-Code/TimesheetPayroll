@@ -1,10 +1,10 @@
-@startuml 11_activity_payroll_settlement
+﻿@startuml 11_activity_payroll_settlement
 skinparam dpi 220
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
 skinparam defaultFontSize 12
 skinparam roundCorner 10
-skinparam shadowing true
+skinparam shadowing false
 
 skinparam titleFontName "Segoe UI"
 skinparam titleFontSize 16
@@ -81,3 +81,4 @@ else (Cần chỉnh sửa)
 endif
 
 @enduml
+

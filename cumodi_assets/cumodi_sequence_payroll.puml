@@ -1,0 +1,48 @@
+@startuml
+skinparam roundCorner 8
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 11
+autonumber
+
+actor "Kế Toán / Quản Lý\n(HR-Accountant)" as User
+boundary "Giao Diện Web\n(Blazor Component)" as UI
+control "Ứng Dụng Nghiệp Vụ\n(PayrollService)" as App
+control "Bộ Truy Xuất CSDL\n(Dapper / Repo)" as Repo
+database "Hệ Quản Trị CSDL\n(SQL Server 2022)" as DB
+
+User -> UI: 1. Nhập Thưởng / Phạt và chọn "Tính lương kỳ"
+activate UI
+UI -> App: 2. Gọi CalculatePayrollBatch(thang, nam)
+activate App
+
+App -> Repo: 3. Khởi tạo kết nối & BeginTransaction()
+activate Repo
+Repo -> DB: 4. BEGIN TRANSACTION
+activate DB
+DB --> Repo: 5. Transaction Id OK
+
+App -> Repo: 6. Thao tác INSERT / UPDATE bảng BANGLUONG
+Repo -> DB: 7. Thực thi SQL kèm tham số (@MaNS, @Thuong, @Phat)
+DB -> DB: 8. Trigger UTG_TinhLuong_Them / Sua tự động kích hoạt
+note right of DB
+  Lấy LuongCoBan từ bảng NHANSU
+  Tính: LuongThanhTien = LuongCoBan + Thuong - Phat
+  Ghi nhận tự động vào bảng BANGLUONG
+end note
+
+DB --> Repo: 9. Ghi nhận dữ liệu thành công
+App -> Repo: 10. CommitTransaction()
+Repo -> DB: 11. COMMIT TRANSACTION
+DB --> Repo: 12. Xác nhận lưu trữ vĩnh viễn (ACID)
+deactivate DB
+
+Repo --> App: 13. Hoàn tất chuỗi xử lý nghiệp vụ
+deactivate Repo
+
+App --> UI: 14. Trả về kết quả bảng lương mới nhất
+deactivate App
+
+UI --> User: 15. Hiển thị bảng lương cập nhật & Nút xuất file Excel Mẫu 02-LĐTL
+deactivate UI
+
+@enduml

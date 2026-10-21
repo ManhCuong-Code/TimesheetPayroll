@@ -16,6 +16,11 @@ public enum UserRole
     ROLE_HR_ACCOUNTANT,
 
     /// <summary>
+    /// Quản lý bộ phận: xem và xác nhận chấm công, xem báo cáo phòng ban, duyệt đơn nghỉ phép.
+    /// </summary>
+    ROLE_MANAGER,
+
+    /// <summary>
     /// Quản trị viên hệ thống: toàn quyền cấu hình, khóa sổ kỳ lương và quản trị tài khoản.
     /// </summary>
     ROLE_ADMIN

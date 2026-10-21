@@ -1,9 +1,9 @@
-@startuml 06_sequence_login
+﻿@startuml 06_sequence_login
 skinparam dpi 220
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
 skinparam roundCorner 8
-skinparam shadowing true
+skinparam shadowing false
 skinparam BoxPadding 10
 autonumber
 
@@ -78,3 +78,4 @@ deactivate LoginUC
 deactivate UI
 
 @enduml
+

@@ -1,10 +1,10 @@
-@startuml 03_usecase_hr_admin
+﻿@startuml 03_usecase_hr_admin
 skinparam dpi 220
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
 skinparam defaultFontSize 12
 skinparam packageStyle rectangle
-skinparam shadowing true
+skinparam shadowing false
 skinparam roundCorner 10
 
 skinparam titleFontName "Segoe UI"
@@ -94,3 +94,4 @@ HR --> UC_HR_09
 HR --> UC_HR_10
 
 @enduml
+

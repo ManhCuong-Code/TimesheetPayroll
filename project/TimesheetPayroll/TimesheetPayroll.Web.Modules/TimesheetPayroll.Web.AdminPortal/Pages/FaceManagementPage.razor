@@ -1,0 +1,683 @@
+@page "/admin/face-management"
+@attribute [Authorize(Roles = "ROLE_ADMIN")]
+@implements IAsyncDisposable
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using TimesheetPayroll.CoreBusiness.Models
+@using TimesheetPayroll.UseCases.AdminPortal
+@using TimesheetPayroll.UseCases.Authentication
+@using TimesheetPayroll.UseCases.PluginInterfaces.DataStore
+@inject IFaceManagementUseCases FaceManagementUseCases
+@inject IEmployeeRepository EmployeeRepo
+@inject IUserSessionService UserSession
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Quản Lý Khuôn Mặt Nhân Viên (Admin) - KimLongEcoStay</PageTitle>
+
+<AuthorizeView Roles="ROLE_ADMIN">
+    <Authorized>
+        <div class="container-fluid py-3">
+            <!-- TIÊU ĐỀ TRANG & PHÂN QUYỀN ADMIN -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom gap-2">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge bg-danger text-white px-2 py-1 fw-bold">
+                            <i class="fa-solid fa-shield-halved me-1"></i>PHÂN HỆ BẢO MẬT ADMIN
+                        </span>
+                        <span class="badge bg-white text-dark border px-2 py-1">
+                            <i class="fa-solid fa-lock me-1"></i>Quyền Hạn: ROLE_ADMIN Tối Cao
+                        </span>
+                    </div>
+                    <h2 class="h4 mb-0 text-dark fw-bold">
+                        <i class="fa-solid fa-fingerprint text-danger me-2"></i>Quản Lý Đăng Ký Khuôn Mặt Nhân Viên
+                    </h2>
+                    <p class="text-muted small mb-0 mt-1">
+                        Chỉ tài khoản Quản trị viên (Admin) mới có thẩm quyền khởi tạo, cập nhật, tạm khóa và thu hồi dữ liệu sinh trắc học khuôn mặt theo quy định bảo mật.
+                    </p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-primary shadow-sm fw-semibold" @onclick="() => OpenEnrollModal(null)">
+                        <i class="fa-solid fa-camera me-1"></i>Đăng Ký Khuôn Mặt Mới
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="LoadDataAsync" disabled="@isLoading" title="Tải lại dữ liệu">
+                        <i class="fa-solid fa-arrows-rotate @(isLoading ? "fa-spin" : "")"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- THÔNG BÁO HỆ THỐNG -->
+            @if (!string.IsNullOrEmpty(statusMessage))
+            {
+                <div class="alert alert-@statusType alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="fa-solid @(statusType == "success" ? "fa-circle-check" : "fa-triangle-exclamation") me-2"></i>
+                    @statusMessage
+                    <button type="button" class="btn-close" @onclick="() => statusMessage = string.Empty"></button>
+                </div>
+            }
+
+            <!-- TAB ĐIỀU HƯỚNG: DANH SÁCH & AUDIT LOG -->
+            <ul class="nav nav-pills mb-3 p-1 bg-white rounded shadow-sm border gap-1">
+                <li class="nav-item">
+                    <button type="button" class="nav-link fw-bold @(activeTab == "list" ? "active bg-primary text-white" : "text-dark")" 
+                            @onclick='() => activeTab = "list"'>
+                        <i class="fa-solid fa-users me-2"></i>Danh Sách Đăng Ký Khuôn Mặt (@faceProfiles.Count nhân sự)
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button type="button" class="nav-link fw-bold @(activeTab == "audit" ? "active bg-primary text-white" : "text-dark")" 
+                            @onclick='() => activeTab = "audit"'>
+                        <i class="fa-solid fa-list-check me-2"></i>Nhật Ký Kiểm Toán Sinh Trắc Học (Audit Trail)
+                        <span class="badge @(activeTab == "audit" ? "bg-light text-dark" : "bg-primary text-white") ms-2">
+                            @auditLogs.Count bản ghi
+                        </span>
+                    </button>
+                </li>
+            </ul>
+
+            @if (activeTab == "list")
+            {
+                <!-- THANH TÌM KIẾM & LỌC -->
+                <div class="card border-0 shadow-sm mb-4 bg-light">
+                    <div class="card-body p-3">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-5">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0 text-muted">
+                                        <i class="fa-solid fa-magnifying-glass"></i>
+                                    </span>
+                                    <input type="text" class="form-control border-start-0 shadow-none" 
+                                           placeholder="Tìm theo mã NV, họ tên hoặc phòng ban..." 
+                                           @bind="searchTerm" @bind:event="oninput" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select shadow-none" @bind="statusFilter">
+                                    <option value="ALL">Tất cả trạng thái đăng ký</option>
+                                    <option value="REGISTERED">Đã đăng ký (Hoạt động)</option>
+                                    <option value="NOT_REGISTERED">Chưa đăng ký</option>
+                                    <option value="LOCKED">Đang tạm khóa</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 text-md-end text-start">
+                                <span class="small text-muted">
+                                    Hiển thị: <strong>@FilteredProfiles.Count()</strong> / @faceProfiles.Count nhân viên
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BẢNG HỒ SƠ KHUÔN MẶT NHÂN SỰ -->
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted small text-uppercase">
+                                <tr>
+                                    <th style="width: 110px;">Mã NV</th>
+                                    <th>Họ và Tên</th>
+                                    <th>Phòng Ban</th>
+                                    <th class="text-center" style="width: 170px;">Trạng Thái Sinh Trắc</th>
+                                    <th>Người Đăng Ký</th>
+                                    <th>Ngày Đăng Ký</th>
+                                    <th>Ghi Chú</th>
+                                    <th class="text-center" style="width: 220px;">Thao Tác Admin</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!FilteredProfiles.Any())
+                                {
+                                    <tr>
+                                        <td colspan="8" class="text-center py-5 text-muted">
+                                            <i class="fa-solid fa-user-xmark fs-2 d-block mb-2 text-secondary"></i>
+                                            Không tìm thấy nhân viên nào phù hợp với bộ lọc hiện tại.
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var p in FilteredProfiles)
+                                    {
+                                        bool isEnrolled = !string.IsNullOrEmpty(p.FaceDescriptorJson) && p.FaceDescriptorJson != "[]";
+                                        <tr>
+                                            <td class="fw-bold text-primary">@p.EmployeeCode</td>
+                                            <td>
+                                                <div class="fw-semibold text-dark">@p.FullName</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark border">@(p.DepartmentName ?? "Chưa phân phòng")</span>
+                                            </td>
+                                            <td class="text-center">
+                                                @if (!isEnrolled)
+                                                {
+                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
+                                                        <i class="fa-solid fa-circle-xmark me-1"></i>Chưa Đăng Ký
+                                                    </span>
+                                                }
+                                                else if (p.IsActive)
+                                                {
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                        <i class="fa-solid fa-circle-check me-1"></i>Đã Đăng Ký (Active)
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                                        <i class="fa-solid fa-lock me-1"></i>Đang Tạm Khóa
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td class="small text-muted">
+                                                @(string.IsNullOrEmpty(p.RegisteredBy) ? "-" : p.RegisteredBy)
+                                            </td>
+                                            <td class="small text-muted">
+                                                @(p.RegisteredAt.Year > 2005 ? p.RegisteredAt.ToString("dd/MM/yyyy HH:mm") : "-")
+                                            </td>
+                                            <td class="small text-muted text-truncate" style="max-width: 180px;" title="@p.Notes">
+                                                @(string.IsNullOrEmpty(p.Notes) ? "-" : p.Notes)
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex justify-content-center gap-1">
+                                                    @if (!isEnrolled)
+                                                    {
+                                                        <button class="btn btn-sm btn-primary" @onclick="() => OpenEnrollModal(p)" title="Đăng ký khuôn mặt">
+                                                            <i class="fa-solid fa-camera me-1"></i>Đăng Ký
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEnrollModal(p)" title="Đăng ký lại (Chụp lại mẫu mới)">
+                                                            <i class="fa-solid fa-camera-rotate"></i>
+                                                        </button>
+                                                        @if (p.IsActive)
+                                                        {
+                                                            <button class="btn btn-sm btn-outline-warning text-dark" @onclick="() => HandleToggleLockAsync(p, false)" title="Tạm khóa khuôn mặt">
+                                                                <i class="fa-solid fa-lock"></i>
+                                                            </button>
+                                                        }
+                                                        else
+                                                        {
+                                                            <button class="btn btn-sm btn-outline-success" @onclick="() => HandleToggleLockAsync(p, true)" title="Mở khóa khuôn mặt">
+                                                                <i class="fa-solid fa-lock-open"></i>
+                                                            </button>
+                                                        }
+                                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => HandleRevokeAsync(p)" title="Thu hồi / Xóa dữ liệu sinh trắc học">
+                                                            <i class="fa-solid fa-trash-can"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <!-- BẢNG NHẬT KÝ KIỂM TOÁN SINH TRẮC HỌC (AUDIT TRAIL) -->
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="fa-solid fa-clock-rotate-left text-danger me-2"></i>Nhật Ký Quản Trị & Điểm Danh Sinh Trắc Học (Tối đa 100 giao dịch mới nhất)
+                        </h6>
+                        <span class="badge bg-secondary-subtle text-secondary px-2 py-1">
+                            Lưu vết tự động chống chối bỏ
+                        </span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 small">
+                            <thead class="table-light text-uppercase">
+                                <tr>
+                                    <th>Thời Điểm</th>
+                                    <th>Nhân Viên</th>
+                                    <th>Loại Hành Động</th>
+                                    <th>Người Thực Hiện</th>
+                                    <th>Thiết Bị / Điểm Cuối</th>
+                                    <th class="text-center">Kết Quả</th>
+                                    <th>Chi Tiết / Lý Do Thất Bại</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!auditLogs.Any())
+                                {
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            Chưa có bản ghi nhật ký kiểm toán sinh trắc học nào.
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var log in auditLogs)
+                                    {
+                                        <tr>
+                                            <td class="font-monospace text-muted">@log.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                            <td class="fw-semibold">
+                                                @if (!string.IsNullOrEmpty(log.EmployeeCode))
+                                                {
+                                                    <span>[@log.EmployeeCode] @log.FullName</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Không xác định (Chưa khớp)</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge @GetActionBadgeClass(log.ActionType)">@log.ActionType</span>
+                                            </td>
+                                            <td><code>@log.PerformedBy</code></td>
+                                            <td class="text-muted">@(log.DeviceInfo ?? "Terminal")</td>
+                                            <td class="text-center">
+                                                @if (log.IsSuccess)
+                                                {
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                        <i class="fa-solid fa-check me-1"></i>Thành Công
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                        <i class="fa-solid fa-xmark me-1"></i>Từ Chối
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td class="text-muted">
+                                                @(log.FailureReason ?? (log.SimilarityScore.HasValue ? $"Độ tin cậy: {log.SimilarityScore:0.##}" : "-"))
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- MODAL ĐĂNG KÝ KHUÔN MẶT MỚI (CAMERA CHỤP THỰC TẾ) -->
+        @if (showEnrollModal)
+        {
+            <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.65);" aria-modal="true" role="dialog">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                        <div class="modal-header bg-dark text-white p-3">
+                            <h5 class="modal-title h6 fw-bold">
+                                <i class="fa-solid fa-camera text-primary me-2"></i>Quy Trình Đăng Ký Khuôn Mặt Nhân Viên
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" @onclick="CloseEnrollModal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <!-- CHỌN NHÂN VIÊN CẦN ĐĂNG KÝ -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-dark">
+                                    <i class="fa-solid fa-user me-1 text-primary"></i>Chọn nhân viên thực hiện thu thập sinh trắc:
+                                </label>
+                                <select class="form-select fw-semibold" @bind="modalSelectedEmployeeId" disabled="@isModalCameraActive">
+                                    @foreach (var emp in allEmployees)
+                                    {
+                                        <option value="@emp.Id">[@emp.EmployeeCode] @emp.FullName - @(emp.DepartmentName ?? "Chưa phân phòng")</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <!-- CAMERA LIVE VIEWPORT CHO ADMIN -->
+                            <div class="card border-0 bg-dark text-white rounded-3 overflow-hidden mb-3">
+                                <div class="position-relative d-flex justify-content-center align-items-center" style="min-height: 320px; background-color: #0b0f19;">
+                                    <video id="adminEnrollVideo" autoplay playsinline muted 
+                                           style="width: 100%; max-height: 340px; object-fit: cover; display: @(isModalCameraActive ? "block" : "none");"></video>
+                                    <canvas id="adminEnrollCanvas" 
+                                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: @(isModalCameraActive ? "block" : "none");"></canvas>
+
+                                    @if (!isModalCameraActive)
+                                    {
+                                        <div class="text-center p-4">
+                                            <i class="fa-solid fa-video-slash fs-1 text-secondary mb-2"></i>
+                                            <div class="text-white-50 small mb-3">Camera chưa bật. Nhấn nút bên dưới để mở camera thu thập mẫu.</div>
+                                            <button class="btn btn-primary btn-sm px-3 shadow" @onclick="StartAdminCameraAsync" disabled="@isBusyModal">
+                                                <i class="fa-solid fa-video me-1"></i>Bật Camera Thu Thập
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(modalError))
+                            {
+                                <div class="alert alert-danger py-2 small mb-3">
+                                    <i class="fa-solid fa-triangle-exclamation me-1"></i>@modalError
+                                </div>
+                            }
+
+                            <!-- GHI CHÚ ĐĂNG KÝ -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-dark">Ghi chú đăng ký (Lý do / Phê duyệt của Admin):</label>
+                                <input type="text" class="form-control" placeholder="vd: Đăng ký lần đầu cho nhân sự mới; Cập nhật lại ảnh do thay đổi kiểu tóc..." 
+                                       @bind="modalEnrollNote" />
+                            </div>
+
+                            <!-- HƯỚNG DẪN THAO TÁC CHO ADMIN -->
+                            <div class="p-3 bg-light rounded border small text-muted">
+                                <strong>Hướng dẫn Admin:</strong> Hướng dẫn nhân viên ngồi thẳng, bỏ kính râm/khẩu trang, nhìn thẳng vào camera sao cho khuôn mặt nằm trong khung oval định vị. 
+                                Nhấn <strong>"Chụp & Đăng Ký Mẫu 128-D"</strong> để lưu vector đặc trưng mã hóa vào cơ sở dữ liệu.
+                            </div>
+                        </div>
+
+                        <div class="modal-footer bg-light p-3">
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CloseEnrollModal">Đóng</button>
+                            @if (isModalCameraActive)
+                            {
+                                <button type="button" class="btn btn-success fw-bold px-4 shadow" @onclick="CaptureAndEnrollAsync" disabled="@isBusyModal">
+                                    @if (isBusyModal)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Đang trích xuất & lưu trữ...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fa-solid fa-floppy-disk me-2"></i>
+                                        <span>Chụp & Đăng Ký Mẫu 128-D</span>
+                                    }
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-primary" @onclick="StartAdminCameraAsync" disabled="@isBusyModal">
+                                    <i class="fa-solid fa-video me-1"></i>Bật Camera
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <!-- BẢO VỆ CHỐNG BYPASS: HIỂN THỊ LỖI 403 KHI KHÔNG ĐỦ QUYỀN ADMIN -->
+        <div class="container py-5 text-center">
+            <div class="card border-danger shadow-sm p-5 mx-auto rounded-4" style="max-width: 600px;">
+                <div class="text-danger mb-3">
+                    <i class="fa-solid fa-shield-virus display-3"></i>
+                </div>
+                <h3 class="fw-bold text-danger mb-2">403 FORBIDDEN - TRUY CẬP BỊ TỪ CHỐI</h3>
+                <p class="text-muted mb-4">
+                    Trang quản trị dữ liệu sinh trắc học khuôn mặt nhân viên chỉ dành riêng cho tài khoản có vai trò <strong>Quản Trị Viên (ROLE_ADMIN)</strong>.
+                    Nhân viên thường, Quản lý và Kế toán không được phép truy cập hoặc thay đổi dữ liệu này.
+                </p>
+                <div>
+                    <a href="/" class="btn btn-primary px-4 fw-semibold">
+                        <i class="fa-solid fa-arrow-left me-1"></i>Quay Về Trang Chủ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private string activeTab = "list";
+    private bool isLoading = false;
+    private string statusMessage = string.Empty;
+    private string statusType = "success";
+
+    private string searchTerm = string.Empty;
+    private string statusFilter = "ALL";
+
+    private List<EmployeeFaceProfile> faceProfiles = new();
+    private List<FaceAuditLog> auditLogs = new();
+    private List<Employee> allEmployees = new();
+
+    // Modal State
+    private bool showEnrollModal = false;
+    private bool isModalCameraActive = false;
+    private bool isBusyModal = false;
+    private long modalSelectedEmployeeId = 1;
+    private string modalEnrollNote = string.Empty;
+    private string modalError = string.Empty;
+
+    private IEnumerable<EmployeeFaceProfile> FilteredProfiles
+    {
+        get
+        {
+            var query = faceProfiles.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(p =>
+                    (p.EmployeeCode?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (p.FullName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (p.DepartmentName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+
+            if (statusFilter == "REGISTERED")
+            {
+                query = query.Where(p => !string.IsNullOrEmpty(p.FaceDescriptorJson) && p.FaceDescriptorJson != "[]" && p.IsActive);
+            }
+            else if (statusFilter == "NOT_REGISTERED")
+            {
+                query = query.Where(p => string.IsNullOrEmpty(p.FaceDescriptorJson) || p.FaceDescriptorJson == "[]");
+            }
+            else if (statusFilter == "LOCKED")
+            {
+                query = query.Where(p => !string.IsNullOrEmpty(p.FaceDescriptorJson) && p.FaceDescriptorJson != "[]" && !p.IsActive);
+            }
+
+            return query;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var user = UserSession.CurrentUser;
+            string? role = user?.Role;
+
+            if (role == "ROLE_ADMIN")
+            {
+                faceProfiles = (await FaceManagementUseCases.GetAllProfilesAsync(role)).ToList();
+                auditLogs = (await FaceManagementUseCases.GetAuditLogsAsync(role, 100)).ToList();
+                allEmployees = (await EmployeeRepo.GetEmployeesAsync()).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Lỗi khi tải dữ liệu sinh trắc học: {ex.Message}";
+            statusType = "danger";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OpenEnrollModal(EmployeeFaceProfile? profile)
+    {
+        modalError = string.Empty;
+        if (profile != null)
+        {
+            modalSelectedEmployeeId = profile.EmployeeId;
+            modalEnrollNote = $"Đăng ký cập nhật cho nhân viên [{profile.EmployeeCode}] {profile.FullName}";
+        }
+        else if (allEmployees.Any())
+        {
+            modalSelectedEmployeeId = allEmployees.First().Id;
+            modalEnrollNote = "Đăng ký khuôn mặt mới";
+        }
+
+        showEnrollModal = true;
+        await Task.Delay(100);
+        await StartAdminCameraAsync();
+    }
+
+    private async Task CloseEnrollModal()
+    {
+        if (isModalCameraActive)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.stopCamera", "adminEnrollVideo");
+            }
+            catch { }
+            isModalCameraActive = false;
+        }
+        showEnrollModal = false;
+    }
+
+    private async Task StartAdminCameraAsync()
+    {
+        isBusyModal = true;
+        modalError = string.Empty;
+        try
+        {
+            var res = await JSRuntime.InvokeAsync<CameraInitResult>("FaceRecognitionHelper.startCamera", "adminEnrollVideo", "adminEnrollCanvas", null);
+            if (res.Success)
+            {
+                isModalCameraActive = true;
+            }
+            else
+            {
+                modalError = res.Error ?? "Không thể kết nối camera.";
+            }
+        }
+        catch (Exception ex)
+        {
+            modalError = $"Lỗi camera: {ex.Message}";
+        }
+        finally
+        {
+            isBusyModal = false;
+        }
+    }
+
+    private async Task CaptureAndEnrollAsync()
+    {
+        if (isBusyModal || !isModalCameraActive) return;
+
+        isBusyModal = true;
+        modalError = string.Empty;
+
+        try
+        {
+            var captureRes = await JSRuntime.InvokeAsync<FaceCaptureResult>("FaceRecognitionHelper.captureFaceDescriptor", "adminEnrollVideo");
+            if (!captureRes.Success || captureRes.Descriptor == null || captureRes.Descriptor.Length == 0)
+            {
+                modalError = captureRes.Error ?? "Chưa phát hiện được khuôn mặt hợp lệ trong khung quét. Vui lòng căn chỉnh lại.";
+                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+                return;
+            }
+
+            var user = UserSession.CurrentUser;
+            await FaceManagementUseCases.RegisterFaceProfileAsync(
+                modalSelectedEmployeeId, 
+                captureRes.Descriptor, 
+                modalEnrollNote, 
+                user?.Username ?? "admin", 
+                user?.Role);
+
+            await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "success");
+            statusMessage = "Đăng ký mẫu sinh trắc học khuôn mặt 128-D thành công vào cơ sở dữ liệu!";
+            statusType = "success";
+
+            await CloseEnrollModal();
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            modalError = $"Lỗi khi lưu dữ liệu đăng ký: {ex.Message}";
+            await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+        }
+        finally
+        {
+            isBusyModal = false;
+        }
+    }
+
+    private async Task HandleToggleLockAsync(EmployeeFaceProfile profile, bool isActive)
+    {
+        try
+        {
+            var user = UserSession.CurrentUser;
+            await FaceManagementUseCases.ToggleFaceProfileLockAsync(profile.EmployeeId, isActive, user?.Username ?? "admin", user?.Role);
+            statusMessage = isActive 
+                ? $"Đã mở khóa khuôn mặt cho nhân viên [{profile.EmployeeCode}] {profile.FullName}." 
+                : $"Đã tạm khóa khuôn mặt của nhân viên [{profile.EmployeeCode}] {profile.FullName}.";
+            statusType = "warning";
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Lỗi: {ex.Message}";
+            statusType = "danger";
+        }
+    }
+
+    private async Task HandleRevokeAsync(EmployeeFaceProfile profile)
+    {
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm", 
+            $"Bạn có chắc chắn muốn thu hồi và XÓA VĨNH VIỄN dữ liệu khuôn mặt của nhân viên [{profile.EmployeeCode}] {profile.FullName}? Thao tác này sẽ ghi nhận vào nhật ký kiểm toán bảo mật.");
+
+        if (!confirm) return;
+
+        try
+        {
+            var user = UserSession.CurrentUser;
+            await FaceManagementUseCases.RevokeFaceProfileAsync(profile.EmployeeId, user?.Username ?? "admin", user?.Role);
+            statusMessage = $"Đã thu hồi thành công dữ liệu khuôn mặt của nhân viên [{profile.EmployeeCode}] {profile.FullName}.";
+            statusType = "info";
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Lỗi khi thu hồi dữ liệu: {ex.Message}";
+            statusType = "danger";
+        }
+    }
+
+    private string GetActionBadgeClass(string action) => action switch
+    {
+        "REGISTER" => "bg-primary text-white",
+        "RE_ENROLL" => "bg-info text-dark",
+        "REVOKE" => "bg-danger text-white",
+        "LOCK" => "bg-warning text-dark",
+        "UNLOCK" => "bg-success text-white",
+        "PUNCH_CHECK_IN" => "bg-success text-white",
+        "PUNCH_CHECK_OUT" => "bg-warning text-dark",
+        "VERIFY_FAIL" => "bg-danger text-white",
+        _ => "bg-secondary text-white"
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (isModalCameraActive)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.stopCamera", "adminEnrollVideo");
+            }
+            catch { }
+        }
+    }
+
+    public class CameraInitResult
+    {
+        public bool Success { get; set; }
+        public string? Error { get; set; }
+    }
+
+    public class FaceCaptureResult
+    {
+        public bool Success { get; set; }
+        public string? Error { get; set; }
+        public float[]? Descriptor { get; set; }
+        public double LivenessScore { get; set; }
+        public bool QualityOk { get; set; }
+    }
+}

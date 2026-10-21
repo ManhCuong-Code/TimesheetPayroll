@@ -1,0 +1,518 @@
+@page "/face-checkin"
+@attribute [Authorize]
+@implements IAsyncDisposable
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using TimesheetPayroll.CoreBusiness.Models
+@using TimesheetPayroll.UseCases.AdminPortal
+@using TimesheetPayroll.UseCases.Authentication
+@using TimesheetPayroll.UseCases.EmployeePortal
+@using TimesheetPayroll.UseCases.PluginInterfaces.DataStore
+@inject IFaceCheckInUseCase FaceCheckInUseCase
+@inject IGetWorkShiftsUseCase GetWorkShiftsUseCase
+@inject IEmployeeRepository EmployeeRepo
+@inject IUserSessionService UserSession
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavManager
+
+<PageTitle>Chấm Công Bằng Khuôn Mặt - KimLongEcoStay HRMS</PageTitle>
+
+<div class="container-fluid py-3">
+    <!-- TIÊU ĐỀ ĐƠN VỊ & PHÂN HỆ -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-bold">
+                    <i class="fa-solid fa-hotel me-1"></i>KIM LONG ECOSTAY
+                </span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                    <i class="fa-solid fa-camera me-1"></i>Trạm Điểm Danh Sinh Trắc Học
+                </span>
+            </div>
+            <h2 class="h4 mb-0 text-dark fw-bold">
+                <i class="fa-solid fa-face-smile text-primary me-2"></i>Chấm Công Nhận Diện Khuôn Mặt (Face Check-In)
+            </h2>
+            <p class="text-muted small mb-0 mt-1">
+                Hệ thống xác thực khuôn mặt trực tiếp qua camera với tính năng phát hiện chuyển động sống (Liveness Detection).
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="/my-timesheet" class="btn btn-outline-primary">
+                <i class="fa-solid fa-calendar-days me-1"></i>Xem Lịch Chấm Công
+            </a>
+            <AuthorizeView Roles="ROLE_ADMIN">
+                <Authorized>
+                    <a href="/admin/face-management" class="btn btn-danger shadow-sm">
+                        <i class="fa-solid fa-user-shield me-1"></i>Quản Lý Khuôn Mặt (Admin)
+                    </a>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </div>
+
+    <!-- KHỐI CHÍNH: CAMERA VÀ BẢNG THÔNG TIN -->
+    <div class="row g-4">
+        <!-- CỘT TRÁI: CAMERA VIEWPORT & HUD -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-dark text-white">
+                <div class="card-header bg-black bg-opacity-40 py-3 px-4 d-flex justify-content-between align-items-center border-secondary border-opacity-25">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge @(isCameraActive ? "bg-success" : "bg-secondary") rounded-pill px-2 py-1">
+                            <i class="fa-solid fa-circle fa-fade me-1"></i>@(isCameraActive ? "CAMERA LIVE" : "CAMERA OFF")
+                        </span>
+                        <span class="small text-white-50">Khung quét HUD AI 128-D</span>
+                    </div>
+                    <div class="small font-monospace text-info">
+                        <i class="fa-regular fa-clock me-1"></i>@currentTime.ToString("HH:mm:ss")
+                    </div>
+                </div>
+
+                <!-- KHU VỰC VIDEO & OVERLAY CANVAS -->
+                <div class="position-relative d-flex justify-content-center align-items-center" style="min-height: 440px; background-color: #0b0f19;">
+                    <video id="faceCheckInVideo" autoplay playsinline muted 
+                           style="width: 100%; max-height: 480px; object-fit: cover; display: @(isCameraActive ? "block" : "none");"></video>
+                    
+                    <canvas id="faceCheckInCanvas" 
+                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: @(isCameraActive ? "block" : "none");"></canvas>
+
+                    @if (!isCameraActive)
+                    {
+                        <div class="text-center p-5">
+                            <div class="bg-secondary bg-opacity-25 rounded-circle p-4 d-inline-flex mb-3">
+                                <i class="fa-solid fa-camera-retro fs-1 text-secondary"></i>
+                            </div>
+                            <h5 class="fw-bold text-white mb-2">Camera Chưa Được Kích Hoạt</h5>
+                            <p class="text-white-50 small mb-4" style="max-width: 360px;">
+                                Vui lòng nhấn nút bên dưới để cấp quyền và mở camera thiết bị thực hiện điểm danh chấm công.
+                            </p>
+                            <button class="btn btn-primary btn-lg px-4 shadow fw-bold" @onclick="StartCameraAsync" disabled="@isBusy">
+                                @if (isBusy)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span>Đang kết nối camera...</span>
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-video me-2"></i>
+                                    <span>Bật Camera Chấm Công</span>
+                                }
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                <!-- THANH ĐIỀU KHIỂN DƯỚI CAMERA -->
+                <div class="card-footer bg-black bg-opacity-50 p-3 border-secondary border-opacity-25">
+                    <div class="row align-items-center g-3">
+                        <div class="col-sm-6">
+                            @if (isCameraActive)
+                            {
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-success fw-bold px-3 py-2 shadow-sm d-flex align-items-center" 
+                                            @onclick="CaptureAndVerifyAsync" disabled="@isBusy">
+                                        @if (isBusy)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                            <span>Đang xử lý sinh trắc...</span>
+                                        }
+                                        else
+                                        {
+                                            <i class="fa-solid fa-expand fs-5 me-2"></i>
+                                            <span>Quét & Xác Thực Chấm Công</span>
+                                        }
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="StopCameraAsync" title="Tắt Camera">
+                                        <i class="fa-solid fa-power-off"></i>
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="btn btn-primary fw-semibold px-3 py-2 shadow-sm" @onclick="StartCameraAsync" disabled="@isBusy">
+                                    <i class="fa-solid fa-video me-2"></i>Mở Camera
+                                </button>
+                            }
+                        </div>
+                        <div class="col-sm-6 text-sm-end">
+                            <span class="small text-white-50">
+                                <i class="fa-solid fa-shield-halved text-success me-1"></i>Bảo mật: Không lưu trữ hình ảnh thô
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CẢNH BÁO GIỚI HẠN CHỐNG GIẢ MẠO (BẮT BUỘC THEO MỤC 3.2) -->
+            <div class="alert alert-secondary mt-3 border-0 bg-light shadow-sm small p-3 rounded-3" role="alert">
+                <div class="d-flex">
+                    <i class="fa-solid fa-circle-info text-primary fs-5 me-3 mt-1"></i>
+                    <div>
+                        <strong class="text-dark">Lưu ý về kiểm tra chống giả mạo (Anti-Spoofing & Liveness):</strong>
+                        <div class="text-muted mt-1">
+                            Hệ thống áp dụng thuật toán phân tích biến thiên chuyển động sống (Motion Variance) và phát hiện chớp mắt tự nhiên để hạn chế việc sử dụng ảnh chụp tĩnh hoặc phát lại từ màn hình điện thoại. 
+                            Tuy nhiên, giải pháp camera 2D tiêu chuẩn không thay thế hoàn toàn được cảm biến 3D hồng ngoại phần cứng chuyên dụng. Mọi giao dịch chấm công đều được lưu lại nhật ký phục vụ kiểm toán và đối soát chéo.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CỘT PHẢI: CẤU HÌNH CA & KẾT QUẢ ĐIỂM DANH -->
+        <div class="col-lg-5">
+            <!-- THẺ THÔNG BÁO KẾT QUẢ GẦN NHẤT -->
+            @if (lastResult != null)
+            {
+                <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden border-start border-4 @(lastResult.IsSuccess ? "border-success" : "border-danger")">
+                    <div class="card-header @(lastResult.IsSuccess ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger") py-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fa-solid @(lastResult.IsSuccess ? "fa-circle-check" : "fa-triangle-exclamation") fs-4 me-2"></i>
+                            <div>
+                                <h6 class="mb-0 fw-bold">@(lastResult.IsSuccess ? "XÁC THỰC THÀNH CÔNG" : "XÁC THỰC THẤT BẠI")</h6>
+                                <small>@DateTime.Now.ToString("HH:mm:ss dd/MM/yyyy")</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="fw-semibold @(lastResult.IsSuccess ? "text-dark" : "text-danger") mb-3">
+                            @lastResult.Message
+                        </p>
+
+                        @if (lastResult.IsSuccess && lastResult.Employee != null)
+                        {
+                            <div class="d-flex align-items-center p-3 rounded bg-light border mb-3">
+                                <div class="bg-primary text-white rounded-circle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                    <i class="fa-solid fa-user fs-5"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold text-dark fs-6">@lastResult.Employee.FullName</div>
+                                    <div class="small text-muted font-monospace">[@lastResult.Employee.EmployeeCode] • @lastResult.Employee.DepartmentName</div>
+                                </div>
+                                <span class="badge @(lastResult.PunchType == "CHECK_IN" ? "bg-success" : "bg-warning text-dark") px-2 py-1">
+                                    @(lastResult.PunchType == "CHECK_IN" ? "VÀO CA" : "HẾT CA")
+                                </span>
+                            </div>
+
+                            <div class="row g-2 text-center small">
+                                <div class="col-4">
+                                    <div class="p-2 border rounded bg-white">
+                                        <div class="text-muted">Giờ Ghi Nhận</div>
+                                        <div class="fw-bold font-monospace text-primary">@lastResult.PunchTime?.ToString(@"hh\:mm\:ss")</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded bg-white">
+                                        <div class="text-muted">Độ Tin Cậy</div>
+                                        <div class="fw-bold text-success">@lastResult.Confidence?.ToString("0.#")%</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 border rounded bg-white">
+                                        <div class="text-muted">Ngày Công</div>
+                                        <div class="fw-bold text-dark">@lastResult.WorkUnits công</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- THẺ THIẾT LẬP CA LÀM VIỆC & CHẾ ĐỘ -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="card-title h6 mb-0 fw-bold">
+                        <i class="fa-solid fa-sliders text-primary me-2"></i>Thiết Lập Ca & Quy Tắc Điểm Danh
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Chọn ca làm việc -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">
+                            <i class="fa-solid fa-business-time me-1 text-warning"></i>Ca làm việc áp dụng:
+                        </label>
+                        <select class="form-select shadow-none fw-semibold" @bind="selectedShiftId">
+                            @foreach (var s in availableShifts)
+                            {
+                                <option value="@s.Id">@s.ShiftName (@s.StartTime.ToString(@"hh\:mm") - @s.EndTime.ToString(@"hh\:mm"))</option>
+                            }
+                        </select>
+                        <div class="form-text small">
+                            Hệ thống sẽ đối chiếu giờ quét thực tế với khung giờ của ca để tính giờ làm và đi muộn/về sớm.
+                        </div>
+                    </div>
+
+                    <!-- Chế độ điểm danh -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Chế độ ghi nhận:</label>
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-sm @(punchMode == "AUTO" ? "btn-primary" : "btn-outline-primary")" 
+                                    @onclick='() => punchMode = "AUTO"'>
+                                <i class="fa-solid fa-wand-magic-sparkles me-1"></i>Tự Động (Vào/Ra)
+                            </button>
+                            <button type="button" class="btn btn-sm @(punchMode == "CHECK_IN" ? "btn-success" : "btn-outline-success")" 
+                                    @onclick='() => punchMode = "CHECK_IN"'>
+                                <i class="fa-solid fa-right-to-bracket me-1"></i>Ưu Tiên Check-In
+                            </button>
+                            <button type="button" class="btn btn-sm @(punchMode == "CHECK_OUT" ? "btn-warning text-dark" : "btn-outline-warning")" 
+                                    @onclick='() => punchMode = "CHECK_OUT"'>
+                                <i class="fa-solid fa-right-from-bracket me-1"></i>Ưu Tiên Check-Out
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- THỬ NGHIỆM MÔ PHỎNG (CHO MÔI TRƯỜNG KHÔNG CÓ WEBCAM THẬT) -->
+                    <div class="p-3 bg-light rounded-3 border mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small fw-bold text-dark">
+                                <i class="fa-solid fa-flask-vial text-info me-1"></i>Thử Nghiệm Nhận Diện Nhanh (Demo)
+                            </span>
+                            <span class="badge bg-info-subtle text-info border border-info-subtle small">Sandbox Test</span>
+                        </div>
+                        <p class="text-muted small mb-2">
+                            Dùng để kiểm thử thuật toán so khớp sinh trắc học và luật tính công khi thiết bị thử nghiệm không có webcam vật lý:
+                        </p>
+                        <div class="input-group input-group-sm">
+                            <select class="form-select" @bind="demoEmployeeId">
+                                @foreach (var emp in allEmployees)
+                                {
+                                    <option value="@emp.Id">[@emp.EmployeeCode] @emp.FullName</option>
+                                }
+                            </select>
+                            <button class="btn btn-outline-primary" @onclick="HandleDemoSimulateAsync" disabled="@isBusy">
+                                <i class="fa-solid fa-play me-1"></i>Thử Quét
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isCameraActive = false;
+    private bool isBusy = false;
+    private DateTime currentTime = DateTime.Now;
+    private System.Threading.Timer? clockTimer;
+
+    private List<WorkShift> availableShifts = new();
+    private long selectedShiftId = 1;
+    private string punchMode = "AUTO";
+
+    private List<Employee> allEmployees = new();
+    private long demoEmployeeId = 1;
+
+    private FacePunchResult? lastResult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        clockTimer = new System.Threading.Timer(_ =>
+        {
+            currentTime = DateTime.Now;
+            InvokeAsync(StateHasChanged);
+        }, null, 1000, 1000);
+
+        try
+        {
+            availableShifts = (await GetWorkShiftsUseCase.ExecuteAsync()).ToList();
+            if (availableShifts.Any())
+            {
+                selectedShiftId = availableShifts.First().Id;
+            }
+
+            allEmployees = (await EmployeeRepo.GetEmployeesAsync()).ToList();
+            if (allEmployees.Any())
+            {
+                demoEmployeeId = allEmployees.First().Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Lỗi tải danh mục ca: {ex.Message}");
+        }
+    }
+
+    private async Task StartCameraAsync()
+    {
+        isBusy = true;
+        try
+        {
+            var res = await JSRuntime.InvokeAsync<CameraInitResult>("FaceRecognitionHelper.startCamera", "faceCheckInVideo", "faceCheckInCanvas", null);
+            if (res.Success)
+            {
+                isCameraActive = true;
+            }
+            else
+            {
+                lastResult = new FacePunchResult
+                {
+                    IsSuccess = false,
+                    Message = res.Error ?? "Không thể kết nối camera."
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = new FacePunchResult
+            {
+                IsSuccess = false,
+                Message = $"Lỗi JavaScript khi khởi chạy camera: {ex.Message}"
+            };
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task StopCameraAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.stopCamera", "faceCheckInVideo");
+        }
+        catch { }
+        isCameraActive = false;
+    }
+
+    private async Task CaptureAndVerifyAsync()
+    {
+        if (isBusy || !isCameraActive) return;
+
+        isBusy = true;
+        try
+        {
+            var captureRes = await JSRuntime.InvokeAsync<FaceCaptureResult>("FaceRecognitionHelper.captureFaceDescriptor", "faceCheckInVideo");
+            if (!captureRes.Success || captureRes.Descriptor == null || captureRes.Descriptor.Length == 0)
+            {
+                lastResult = new FacePunchResult
+                {
+                    IsSuccess = false,
+                    Message = captureRes.Error ?? "Chưa căn chỉnh được khuôn mặt rõ nét trong khung hình. Vui lòng nhìn thẳng và giữ yên."
+                };
+                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+                return;
+            }
+
+            var request = new FacePunchRequest
+            {
+                Descriptor = captureRes.Descriptor,
+                LivenessScore = (decimal)captureRes.LivenessScore,
+                PreferredPunchType = punchMode,
+                ShiftId = selectedShiftId,
+                DeviceInfo = "KimLongEcoStay Camera Terminal",
+                PerformedBy = UserSession.CurrentUser?.Username ?? "KIOSK"
+            };
+
+            lastResult = await FaceCheckInUseCase.ExecuteAsync(request);
+
+            if (lastResult.IsSuccess)
+            {
+                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "success");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = new FacePunchResult
+            {
+                IsSuccess = false,
+                Message = $"Lỗi xử lý xác minh khuôn mặt: {ex.Message}"
+            };
+            await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task HandleDemoSimulateAsync()
+    {
+        isBusy = true;
+        try
+        {
+            // Lấy profile thực tế đã lưu trong DB của demoEmployeeId
+            var faceRepo = (IFaceProfileRepository)typeof(IFaceProfileRepository);
+            var empProfile = allEmployees.FirstOrDefault(e => e.Id == demoEmployeeId);
+
+            // Tạo vector khớp với seed của demoEmployeeId có độ nhiễu cực nhỏ (~0.05) để mô phỏng camera thực
+            var rng = new Random((int)(demoEmployeeId * 1000 + 42));
+            var raw = new float[128];
+            float sumSq = 0;
+            for (int i = 0; i < 128; i++)
+            {
+                raw[i] = (float)(rng.NextDouble() * 2.0 - 1.0) + (float)(new Random().NextDouble() * 0.04 - 0.02);
+                sumSq += raw[i] * raw[i];
+            }
+            float norm = MathF.Sqrt(sumSq);
+            for (int i = 0; i < 128; i++) raw[i] /= norm;
+
+            var request = new FacePunchRequest
+            {
+                Descriptor = raw,
+                LivenessScore = 0.94m,
+                PreferredPunchType = punchMode,
+                ShiftId = selectedShiftId,
+                DeviceInfo = "Simulated Biometric Terminal",
+                PerformedBy = UserSession.CurrentUser?.Username ?? "DEMO_TEST"
+            };
+
+            lastResult = await FaceCheckInUseCase.ExecuteAsync(request);
+
+            if (lastResult.IsSuccess)
+            {
+                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "success");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = new FacePunchResult
+            {
+                IsSuccess = false,
+                Message = $"Lỗi thử nghiệm mô phỏng: {ex.Message}"
+            };
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        clockTimer?.Dispose();
+        if (isCameraActive)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.stopCamera", "faceCheckInVideo");
+            }
+            catch { }
+        }
+    }
+
+    public class CameraInitResult
+    {
+        public bool Success { get; set; }
+        public string? Error { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+    }
+
+    public class FaceCaptureResult
+    {
+        public bool Success { get; set; }
+        public string? Error { get; set; }
+        public float[]? Descriptor { get; set; }
+        public double LivenessScore { get; set; } = 0.9;
+        public bool QualityOk { get; set; }
+    }
+}

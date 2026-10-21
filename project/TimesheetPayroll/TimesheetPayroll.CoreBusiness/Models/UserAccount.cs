@@ -29,9 +29,19 @@ public class UserAccount
     public bool IsAdmin() => Role == "ROLE_ADMIN";
 
     /// <summary>
+    /// Kiểm tra người dùng có quyền Quản lý bộ phận hay không.
+    /// </summary>
+    public bool IsManager() => Role == "ROLE_MANAGER" || Role == "ROLE_ADMIN";
+
+    /// <summary>
     /// Kiểm tra người dùng có quyền Kế toán / Nhân sự hay không.
     /// </summary>
     public bool IsHrAccountant() => Role == "ROLE_HR_ACCOUNTANT" || Role == "ROLE_ADMIN";
+
+    /// <summary>
+    /// Kiểm tra người dùng có quyền xem/điều chỉnh bảng công nhiều nhân sự (Manager, Kế toán, Admin).
+    /// </summary>
+    public bool CanManageTimesheet() => Role == "ROLE_MANAGER" || Role == "ROLE_HR_ACCOUNTANT" || Role == "ROLE_ADMIN";
 
     /// <summary>
     /// Kiểm tra người dùng có vai trò Nhân viên hay không.

@@ -1,4 +1,4 @@
-@startuml 09_activity_swimlane
+﻿@startuml 09_activity_swimlane
 !theme plain
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
@@ -83,3 +83,4 @@ endif
 
 stop
 @enduml
+

@@ -259,3 +259,36 @@ public interface IUserAccountRepository
     /// </summary>
     Task ChangePasswordAsync(long userId, string newPlainPassword);
 }
+
+/// <summary>
+/// Cổng giao tiếp dữ liệu hồ sơ đặc trưng khuôn mặt nhân viên (128-d Biometric Vector).
+/// </summary>
+public interface IFaceProfileRepository
+{
+    Task<EmployeeFaceProfile?> GetByEmployeeIdAsync(long employeeId);
+    Task<IEnumerable<EmployeeFaceProfile>> GetAllActiveProfilesAsync();
+    Task<IEnumerable<EmployeeFaceProfile>> GetAllProfilesWithEmployeeDetailsAsync();
+    Task SaveProfileAsync(EmployeeFaceProfile profile);
+    Task DeleteProfileAsync(long employeeId);
+    Task ToggleStatusAsync(long employeeId, bool isActive);
+}
+
+/// <summary>
+/// Cổng giao tiếp dữ liệu nhật ký kiểm toán khuôn mặt và chấm công camera.
+/// </summary>
+public interface IFaceAuditLogRepository
+{
+    Task LogActionAsync(FaceAuditLog log);
+    Task<IEnumerable<FaceAuditLog>> GetLogsAsync(int limit = 100);
+}
+
+/// <summary>
+/// Cổng giao tiếp dữ liệu nhật ký chỉnh sửa / điều chỉnh bảng chấm công.
+/// </summary>
+public interface ITimesheetAuditLogRepository
+{
+    Task LogAuditAsync(TimesheetAuditLog log);
+    Task<IEnumerable<TimesheetAuditLog>> GetLogsByEmployeeAsync(long employeeId, int limit = 50);
+    Task<IEnumerable<TimesheetAuditLog>> GetRecentLogsAsync(int limit = 100);
+}
+

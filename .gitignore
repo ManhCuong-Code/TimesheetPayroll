@@ -30,3 +30,10 @@ BANG_QUY_DOI_TEN_DU_AN.md
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Python & Temporary
+__pycache__/
+*.pyc
+scratch/
+extracted_from_doc/
+extracted_images/

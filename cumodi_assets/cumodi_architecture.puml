@@ -1,0 +1,76 @@
+@startuml
+skinparam packageStyle rectangle
+skinparam roundCorner 8
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 11
+
+package "1. Tầng Giao Diện (Presentation Layer)" #EBF8FF {
+    class "Blazor Components & Razor Pages" as UI {
+        + DashboardComponent (/dashboard)
+        + StaffTaskComponent (/staff-tasks)
+        + ChannelVideoComponent (/channels-videos)
+        + PartnerContractComponent (/partners-contracts)
+        + PayrollComponent (/payroll)
+        + Responsive CSS (Desktop & Mobile 390px)
+    }
+}
+
+package "2. Tầng Nghiệp Vụ & Ca Sử Dụng (Application Layer)" #F0FFF4 {
+    class "StaffTaskService" as STS {
+        + AssignTask()
+        + UpdateProgress()
+    }
+    class "PayrollService" as PS {
+        + CalculatePayrollBatch()
+        + ExportExcelPayroll()
+        + UpdateBonusPenalty()
+    }
+    class "SecurityService" as SS {
+        + VerifyPasswordBCrypt()
+        + CheckRoleRBAC()
+        + ValidateAntiIDOR()
+    }
+}
+
+package "3. Tầng Mô Hình Miền (Core Domain Layer)" #FFF5F5 {
+    class "Company (CONGTY)" as ECompany
+    class "Department (PHONGBAN)" as EDept
+    class "Employee (NHANSU)" as EEmp
+    class "Channel (KENH)" as EChan
+    class "Video (VIDEO)" as EVid
+    class "Creator (NHASANGTAOND)" as ECreator
+    class "Contract (HOPDONG)" as ECont
+    class "Task (CONGVIEC)" as ETask
+    class "Payroll (BANGLUONG)" as EPay
+}
+
+package "4. Tầng Hạ Tầng & Truy Xuất CSDL (Infrastructure Layer)" #FFFFF0 {
+    class "CumodiDbContext & Dapper Repositories" as Repo {
+        + Database Connection Pool
+        + BeginTransaction() / Commit() / Rollback()
+        + Parameterized SQL Queries (Anti-SQLi)
+    }
+    class "Microsoft SQL Server 2022" as DB {
+        + 13 Bang Thuc The Chuan 3NF
+        + Views: ThongKeKenh, Trending
+        + Stored Procedures & Functions
+        + Triggers: UTG_TinhLuong, UTG_DoanhThu
+    }
+}
+
+UI --> STS
+UI --> PS
+UI --> SS
+
+PS --> EEmp
+PS --> EPay
+PS --> EVid
+
+STS --> ETask
+STS --> EEmp
+
+PS --> Repo
+STS --> Repo
+Repo --> DB
+
+@enduml

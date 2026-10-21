@@ -5,12 +5,12 @@
 <nav class="navbar navbar-expand-lg navbar-dark shadow-sm px-3" style="background-color: #0f172a; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
     <div class="container-fluid">
         <a class="navbar-brand fw-bold d-flex align-items-center me-4" href="/">
-            <div class="bg-primary text-white rounded-3 p-2 me-2 d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
-                <i class="fa-solid fa-cubes-stacked fs-5"></i>
+            <div class="bg-success text-white rounded-3 p-2 me-2 d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                <i class="fa-solid fa-tree fs-5"></i>
             </div>
             <div class="d-flex flex-column">
-                <span class="fs-5 lh-1 text-white fw-bold">HRM<span style="color: #60a5fa;">PRO</span></span>
-                <span class="text-white-50" style="font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 600;">ENTERPRISE PORTAL</span>
+                <span class="fs-5 lh-1 text-white fw-bold">KIM LONG <span style="color: #4ade80;">ECOSTAY</span></span>
+                <span class="text-white-50" style="font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 600;">HR & PAYROLL SYSTEM</span>
             </div>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
@@ -27,8 +27,13 @@
                 <AuthorizeView>
                     <Authorized>
                         <li class="nav-item">
+                            <NavLink class="nav-link text-info fw-semibold" href="/face-checkin">
+                                <i class="fa-solid fa-face-smile me-1"></i>Chấm Công Khuôn Mặt
+                            </NavLink>
+                        </li>
+                        <li class="nav-item">
                             <NavLink class="nav-link" href="/my-timesheet">
-                                <i class="fa-solid fa-fingerprint me-1 text-success"></i>Chấm Công (Check-In/Out)
+                                <i class="fa-solid fa-calendar-days me-1 text-success"></i>Lịch Chấm Công
                             </NavLink>
                         </li>
                         <li class="nav-item">
@@ -44,7 +49,7 @@
                     </Authorized>
                 </AuthorizeView>
 
-                <!-- MENU DÀNH RIÊNG CHO KẾ TOÁN & ADMIN -->
+                <!-- MENU DÀNH CHO KẾ TOÁN & ADMIN -->
                 <AuthorizeView Roles="ROLE_HR_ACCOUNTANT, ROLE_ADMIN">
                     <Authorized>
                         <li class="nav-item">
@@ -52,6 +57,12 @@
                                 <i class="fa-solid fa-calculator me-1"></i>Quản Trị Lương
                             </NavLink>
                         </li>
+                    </Authorized>
+                </AuthorizeView>
+
+                <!-- MENU DÀNH CHO QUẢN LÝ, KẾ TOÁN & ADMIN -->
+                <AuthorizeView Roles="ROLE_MANAGER, ROLE_HR_ACCOUNTANT, ROLE_ADMIN">
+                    <Authorized>
                         <li class="nav-item">
                             <NavLink class="nav-link text-info fw-semibold" href="/admin/leave-approval">
                                 <i class="fa-solid fa-calendar-check me-1"></i>Duyệt Nghỉ Phép
@@ -65,12 +76,17 @@
                     </Authorized>
                 </AuthorizeView>
 
-                <!-- MENU DÀNH CHO QUẢN TRỊ VIÊN -->
+                <!-- MENU DÀNH RIÊNG CHO QUẢN TRỊ VIÊN (ROLE_ADMIN) -->
                 <AuthorizeView Roles="ROLE_ADMIN">
                     <Authorized>
                         <li class="nav-item">
-                            <NavLink class="nav-link text-info fw-semibold" href="/admin/user-management">
-                                <i class="fa-solid fa-users-gear me-1"></i>Tài Khoản Nhân Viên
+                            <NavLink class="nav-link text-danger fw-semibold" href="/admin/face-management">
+                                <i class="fa-solid fa-camera-rotate me-1"></i>Quản Lý Khuôn Mặt
+                            </NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link text-white-50" href="/admin/user-management">
+                                <i class="fa-solid fa-users-gear me-1"></i>Tài Khoản
                             </NavLink>
                         </li>
                     </Authorized>
@@ -131,14 +147,16 @@
 
     private string GetRoleBadgeClass(string? role) => role switch
     {
-        "ROLE_ADMIN" => "bg-danger",
+        "ROLE_ADMIN" => "bg-danger text-white",
+        "ROLE_MANAGER" => "bg-info text-dark",
         "ROLE_HR_ACCOUNTANT" => "bg-warning text-dark",
-        _ => "bg-success"
+        _ => "bg-success text-white"
     };
 
     private string GetRoleDisplayName(string? role) => role switch
     {
         "ROLE_ADMIN" => "Admin",
+        "ROLE_MANAGER" => "Quản lý",
         "ROLE_HR_ACCOUNTANT" => "Kế toán",
         _ => "Nhân viên"
     };

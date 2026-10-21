@@ -1,10 +1,10 @@
-@startuml 01_usecase_overview
+﻿@startuml 01_usecase_overview
 skinparam dpi 220
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
 skinparam defaultFontSize 12
 skinparam packageStyle rectangle
-skinparam shadowing true
+skinparam shadowing false
 skinparam roundCorner 10
 
 ' Color Scheme
@@ -88,3 +88,4 @@ HR --> UC_SUB_04 : Chạy tính lương, chốt kỳ & xuất Excel
 UC_SUB_05 --> ExtAI : Tích hợp Gemini LLM API
 
 @enduml
+

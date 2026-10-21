@@ -21,10 +21,10 @@ public class LlmClient : ILlmClient
         _config = new AiConfiguration
         {
             Provider = AiProviderType.Gemini,
-            Model = "gemini-2.0-flash",
+            Model = "gemini-3.8-flash",
             IsEnabled = true,
-            // Tự động kiểm tra biến môi trường GEMINI_API_KEY nếu có
-            ApiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? string.Empty
+            // Tự động kiểm tra biến môi trường GEMINI_API_KEY hoặc OPENAI_API_KEY nếu có
+            ApiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? string.Empty
         };
     }
 
@@ -96,7 +96,11 @@ public class LlmClient : ILlmClient
         string userPrompt, 
         CancellationToken cancellationToken)
     {
-        string model = string.IsNullOrWhiteSpace(_config.Model) ? "gemini-2.0-flash" : _config.Model;
+        string model = string.IsNullOrWhiteSpace(_config.Model) ? "gemini-3.8-flash" : _config.Model;
+        if (model.Contains("gemini-2.0") || model == "gemini-2.5-flash")
+        {
+            model = "gemini-3.8-flash";
+        }
         string endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={_config.ApiKey.Trim()}";
 
         var requestBody = new

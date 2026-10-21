@@ -1,9 +1,9 @@
-@startuml 07_sequence_payroll_calculation
+﻿@startuml 07_sequence_payroll_calculation
 skinparam dpi 220
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
 skinparam roundCorner 8
-skinparam shadowing true
+skinparam shadowing false
 skinparam BoxPadding 10
 autonumber
 
@@ -121,3 +121,4 @@ deactivate UseCase
 deactivate UI
 
 @enduml
+

@@ -20,6 +20,8 @@ public class Employee
     public string BankName { get; set; } = string.Empty;
     public long? DepartmentId { get; set; }
     public string? DepartmentName { get; set; }
+    public string? Department => DepartmentName;
+    public string? Position { get; set; } = "Nhân viên";
     public DateTime HireDate { get; set; } = DateTime.Today;
     public string Status { get; set; } = "ACTIVE";
 

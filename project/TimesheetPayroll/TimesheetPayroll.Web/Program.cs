@@ -39,9 +39,13 @@ builder.Services.AddScoped<IDeductionRateRepository, DeductionRateRepository>();
 builder.Services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
 builder.Services.AddScoped<IWorkShiftRepository, WorkShiftRepository>();
 builder.Services.AddScoped<ITimesheetStateStore, TimesheetStateStore>();
+builder.Services.AddScoped<IFaceProfileRepository, FaceProfileRepository>();
+builder.Services.AddScoped<IFaceAuditLogRepository, FaceAuditLogRepository>();
+builder.Services.AddScoped<ITimesheetAuditLogRepository, TimesheetAuditLogRepository>();
 
 // 3. CORE SERVICES & AI ASSISTANT
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton<IFaceBiometricService, FaceBiometricService>();
 builder.Services.AddSingleton<IAiKnowledgeBaseService>(sp =>
 {
     var kb = new AiKnowledgeBaseService();
@@ -61,7 +65,7 @@ builder.Services.AddSingleton<ILlmClient>(sp =>
 
     var providerStr = builder.Configuration["AiSettings:Provider"];
     var apiKey = builder.Configuration["AiSettings:ApiKey"];
-    var model = builder.Configuration["AiSettings:Model"] ?? "gemini-2.0-flash";
+    var model = builder.Configuration["AiSettings:Model"] ?? "gemini-3.8-flash";
     var isEnabled = builder.Configuration.GetValue<bool>("AiSettings:IsEnabled", true);
 
     var provider = TimesheetPayroll.CoreBusiness.Models.AiProviderType.Gemini;
@@ -70,10 +74,14 @@ builder.Services.AddSingleton<ILlmClient>(sp =>
     else if (string.Equals(providerStr, "Local", StringComparison.OrdinalIgnoreCase))
         provider = TimesheetPayroll.CoreBusiness.Models.AiProviderType.LocalEngine;
 
+    string envKey = provider == TimesheetPayroll.CoreBusiness.Models.AiProviderType.OpenAi
+        ? (Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? string.Empty)
+        : (Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? string.Empty);
+
     client.UpdateConfiguration(new TimesheetPayroll.CoreBusiness.Models.AiConfiguration
     {
         Provider = provider,
-        ApiKey = !string.IsNullOrWhiteSpace(apiKey) ? apiKey : (Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? string.Empty),
+        ApiKey = !string.IsNullOrWhiteSpace(apiKey) ? apiKey : envKey,
         Model = model,
         IsEnabled = isEnabled
     });
@@ -106,12 +114,16 @@ builder.Services.AddTransient<IToggleUserStatusUseCase, ToggleUserStatusUseCase>
 builder.Services.AddTransient<IGetWorkShiftsUseCase, GetWorkShiftsUseCase>();
 builder.Services.AddTransient<IManageWorkShiftUseCase, ManageWorkShiftUseCase>();
 builder.Services.AddTransient<IExportPayrollExcelUseCase, ExportPayrollExcelUseCase>();
+builder.Services.AddTransient<IFaceManagementUseCases, FaceManagementUseCases>();
+builder.Services.AddTransient<IExportTimesheetExcelUseCase, ExportTimesheetExcelUseCase>();
+builder.Services.AddTransient<IManageTimesheetUseCase, ManageTimesheetUseCase>();
 
 // 6. EMPLOYEE PORTAL USE CASES
 builder.Services.AddTransient<IViewMyPayslipUseCase, ViewMyPayslipUseCase>();
 builder.Services.AddTransient<IViewMyTimesheetUseCase, ViewMyTimesheetUseCase>();
 builder.Services.AddTransient<ICreateLeaveRequestUseCase, CreateLeaveRequestUseCase>();
 builder.Services.AddTransient<ICheckInCheckOutUseCase, CheckInCheckOutUseCase>();
+builder.Services.AddTransient<IFaceCheckInUseCase, FaceCheckInUseCase>();
 builder.Services.AddTransient<IGetEmployeeProfileUseCase, GetEmployeeProfileUseCase>();
 builder.Services.AddTransient<IGetEmployeePayslipHistoryUseCase, GetEmployeePayslipHistoryUseCase>();
 builder.Services.AddTransient<ICompareSalaryUseCase, CompareSalaryUseCase>();

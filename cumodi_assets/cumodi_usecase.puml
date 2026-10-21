@@ -1,0 +1,80 @@
+@startuml
+skinparam packageStyle rectangle
+skinparam roundCorner 8
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam actorBorderColor #1A365D
+skinparam actorBackgroundColor #EBF8FF
+skinparam usecaseBorderColor #2B6CB0
+skinparam usecaseBackgroundColor #F7FAFC
+skinparam packageBorderColor #4A5568
+skinparam packageBackgroundColor #FFFFFF
+
+left to right direction
+
+actor "Quản Trị Viên\n(Admin)" as Admin
+actor "Kế Toán / Quản Lý\n(HR / Accountant)" as Manager
+actor "Nhân Viên / Creator\n(Staff / Creator)" as Staff
+
+rectangle "Hệ Thống Web Quản Trị CUMODI (CUMODI Web Portal)" {
+    package "1. Phân Hệ Xác Thực & Phân Quyền" {
+        usecase "UC01: Đăng nhập hệ thống" as UC01
+        usecase "UC02: Đổi mật khẩu cá nhân" as UC02
+        usecase "UC03: Quản trị tài khoản & Cấp quyền" as UC03
+    }
+
+    package "2. Phân Hệ Nhân Sự & Phân Công Việc" {
+        usecase "UC04: Quản lý hồ sơ nhân viên" as UC04
+        usecase "UC05: Giao việc sản xuất video" as UC05
+        usecase "UC06: Cập nhật tiến độ hoàn thành" as UC06
+    }
+
+    package "3. Phân Hệ Kênh & Video Đa Nền Tảng" {
+        usecase "UC07: Quản trị kênh & nền tảng số" as UC07
+        usecase "UC08: Xuất bản & theo dõi video" as UC08
+        usecase "UC09: Thống kê video trending & view" as UC09
+    }
+
+    package "4. Phân Hệ Hợp Đồng & Creators" {
+        usecase "UC10: Quản lý hồ sơ đối tác" as UC10
+        usecase "UC11: Ký kết & theo dõi hợp đồng" as UC11
+        usecase "UC12: Quản lý Nhà sáng tạo nội dung" as UC12
+    }
+
+    package "5. Phân Hệ Lương & Quyết Toán" {
+        usecase "UC13: Tính lương tự động (Thưởng/Phạt)" as UC13
+        usecase "UC14: Tra cứu phiếu lương cá nhân" as UC14
+        usecase "UC15: Xuất báo cáo Excel Kế toán" as UC15
+    }
+}
+
+' Admin permissions
+Admin --> UC01
+Admin --> UC02
+Admin --> UC03
+Admin --> UC04
+Admin --> UC07
+Admin --> UC15
+
+' Manager / Accountant permissions
+Manager --> UC01
+Manager --> UC02
+Manager --> UC04
+Manager --> UC05
+Manager --> UC07
+Manager --> UC08
+Manager --> UC09
+Manager --> UC10
+Manager --> UC11
+Manager --> UC12
+Manager --> UC13
+Manager --> UC15
+
+' Staff / Creator permissions
+Staff --> UC01
+Staff --> UC02
+Staff --> UC06
+Staff --> UC08
+Staff --> UC14
+
+@enduml

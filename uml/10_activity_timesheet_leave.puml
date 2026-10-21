@@ -1,10 +1,10 @@
-@startuml 10_activity_timesheet_leave
+﻿@startuml 10_activity_timesheet_leave
 skinparam dpi 220
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
 skinparam defaultFontSize 12
 skinparam roundCorner 10
-skinparam shadowing true
+skinparam shadowing false
 
 skinparam titleFontName "Segoe UI"
 skinparam titleFontSize 16
@@ -64,3 +64,4 @@ endif
 stop
 
 @enduml
+

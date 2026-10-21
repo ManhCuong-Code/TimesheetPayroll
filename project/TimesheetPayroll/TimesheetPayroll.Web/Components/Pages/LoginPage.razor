@@ -139,6 +139,21 @@
                         <span class="badge bg-primary-subtle text-primary border border-primary border-opacity-25">Nhân Viên</span>
                     </button>
 
+                    <!-- TÀI KHOẢN QUẢN LÝ NAM -->
+                    <button class="btn btn-white text-start p-3 border rounded-3 shadow-sm card-hover d-flex align-items-center justify-content-between"
+                            @onclick='() => QuickLoginAsync("quanly.nam", "123456")' disabled="@isLoading">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-info-subtle text-info rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                                <i class="fa-solid fa-user-tie"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark">Phạm Hoàng Nam</div>
+                                <div class="small text-muted"><code>quanly.nam</code> • Trưởng phòng Kinh Doanh</div>
+                            </div>
+                        </div>
+                        <span class="badge bg-info-subtle text-info border border-info border-opacity-25">Quản Lý Bộ Phận</span>
+                    </button>
+
                     <!-- TÀI KHOẢN KẾ TOÁN THẢO -->
                     <button class="btn btn-white text-start p-3 border rounded-3 shadow-sm card-hover d-flex align-items-center justify-content-between"
                             @onclick='() => QuickLoginAsync("ketoan.thao", "123456")' disabled="@isLoading">

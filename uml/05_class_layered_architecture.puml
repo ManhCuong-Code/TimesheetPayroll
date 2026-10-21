@@ -1,11 +1,11 @@
-@startuml 05_class_layered_architecture
+﻿@startuml 05_class_layered_architecture
 skinparam dpi 220
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
 skinparam defaultFontSize 11
 skinparam roundCorner 8
 skinparam classAttributeIconSize 0
-skinparam shadowing true
+skinparam shadowing false
 
 skinparam titleFontName "Segoe UI"
 skinparam titleFontSize 16
@@ -149,3 +149,4 @@ SqlRepositories ..|> ITimesheetRepository : implements (Dapper)
 SqlRepositories ..|> IPayrollPeriodRepository : implements (Dapper)
 
 @enduml
+
