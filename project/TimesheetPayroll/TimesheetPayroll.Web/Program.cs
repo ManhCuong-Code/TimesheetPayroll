@@ -144,9 +144,9 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
 app.UseStatusCodePagesWithReExecute("/404");
 app.UseAntiforgery();
 app.UseStaticFiles();
