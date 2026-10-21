@@ -32,7 +32,12 @@
   --gradient-card: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
   
   /* Font chữ chuẩn tiếng Việt: Be Vietnam Pro + Inter */
-  --font-main: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Be Vietnam Pro', Arial, sans-serif;
+  --font-heading: 'Be Vietnam Pro', Arial, sans-serif;
+  --font-main: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', Arial, sans-serif;
+  --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', Arial, sans-serif;
+  --bs-body-font-family: var(--font-body);
+  --bs-font-sans-serif: var(--font-body);
   --font-code: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
   
   --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(226, 232, 240, 0.8);
@@ -80,19 +85,34 @@ body.dark-theme {
   padding: 0;
 }
 
+html, body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: var(--font-heading);
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+button, input, select, textarea, .btn, .form-control, .form-select, .table, .dropdown-menu {
+  font: inherit;
+  font-family: inherit;
+}
+
 body {
-  font-family: var(--font-main);
   background-color: var(--bg-primary);
   color: var(--text-main);
   overflow: hidden;
   height: 100vh;
   width: 100vw;
   user-select: none;
-  font-size: 16px;
-  line-height: 1.55;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
   background-image: 
     radial-gradient(circle at 10% 15%, rgba(79, 70, 229, 0.06) 0%, transparent 40%),
     radial-gradient(circle at 90% 85%, rgba(8, 145, 178, 0.06) 0%, transparent 40%),

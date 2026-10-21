@@ -4,9 +4,11 @@
    ========================================================================== */
 
 :root {
-    --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --bs-body-font-family: var(--hrm-font-sans);
-    --bs-font-sans-serif: var(--hrm-font-sans);
+    --font-body: 'Be Vietnam Pro', Arial, sans-serif;
+    --font-heading: 'Be Vietnam Pro', Arial, sans-serif;
+    --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', Arial, sans-serif;
+    --bs-body-font-family: var(--font-body);
+    --bs-font-sans-serif: var(--font-body);
     --hrm-bg-main: #f8fafc;
     --hrm-bg-card: #ffffff;
     --hrm-slate-900: #0f172a;
@@ -42,19 +44,28 @@
     --hrm-shadow-card: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
 }
 
-body {
-    font-family: var(--hrm-font-sans);
+html, body {
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    font-weight: 400;
     background-color: var(--hrm-bg-main);
     color: var(--hrm-slate-800);
-    line-height: 1.6;
     letter-spacing: -0.011em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
 }
 
-body, button, input, select, textarea, .btn, .form-control, .form-select, .table, .dropdown-menu {
-    font-family: var(--hrm-font-sans);
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+    font-family: var(--font-heading);
+    line-height: 1.3;
+    font-weight: 600;
+}
+
+button, input, select, textarea, .btn, .form-control, .form-select, .table, .dropdown-menu, .modal, .toast {
+    font: inherit;
+    font-family: inherit;
 }
 
 /* CARDS & CONTAINERS */
