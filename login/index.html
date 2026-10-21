@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/" />
+    <script>
+        (function(l) {
+            var isGitHubProject = l.hostname.endsWith('github.io') && l.pathname.indexOf('/TimesheetPayroll') === 0;
+            var baseEl = document.querySelector('base');
+            if (baseEl) {
+                baseEl.setAttribute('href', isGitHubProject ? '/TimesheetPayroll/' : '/');
+            }
+        })(window.location);
+    </script>
+    <title>Đăng Nhập Hệ Thống — Quản Lý Nhân Sự & Chấm Công</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+            --hrm-primary: #2563eb;
+            --hrm-primary-dark: #1d4ed8;
+            --hrm-slate-900: #0f172a;
+        }
+        body {
+            font-family: var(--hrm-font-sans);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            color: #1e293b;
+        }
+        .login-card {
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 1.25rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+            background: #ffffff;
+            overflow: hidden;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: white;
+            padding: 2.5rem 2rem 2rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="d-flex align-items-center justify-content-center p-3">
+
+<div class="container" style="max-width: 520px;">
+    <div class="text-center mb-3">
+        <a href="./" class="text-decoration-none d-inline-flex align-items-center gap-2 text-white">
+            <div class="bg-primary text-white rounded-3 p-2 shadow-sm d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                <i class="fa-solid fa-users-gear fs-5"></i>
+            </div>
+            <div class="text-start">
+                <span class="fs-5 fw-bold lh-1 text-white d-block">HỆ THỐNG <span style="color: #60a5fa;">QUẢN LÝ NHÂN SỰ</span></span>
+                <span class="text-white-50" style="font-size: 0.7rem; letter-spacing: 0.08em; font-weight: 600;">CHẤM CÔNG – TÍNH LƯƠNG</span>
+            </div>
+        </a>
+    </div>
+
+    <div class="login-card">
+        <div class="login-header">
+            <div class="d-inline-flex p-3 rounded-circle bg-white bg-opacity-10 mb-3">
+                <i class="fa-solid fa-user-shield fs-2"></i>
+            </div>
+            <h4 class="fw-bold mb-1">Đăng Nhập Hệ Thống</h4>
+            <p class="small text-white-50 mb-0">Xác thực tài khoản cán bộ nhân viên & quản trị</p>
+        </div>
+
+        <div class="p-4">
+            <div id="loginAlertBox" class="alert alert-danger py-2 px-3 small d-none mb-3">
+                <i class="fa-solid fa-circle-exclamation me-1"></i><span id="loginAlertMsg">Thông tin không đúng!</span>
+            </div>
+
+            <form onsubmit="handleFormSubmit(event)">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary">Tên đăng nhập / Mã nhân viên:</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" id="loginUsername" class="form-control" placeholder="Nhập tài khoản (vd: admin.trong, nhanvien.a)" value="admin.trong" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary">Mật khẩu:</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" id="loginPassword" class="form-control" placeholder="Nhập mật khẩu" value="123456" required>
+                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility()"><i class="fa-solid fa-eye" id="pwdEye"></i></button>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="rememberMe" checked>
+                        <label class="form-check-label small text-muted" for="rememberMe">Ghi nhớ phiên</label>
+                    </div>
+                    <a href="javascript:void(0)" onclick="alert('Vui lòng liên hệ Phòng Hành chính Nhân sự để cấp lại mật khẩu.')" class="small text-decoration-none text-primary">Quên mật khẩu?</a>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm mb-3">
+                    <i class="fa-solid fa-right-to-bracket me-2"></i>Đăng Nhập
+                </button>
+            </form>
+
+            <div class="border-top pt-3 mt-2">
+                <div class="text-center mb-2">
+                    <span class="badge bg-light text-secondary border px-3 py-1 fw-bold text-uppercase" style="font-size: 0.75rem;">
+                        <i class="fa-solid fa-bolt text-warning me-1"></i>Đăng Nhập Nhanh 1-Click
+                    </span>
+                </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100 text-start py-2 d-flex align-items-center gap-2" onclick="performQuickLogin('admin.trong', 'Nguyễn Văn An (Admin)', 'ROLE_ADMIN', 1)">
+                            <i class="fa-solid fa-shield-halved text-primary fs-5"></i>
+                            <div class="lh-sm">
+                                <div class="fw-bold" style="font-size: 0.8rem;">Admin Quản Trị</div>
+                                <small class="text-muted" style="font-size: 0.7rem;">admin.trong</small>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-success btn-sm w-100 text-start py-2 d-flex align-items-center gap-2" onclick="performQuickLogin('ketoan.thao', 'Trần Thị Bích (Kế toán)', 'ROLE_HR_ACCOUNTANT', 2)">
+                            <i class="fa-solid fa-calculator text-success fs-5"></i>
+                            <div class="lh-sm">
+                                <div class="fw-bold" style="font-size: 0.8rem;">Kế Toán / Nhân Sự</div>
+                                <small class="text-muted" style="font-size: 0.7rem;">ketoan.thao</small>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-warning text-dark btn-sm w-100 text-start py-2 d-flex align-items-center gap-2" onclick="performQuickLogin('quanly.nam', 'Lê Hoàng Nam (Quản lý)', 'ROLE_MANAGER', 3)">
+                            <i class="fa-solid fa-user-tie text-warning fs-5"></i>
+                            <div class="lh-sm">
+                                <div class="fw-bold" style="font-size: 0.8rem;">Trưởng Phòng Duyệt</div>
+                                <small class="text-muted" style="font-size: 0.7rem;">quanly.nam</small>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-info text-dark btn-sm w-100 text-start py-2 d-flex align-items-center gap-2" onclick="performQuickLogin('nhanvien.a', 'Phạm Hoàng Nam (Nhân viên)', 'ROLE_EMPLOYEE', 5)">
+                            <i class="fa-solid fa-id-badge text-info fs-5"></i>
+                            <div class="lh-sm">
+                                <div class="fw-bold" style="font-size: 0.8rem;">Nhân Viên Cá Nhân</div>
+                                <small class="text-muted" style="font-size: 0.7rem;">nhanvien.a</small>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer bg-light p-3 text-center border-top">
+            <span class="small text-muted">Hoặc thử nghiệm ngay: </span>
+            <a href="face-checkin" class="small fw-bold text-decoration-none text-primary ms-1">
+                <i class="fa-solid fa-camera me-1"></i>Kiosk Chấm Công Khuôn Mặt AI
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="data/hrm_data.js"></script>
+<script>
+    // Kiểm tra thông báo lỗi trên URL nếu có
+    (function() {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('error') === 'denied') {
+            document.getElementById('loginAlertBox').classList.remove('d-none');
+            document.getElementById('loginAlertMsg').textContent = 'Truy cập bị từ chối! Bạn cần đăng nhập với quyền Quản trị hoặc Nhân sự.';
+        }
+    })();
+
+    function togglePasswordVisibility() {
+        var pwdInput = document.getElementById('loginPassword');
+        var eyeIcon = document.getElementById('pwdEye');
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            eyeIcon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            pwdInput.type = 'password';
+            eyeIcon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        var u = document.getElementById('loginUsername').value.trim();
+        var p = document.getElementById('loginPassword').value.trim();
+
+        if (!u || !p) {
+            document.getElementById('loginAlertBox').classList.remove('d-none');
+            document.getElementById('loginAlertMsg').textContent = 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!';
+            return;
+        }
+
+        // Tìm nhân viên trong dữ liệu mẫu
+        var found = HRM_DATA.employees.find(function(item) {
+            return item.username.toLowerCase() === u.toLowerCase() || item.code.toLowerCase() === u.toLowerCase();
+        });
+
+        if (found) {
+            performQuickLogin(found.username, found.name, found.role, found.id);
+        } else if (u.toLowerCase() === 'admin') {
+            performQuickLogin('admin.trong', 'Nguyễn Văn An (Admin)', 'ROLE_ADMIN', 1);
+        } else {
+            // Mặc định đăng nhập với quyền nhân viên
+            performQuickLogin(u, u, 'ROLE_EMPLOYEE', 99);
+        }
+    }
+
+    function performQuickLogin(username, name, role, empId) {
+        var session = {
+            username: username,
+            name: name,
+            role: role,
+            empId: empId,
+            loginTime: new Date().toISOString()
+        };
+        localStorage.setItem('hrm_session', JSON.stringify(session));
+
+        // Điều hướng theo quyền
+        if (role === 'ROLE_ADMIN' || role === 'ROLE_HR_ACCOUNTANT' || role === 'ROLE_MANAGER') {
+            window.location.replace('admin');
+        } else {
+            window.location.replace('my-timesheet');
+        }
+    }
+</script>
+</body>
+</html>

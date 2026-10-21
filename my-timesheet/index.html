@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/" />
+    <script>
+        (function(l) {
+            var isGitHubProject = l.hostname.endsWith('github.io') && l.pathname.indexOf('/TimesheetPayroll') === 0;
+            var baseEl = document.querySelector('base');
+            if (baseEl) {
+                baseEl.setAttribute('href', isGitHubProject ? '/TimesheetPayroll/' : '/');
+            }
+        })(window.location);
+    </script>
+    <title>Bảng Chấm Công Cá Nhân — TimesheetPayroll</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+            --hrm-primary: #2563eb;
+            --hrm-slate-900: #0f172a;
+        }
+        body {
+            font-family: var(--hrm-font-sans);
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .stat-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            padding: 1.25rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-sm px-3" style="background-color: #0f172a;">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold d-flex align-items-center me-4" href="./">
+                <div class="bg-primary text-white rounded-3 p-2 me-2 d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                    <i class="fa-solid fa-users-gear fs-5"></i>
+                </div>
+                <div class="d-flex flex-column">
+                    <span class="fs-6 lh-1 text-white fw-bold">HỆ THỐNG <span style="color: #60a5fa;">QUẢN LÝ NHÂN SỰ</span></span>
+                    <span class="text-white-50" style="font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 600;">CỔNG THÔNG TIN NHÂN VIÊN</span>
+                </div>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="userNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1 small">
+                    <li class="nav-item"><a class="nav-link" href="./"><i class="fa-solid fa-house me-1"></i>Trang Chủ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="face-checkin"><i class="fa-solid fa-camera me-1 text-info"></i>Điểm Danh Mặt</a></li>
+                    <li class="nav-item"><a class="nav-link active text-primary fw-bold" href="my-timesheet"><i class="fa-solid fa-calendar me-1"></i>Bảng Công Cá Nhân</a></li>
+                    <li class="nav-item"><a class="nav-link" href="my-payslip"><i class="fa-solid fa-file-invoice-dollar me-1 text-success"></i>Phiếu Lương</a></li>
+                    <li class="nav-item"><a class="nav-link" href="leave-request"><i class="fa-solid fa-plane-departure me-1 text-warning"></i>Nghỉ Phép</a></li>
+                    <li class="nav-item"><a class="nav-link" href="tro-ly-ai"><i class="fa-solid fa-wand-magic-sparkles me-1 text-info"></i>Trợ Lý AI</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="admin" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                        <i class="fa-solid fa-gauge me-1"></i>Cổng Quản Trị
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN BODY -->
+    <main class="container py-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h3 class="fw-bold mb-1"><i class="fa-solid fa-calendar-check text-primary me-2"></i>Bảng Chấm Công Cá Nhân</h3>
+                <p class="text-muted small mb-0">Theo dõi thời gian vào/ra, ca làm việc thực tế và ngày công tích lũy</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <label class="small fw-bold text-muted">Kỳ chấm công:</label>
+                <select class="form-select form-select-sm" style="width: 180px;">
+                    <option selected>Tháng 10 / 2026</option>
+                    <option>Tháng 09 / 2026</option>
+                    <option>Tháng 08 / 2026</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- STAT METRICS -->
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card">
+                    <span class="text-muted small fw-bold text-uppercase">Ngày Công Tích Lũy</span>
+                    <h3 class="fw-bold mb-0 text-primary mt-1">21.5 / 22</h3>
+                    <small class="text-success"><i class="fa-solid fa-circle-check me-1"></i>Đạt 97.7% chuẩn</small>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card">
+                    <span class="text-muted small fw-bold text-uppercase">Số Giờ Làm Việc</span>
+                    <h3 class="fw-bold mb-0 text-dark mt-1">172.0 h</h3>
+                    <small class="text-muted">Trung bình 8h / ngày</small>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card">
+                    <span class="text-muted small fw-bold text-uppercase">Số Lần Đi Muộn</span>
+                    <h3 class="fw-bold mb-0 text-warning mt-1">1 lần</h3>
+                    <small class="text-muted">Tổng 25 phút</small>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card">
+                    <span class="text-muted small fw-bold text-uppercase">Nghỉ Phép Có Lương</span>
+                    <h3 class="fw-bold mb-0 text-info mt-1">0.5 ngày</h3>
+                    <small class="text-muted">Phép năm đã duyệt</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLE CHI TIẾT CHẤM CÔNG -->
+        <div class="card border-0 shadow-sm rounded-4 p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-list-check text-primary me-2"></i>Nhật Ký Chấm Công Hàng Ngày (Tháng 10/2026)</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle small mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Ngày</th>
+                            <th>Ca Phân Công</th>
+                            <th>Giờ Vào (Check-In)</th>
+                            <th>Giờ Ra (Check-Out)</th>
+                            <th>Giờ Làm Việc</th>
+                            <th>Công Quy Đổi</th>
+                            <th>Trạng Thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timesheetTbody">
+                        <!-- Nạp mẫu -->
+                        <tr>
+                            <td><strong>21/10/2026 (Thứ 4)</strong></td>
+                            <td>Ca Hành Chính (08:00 - 17:30)</td>
+                            <td>08:02 <span class="badge bg-success-subtle text-success">Đúng giờ</span></td>
+                            <td>--:-- (Đang làm việc)</td>
+                            <td>--</td>
+                            <td>--</td>
+                            <td><span class="badge bg-primary">Đang trong ca</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>20/10/2026 (Thứ 3)</strong></td>
+                            <td>Ca Hành Chính (08:00 - 17:30)</td>
+                            <td>08:00</td>
+                            <td>17:35</td>
+                            <td>8.0 giờ</td>
+                            <td>1.0 công</td>
+                            <td><span class="badge bg-success">Hợp lệ</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>19/10/2026 (Thứ 2)</strong></td>
+                            <td>Ca Hành Chính (08:00 - 17:30)</td>
+                            <td>08:25 <span class="badge bg-warning-subtle text-dark">Muộn 25p</span></td>
+                            <td>17:30</td>
+                            <td>7.6 giờ</td>
+                            <td>0.95 công</td>
+                            <td><span class="badge bg-warning text-dark">Đi muộn</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>16/10/2026 (Thứ 6)</strong></td>
+                            <td>Ca Hành Chính (08:00 - 17:30)</td>
+                            <td>07:55</td>
+                            <td>17:40</td>
+                            <td>8.0 giờ</td>
+                            <td>1.0 công</td>
+                            <td><span class="badge bg-success">Hợp lệ</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>15/10/2026 (Thứ 5)</strong></td>
+                            <td>Ca Chiều (Nghỉ phép buổi sáng)</td>
+                            <td>13:25</td>
+                            <td>17:30</td>
+                            <td>4.0 giờ</td>
+                            <td>0.5 công + 0.5 phép</td>
+                            <td><span class="badge bg-info text-dark">Nghỉ phép 0.5d</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white border-top py-3 mt-5 text-center text-muted small">
+        &copy; 2026 <strong>TimesheetPayroll</strong> — Cổng Thông Tin & Quản Lý Nhân Sự Toàn Diện.
+    </footer>
+</body>
+</html>
