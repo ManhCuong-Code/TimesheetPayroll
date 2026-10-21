@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HỆ THỐNG QUẢN LÝ NHÂN SỰ – CHẤM CÔNG – TÍNH LƯƠNG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            --hrm-primary: #2563eb;
+            --hrm-primary-dark: #1d4ed8;
+            --hrm-bg-main: #f8fafc;
+            --hrm-slate-900: #0f172a;
+            --hrm-slate-800: #1e293b;
+        }
+        body {
+            font-family: var(--hrm-font-sans);
+            background-color: var(--hrm-bg-main);
+            color: #1e293b;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        body, button, input, select, textarea, .btn, .card {
+            font-family: var(--hrm-font-sans);
+        }
+        .hero-banner {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%);
+            color: white;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .feature-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            background: #ffffff;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.08);
+        }
+        .badge-subtle-primary {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+        }
+        .badge-subtle-success {
+            background-color: #ecfdf5;
+            color: #059669;
+            border: 1px solid #a7f3d0;
+        }
+        .badge-subtle-warning {
+            background-color: #fffbeb;
+            color: #d97706;
+            border: 1px solid #fde68a;
+        }
+        .code-box {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVIGATION -->
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm px-3 sticky-top" style="background-color: #0f172a; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold d-flex align-items-center me-4" href="#">
+                <div class="bg-primary text-white rounded-3 p-2 me-2 d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                    <i class="fa-solid fa-users-gear fs-5"></i>
+                </div>
+                <div class="d-flex flex-column">
+                    <span class="fs-5 lh-1 text-white fw-bold">HỆ THỐNG <span style="color: #60a5fa;">QUẢN LÝ NHÂN SỰ</span></span>
+                    <span class="text-white-50" style="font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 600;">CHẤM CÔNG – TÍNH LƯƠNG</span>
+                </div>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1">
+                    <li class="nav-item"><a class="nav-link active" href="#overview"><i class="fa-solid fa-house me-1 text-white-50"></i>Tổng Quan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#face-checkin"><i class="fa-solid fa-face-smile me-1 text-info"></i>Điểm Danh Sinh Trắc</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#simulator"><i class="fa-solid fa-flask-vial me-1 text-warning"></i>Bộ Mô Phỏng Ca</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#architecture"><i class="fa-solid fa-sitemap me-1 text-success"></i>Kiến Trúc & SQL</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#deployment"><i class="fa-solid fa-cloud-arrow-up me-1 text-primary"></i>Hướng Dẫn Triển Khai</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="https://github.com/ManhCuong-Code/TimesheetPayroll" target="_blank" class="btn btn-outline-light btn-sm px-3 shadow-sm">
+                        <i class="fa-brands fa-github me-1"></i>Kho Mã Nguồn GitHub
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO BANNER -->
+    <header class="hero-banner py-5" id="overview">
+        <div class="container py-4">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-8">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="badge bg-primary px-3 py-1 fw-bold"><i class="fa-solid fa-building me-1"></i>ĐỒ ÁN DOANH NGHIỆP</span>
+                        <span class="badge bg-success bg-opacity-25 text-white border border-success px-2 py-1"><i class="fa-solid fa-check-circle me-1"></i>Blazor .NET 10 + SQL Server</span>
+                    </div>
+                    <h1 class="display-6 fw-bold mb-3">HỆ THỐNG QUẢN LÝ NHÂN SỰ – CHẤM CÔNG – TÍNH LƯƠNG</h1>
+                    <p class="lead text-white-50 mb-4">
+                        Giải pháp tự động hóa toàn diện quy trình nhân sự, điểm danh khuôn mặt AI tự xác định ca làm việc theo lịch phân công thực tế, tính công, xét duyệt nghỉ phép và hạch toán bảng lương hàng loạt.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="#simulator" class="btn btn-primary px-4 py-2 fw-semibold shadow-sm">
+                            <i class="fa-solid fa-play me-2"></i>Thử Nghiệm Phân Giải Ca
+                        </a>
+                        <a href="https://github.com/ManhCuong-Code/TimesheetPayroll" target="_blank" class="btn btn-outline-light px-4 py-2 fw-semibold">
+                            <i class="fa-brands fa-github me-2"></i>Xem Mã Nguồn GitHub
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-4 text-center">
+                    <div class="p-4 rounded-4 bg-white bg-opacity-10 border border-white border-opacity-20 shadow">
+                        <div class="mb-3">
+                            <i class="fa-solid fa-camera-viewfinder display-3 text-info"></i>
+                        </div>
+                        <h5 class="fw-bold text-white mb-2">Kiosk Chấm Công 100% Tự Động</h5>
+                        <p class="small text-white-50 mb-0">
+                            Không cần chọn ca, không cần nhập mã nhân viên. AI nhận diện danh tính và SQL Transaction tự động khóa và ghi nhận an toàn.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- SECTION: CORE MODULES -->
+    <section class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <span class="badge badge-subtle-primary px-3 py-1 fw-bold text-uppercase">Tính năng cốt lõi</span>
+                <h2 class="fw-bold mt-2">Các Phân Hệ Nghiệp Vụ Chuẩn Hóa</h2>
+                <p class="text-muted">Được thiết kế theo kiến trúc Clean Architecture & Domain-Driven Design (DDD)</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card p-4 h-100 shadow-sm">
+                        <div class="bg-primary-subtle text-primary rounded-3 p-3 d-inline-flex mb-3">
+                            <i class="fa-solid fa-camera-rotate fs-4"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">Chấm Công Khuôn Mặt AI</h5>
+                        <p class="text-muted small mb-0">
+                            Tự động quét camera, kiểm tra liveness và trích xuất vector đặc trưng. Xác định danh tính nhân viên và ghi nhận thời gian vào/ra.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card p-4 h-100 shadow-sm">
+                        <div class="bg-success-subtle text-success rounded-3 p-3 d-inline-flex mb-3">
+                            <i class="fa-solid fa-business-time fs-4"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">Tự Động Phân Giải Ca Làm Việc</h5>
+                        <p class="text-muted small mb-0">
+                            Service <code>AttendanceShiftResolver</code> tự động truy vấn lịch phân công thực tế, tính toán cửa sổ chấm công, xử lý ca qua đêm (22:00 - 06:00) và đa ca trong ngày.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card p-4 h-100 shadow-sm">
+                        <div class="bg-warning-subtle text-warning rounded-3 p-3 d-inline-flex mb-3">
+                            <i class="fa-solid fa-calculator fs-4"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">Quản Trị Bảng Lương Hàng Loạt</h5>
+                        <p class="text-muted small mb-0">
+                            Batch Calculation tính lương tự động cho toàn bộ nhân sự theo ngày công thực tế, phụ cấp cơm/xăng, khấu trừ bảo hiểm luật định (BHXH 8%, BHYT 1.5%, BHTN 1%).
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card p-4 h-100 shadow-sm">
+                        <div class="bg-info-subtle text-info rounded-3 p-3 d-inline-flex mb-3">
+                            <i class="fa-solid fa-calendar-check fs-4"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">Nghỉ Phép & Yêu Cầu Chấm Công</h5>
+                        <p class="text-muted small mb-0">
+                            Nhân viên nộp đơn phép trực tuyến hoặc bổ sung giờ vào/ra khi quên quẹt thẻ. Quản lý xét duyệt và tự động phản ánh vào bảng công.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card p-4 h-100 shadow-sm">
+                        <div class="bg-danger-subtle text-danger rounded-3 p-3 d-inline-flex mb-3">
+                            <i class="fa-solid fa-user-shield fs-4"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">Phân Quyền RBAC 4 Cấp Độ</h5>
+                        <p class="text-muted small mb-0">
+                            Bảo mật nghiêm ngặt phân vai: <code>ROLE_EMPLOYEE</code> (Nhân viên), <code>ROLE_MANAGER</code> (Quản lý), <code>ROLE_HR_ACCOUNTANT</code> (Kế toán), <code>ROLE_ADMIN</code> (Quản trị viên).
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card p-4 h-100 shadow-sm">
+                        <div class="bg-primary-subtle text-primary rounded-3 p-3 d-inline-flex mb-3">
+                            <i class="fa-solid fa-database fs-4"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">Giao Dịch SQL An Toàn Tuyệt Đối</h5>
+                        <p class="text-muted small mb-0">
+                            Stored Procedure chuyên biệt với khóa <code>UPDLOCK, ROWLOCK</code>, cơ chế Cooldown chống quét trùng lặp và loại bỏ Race Condition.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: INTERACTIVE SIMULATOR -->
+    <section class="py-5 bg-white border-top border-bottom" id="simulator">
+        <div class="container">
+            <div class="text-center mb-4">
+                <span class="badge badge-subtle-warning px-3 py-1 fw-bold text-uppercase"><i class="fa-solid fa-flask me-1"></i>Trực tiếp trải nghiệm</span>
+                <h2 class="fw-bold mt-2">Mô Phỏng Phân Giải Ca Làm Việc Tự Động</h2>
+                <p class="text-muted">Kiểm thử thuật toán giải quyết ca làm việc theo 5 kịch bản thực tế của đề án</p>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="card border-0 shadow-sm p-4 rounded-4 bg-light">
+                        <div class="row g-3 align-items-end mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Nhân viên mẫu:</label>
+                                <select class="form-select" id="simEmployee">
+                                    <option value="1">EMP001 - Nguyễn Văn An (Ca Hành Chính 08:00 - 17:30)</option>
+                                    <option value="6">EMP006 - Đỗ Thị Mai Linh (Đa Ca: Sáng 08:00 & Chiều 13:30)</option>
+                                    <option value="7">EMP007 - Vũ Quốc Anh (Ca Đêm Qua 24h: 22:00 - 06:00)</option>
+                                    <option value="99">EMP999 - Nhân viên chưa có lịch phân công</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Thời điểm soi mặt quét camera:</label>
+                                <input type="datetime-local" class="form-control" id="simTime" value="2026-10-21T08:05">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary w-100 fw-semibold" onclick="runSimulation()">
+                                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i>Chạy Phân Giải Ca
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-white rounded-3 border" id="simResultBox">
+                            <div class="d-flex align-items-center text-muted">
+                                <i class="fa-solid fa-circle-info me-2 text-primary"></i>Chọn nhân viên và thời gian, sau đó nhấn "Chạy Phân Giải Ca" để xem thuật toán xử lý.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: ARCHITECTURE & SQL -->
+    <section class="py-5" id="architecture">
+        <div class="container">
+            <div class="text-center mb-5">
+                <span class="badge badge-subtle-success px-3 py-1 fw-bold text-uppercase">Cấu trúc hệ thống</span>
+                <h2 class="fw-bold mt-2">Kiến Trúc Dữ Liệu & Stored Procedures</h2>
+                <p class="text-muted">Cơ sở dữ liệu Microsoft SQL Server với chuẩn hóa phân ca và chấm công</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card h-100 p-4 border-0 shadow-sm rounded-4">
+                        <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-table-cells text-primary me-2"></i>Các Bảng Dữ Liệu Trọng Yếu</h5>
+                        <ul class="list-group list-group-flush small">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><strong>shift_assignments</strong>: Bảng phân công ca theo ngày</span>
+                                <span class="badge bg-primary rounded-pill">Mới</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><strong>work_shifts</strong>: Cấu hình cửa sổ sớm/muộn & ca qua đêm</span>
+                                <span class="badge bg-info rounded-pill">Nâng cấp</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><strong>timesheets</strong>: Lưu trữ bản ghi chấm công (Unique đa ca)</span>
+                                <span class="badge bg-success rounded-pill">Chuẩn hóa</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><strong>employee_face_profiles</strong>: Mẫu đặc trưng khuôn mặt AI</span>
+                                <span class="badge bg-secondary rounded-pill">Bảo mật</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><strong>face_audit_logs</strong>: Nhật ký kiểm toán thiết bị sinh trắc</span>
+                                <span class="badge bg-secondary rounded-pill">Kiểm toán</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card h-100 p-4 border-0 shadow-sm rounded-4">
+                        <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-code text-success me-2"></i>5 Stored Procedures Chuyên Biệt</h5>
+                        <ul class="list-group list-group-flush small">
+                            <li class="list-group-item">
+                                <code>sp_GetAssignedShiftsForAttendance</code>: Truy vấn các ca được phân công cho nhân viên quanh thời điểm chấm công.
+                            </li>
+                            <li class="list-group-item">
+                                <code>sp_ResolveAttendanceShift</code>: Phân giải ca làm việc tự động và tính điểm ưu tiên Check-in vs Check-out.
+                            </li>
+                            <li class="list-group-item">
+                                <code>sp_ProcessFaceAttendance</code>: Giao dịch SQL an toàn (UPDLOCK), tính giờ công, trừ nghỉ trưa và kiểm soát Cooldown 3 phút.
+                            </li>
+                            <li class="list-group-item">
+                                <code>sp_GetAttendanceStatus</code>: Kiểm tra trạng thái làm việc thực tế của nhân viên trong ngày.
+                            </li>
+                            <li class="list-group-item">
+                                <code>sp_GetMonthlyAttendanceSummary</code>: Tổng hợp dữ liệu công tháng phục vụ kế toán tính lương.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: DEPLOYMENT GUIDE -->
+    <section class="py-5 bg-light border-top" id="deployment">
+        <div class="container">
+            <div class="text-center mb-5">
+                <span class="badge badge-subtle-primary px-3 py-1 fw-bold text-uppercase">Triển khai</span>
+                <h2 class="fw-bold mt-2">Hướng Dẫn Khởi Chạy Ứng Dụng</h2>
+                <p class="text-muted">Các bước để vận hành hệ thống trên môi trường máy chủ và máy trạm Kiosk</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card p-4 border-0 shadow-sm rounded-4 h-100">
+                        <h5 class="fw-bold text-primary mb-3">1. Cơ sở dữ liệu SQL Server</h5>
+                        <p class="small text-muted mb-2">Chạy tệp SQL migration đã chuẩn bị sẵn trên SQL Server:</p>
+                        <div class="code-box mb-3">
+sqlcmd -S .\SQLEXPRESS -d BangChamCongDB -i "Scripts\01_AutoFaceShift_Migration.sql"
+                        </div>
+                        <ul class="small text-secondary mb-0">
+                            <li>Tự động mở rộng bảng <code>work_shifts</code> với cửa sổ sớm/muộn.</li>
+                            <li>Tạo bảng <code>shift_assignments</code> và sinh dữ liệu phân ca mẫu.</li>
+                            <li>Biên dịch 5 Stored Procedures phục vụ điểm danh tự động.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card p-4 border-0 shadow-sm rounded-4 h-100">
+                        <h5 class="fw-bold text-primary mb-3">2. Ứng dụng Blazor Web Kiosk</h5>
+                        <p class="small text-muted mb-2">Khởi chạy dự án bằng .NET SDK:</p>
+                        <div class="code-box mb-3">
+cd project\TimesheetPayroll
+dotnet build TimesheetPayroll.sln -c Release
+dotnet run --project TimesheetPayroll.Web
+                        </div>
+                        <ul class="small text-secondary mb-0">
+                            <li>Mở trình duyệt: <code>http://localhost:5050/face-checkin</code></li>
+                            <li>Đưa khuôn mặt vào camera để chấm công tự động không cần bấm chọn ca.</li>
+                            <li>Quản lý ca & phân ca tại: <code>http://localhost:5050/admin/shifts</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-dark text-white py-4 border-top border-secondary">
+        <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2 small">
+            <div>
+                <span class="badge bg-primary text-white fw-bold px-2 py-1 me-2">HRMS</span>
+                <span>&copy; 2026 <strong>HỆ THỐNG QUẢN LÝ NHÂN SỰ – CHẤM CÔNG – TÍNH LƯƠNG</strong>. Tất cả quyền được bảo lưu.</span>
+            </div>
+            <div class="d-flex align-items-center gap-3 text-white-50">
+                <span>Font: Be Vietnam Pro & Plus Jakarta Sans</span>
+                <span>•</span>
+                <span>Chuẩn mã hóa: UTF-8 Tiếng Việt</span>
+                <span>•</span>
+                <a href="https://github.com/ManhCuong-Code/TimesheetPayroll" target="_blank" class="text-white text-decoration-none">
+                    <i class="fa-brands fa-github me-1"></i>GitHub Repository
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function runSimulation() {
+            const emp = document.getElementById('simEmployee').value;
+            const timeVal = document.getElementById('simTime').value;
+            const resBox = document.getElementById('simResultBox');
+            
+            const time = new Date(timeVal);
+            const hour = time.getHours();
+            const minute = time.getMinutes();
+            const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+
+            if (emp === '99') {
+                resBox.innerHTML = `
+                    <div class="alert alert-warning mb-0">
+                        <div class="fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Trạng thái: NO_ASSIGNED_SHIFT</div>
+                        <div class="small mt-1">Bạn chưa được phân công ca làm việc phù hợp cho ngày hôm nay. Vui lòng liên hệ quản lý.</div>
+                    </div>
+                `;
+            } else if (emp === '7') {
+                // Ca đêm 22:00 - 06:00
+                if (hour >= 21 || hour < 2) {
+                    resBox.innerHTML = `
+                        <div class="alert alert-success mb-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold"><i class="fa-solid fa-circle-check me-2"></i>Trạng thái: RESOLVED (Tự Động Xác Định Ca)</span>
+                                <span class="badge bg-dark text-warning"><i class="fa-solid fa-moon me-1"></i>Ca qua đêm</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="small">
+                                <strong>Nhân viên:</strong> [EMP007] Vũ Quốc Anh • Phòng Công Nghệ Thông Tin<br>
+                                <strong>Ca làm việc:</strong> Ca Đêm (22:00 - 06:00)<br>
+                                <strong>Thao tác:</strong> <span class="badge bg-primary">CHECK-IN (Vào Ca)</span> lúc ${timeStr}<br>
+                                <strong>Độ tin cậy AI:</strong> 96.8% • Cửa sổ chấm công hợp lệ (21:00 - 08:00 hôm sau)
+                            </div>
+                        </div>
+                    `;
+                } else if (hour >= 5 && hour <= 8) {
+                    resBox.innerHTML = `
+                        <div class="alert alert-success mb-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold"><i class="fa-solid fa-circle-check me-2"></i>Trạng thái: RESOLVED (Tự Động Kết Thúc Ca Đêm)</span>
+                                <span class="badge bg-dark text-warning"><i class="fa-solid fa-moon me-1"></i>Ca qua đêm</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="small">
+                                <strong>Nhân viên:</strong> [EMP007] Vũ Quốc Anh • Phòng Công Nghệ Thông Tin<br>
+                                <strong>Ca làm việc:</strong> Ca Đêm bắt đầu từ ngày hôm trước (22:00 - 06:00)<br>
+                                <strong>Thao tác:</strong> <span class="badge bg-success">CHECK-OUT (Hết Ca)</span> lúc ${timeStr}<br>
+                                <strong>Số giờ làm việc thực tế:</strong> 8.0 giờ • <strong>Ngày công:</strong> 1.0 công chuẩn
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resBox.innerHTML = `
+                        <div class="alert alert-secondary mb-0">
+                            <div class="fw-bold"><i class="fa-solid fa-clock me-2"></i>Trạng thái: OUTSIDE_WINDOW</div>
+                            <div class="small mt-1">Thời điểm chấm công lúc ${timeStr} nằm ngoài cửa sổ cho phép của Ca Đêm (21:00 - 08:00).</div>
+                        </div>
+                    `;
+                }
+            } else if (emp === '6') {
+                // Đa ca: Ca Sáng (08:00 - 12:00) & Ca Chiều (13:30 - 17:30)
+                if (hour >= 7 && hour < 12) {
+                    resBox.innerHTML = `
+                        <div class="alert alert-success mb-0">
+                            <div class="fw-bold"><i class="fa-solid fa-circle-check me-2"></i>Trạng thái: RESOLVED - Ca Sáng</div>
+                            <hr class="my-2">
+                            <div class="small">
+                                <strong>Nhân viên:</strong> [EMP006] Đỗ Thị Mai Linh • Phòng Nhân Sự<br>
+                                <strong>Ca làm việc tự chọn:</strong> Ca Sáng (08:00 - 12:00)<br>
+                                <strong>Thao tác:</strong> <span class="badge bg-primary">CHECK-IN</span> lúc ${timeStr}
+                            </div>
+                        </div>
+                    `;
+                } else if (hour >= 13 && hour <= 19) {
+                    resBox.innerHTML = `
+                        <div class="alert alert-success mb-0">
+                            <div class="fw-bold"><i class="fa-solid fa-circle-check me-2"></i>Trạng thái: RESOLVED - Ca Chiều</div>
+                            <hr class="my-2">
+                            <div class="small">
+                                <strong>Nhân viên:</strong> [EMP006] Đỗ Thị Mai Linh • Phòng Nhân Sự<br>
+                                <strong>Ca làm việc tự chọn:</strong> Ca Chiều (13:30 - 17:30)<br>
+                                <strong>Thao tác:</strong> <span class="badge bg-primary">${hour < 15 ? 'CHECK-IN' : 'CHECK-OUT'}</span> lúc ${timeStr}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resBox.innerHTML = `
+                        <div class="alert alert-danger mb-0">
+                            <div class="fw-bold"><i class="fa-solid fa-circle-exclamation me-2"></i>Trạng thái: AMBIGUOUS / OUTSIDE_WINDOW</div>
+                            <div class="small mt-1">Khoảng thời gian nằm giữa 2 ca hoặc ngoài khung giờ cho phép. Hệ thống không tự ý chọn ca mà yêu cầu kiểm tra.</div>
+                        </div>
+                    `;
+                }
+            } else {
+                // EMP001: Ca Hành Chính 08:00 - 17:30
+                if (hour >= 7 && hour < 12) {
+                    resBox.innerHTML = `
+                        <div class="alert alert-success mb-0">
+                            <div class="fw-bold"><i class="fa-solid fa-circle-check me-2"></i>Trạng thái: RESOLVED</div>
+                            <hr class="my-2">
+                            <div class="small">
+                                <strong>Nhân viên:</strong> [EMP001] Nguyễn Văn An • Ban Giám Đốc<br>
+                                <strong>Ca làm việc:</strong> Ca Hành Chính (08:00 - 17:30)<br>
+                                <strong>Thao tác:</strong> <span class="badge bg-primary">CHECK-IN</span> lúc ${timeStr}<br>
+                                <strong>Đánh giá:</strong> ${hour === 8 && minute <= 15 ? '<span class="text-success fw-bold">Đúng giờ</span>' : '<span class="text-warning fw-bold">Đi muộn</span>'}
+                            </div>
+                        </div>
+                    `;
+                } else if (hour >= 16 && hour <= 20) {
+                    resBox.innerHTML = `
+                        <div class="alert alert-success mb-0">
+                            <div class="fw-bold"><i class="fa-solid fa-circle-check me-2"></i>Trạng thái: RESOLVED</div>
+                            <hr class="my-2">
+                            <div class="small">
+                                <strong>Nhân viên:</strong> [EMP001] Nguyễn Văn An • Ban Giám Đốc<br>
+                                <strong>Ca làm việc:</strong> Ca Hành Chính (08:00 - 17:30)<br>
+                                <strong>Thao tác:</strong> <span class="badge bg-success">CHECK-OUT</span> lúc ${timeStr}<br>
+                                <strong>Ngày công quy đổi:</strong> 1.0 công chuẩn
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resBox.innerHTML = `
+                        <div class="alert alert-secondary mb-0">
+                            <div class="fw-bold"><i class="fa-solid fa-clock me-2"></i>Trạng thái: OUTSIDE_WINDOW</div>
+                            <div class="small mt-1">Thời điểm ${timeStr} nằm ngoài cửa sổ chấm công quy định của Ca Hành Chính.</div>
+                        </div>
+                    `;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
