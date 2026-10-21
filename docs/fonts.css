@@ -1,0 +1,57 @@
+/* ==========================================================================
+   LOCAL BE VIETNAM PRO FONT-FACE DEFINITIONS (OFFLINE & LOCALHOST READY)
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: local('Be Vietnam Pro Light'), local('BeVietnamPro-Light'),
+       url('fonts/BeVietnamPro-Light.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Be Vietnam Pro Regular'), local('BeVietnamPro-Regular'),
+       url('fonts/BeVietnamPro-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: local('Be Vietnam Pro Medium'), local('BeVietnamPro-Medium'),
+       url('fonts/BeVietnamPro-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Be Vietnam Pro SemiBold'), local('BeVietnamPro-SemiBold'),
+       url('fonts/BeVietnamPro-SemiBold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Be Vietnam Pro Bold'), local('BeVietnamPro-Bold'),
+       url('fonts/BeVietnamPro-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Be Vietnam Pro Italic'), local('BeVietnamPro-Italic'),
+       url('fonts/BeVietnamPro-Italic.ttf') format('truetype');
+}
