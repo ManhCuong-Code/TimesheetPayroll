@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/" />
+    <script>
+        (function(l) {
+            var isGitHubProject = l.hostname.endsWith('github.io') && l.pathname.indexOf('/TimesheetPayroll') === 0;
+            var baseEl = document.querySelector('base');
+            if (baseEl) {
+                baseEl.setAttribute('href', isGitHubProject ? '/TimesheetPayroll/' : '/');
+            }
+        })(window.location);
+    </script>
+    <title>Phiếu Lương Cá Nhân — TimesheetPayroll</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+            --hrm-primary: #2563eb;
+            --hrm-slate-900: #0f172a;
+        }
+        body {
+            font-family: var(--hrm-font-sans);
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+        .payslip-card {
+            background: white;
+            border-radius: 1.25rem;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+            max-width: 820px;
+            margin: 0 auto;
+        }
+        @media print {
+            body { background: white; }
+            .no-print { display: none !important; }
+            .payslip-card { border: none; box-shadow: none; margin: 0; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVBAR (NO PRINT) -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-sm px-3 no-print" style="background-color: #0f172a;">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold d-flex align-items-center me-4" href="./">
+                <div class="bg-primary text-white rounded-3 p-2 me-2 d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                    <i class="fa-solid fa-users-gear fs-5"></i>
+                </div>
+                <div class="d-flex flex-column">
+                    <span class="fs-6 lh-1 text-white fw-bold">HỆ THỐNG <span style="color: #60a5fa;">QUẢN LÝ NHÂN SỰ</span></span>
+                    <span class="text-white-50" style="font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 600;">PHIẾU LƯƠNG ĐIỆN TỬ</span>
+                </div>
+            </a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1 small">
+                    <li class="nav-item"><a class="nav-link" href="./"><i class="fa-solid fa-house me-1"></i>Trang Chủ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="face-checkin"><i class="fa-solid fa-camera me-1"></i>Kiosk Điểm Danh</a></li>
+                    <li class="nav-item"><a class="nav-link" href="my-timesheet"><i class="fa-solid fa-calendar me-1"></i>Bảng Công</a></li>
+                    <li class="nav-item"><a class="nav-link active text-primary fw-bold" href="my-payslip"><i class="fa-solid fa-file-invoice-dollar me-1"></i>Phiếu Lương</a></li>
+                    <li class="nav-item"><a class="nav-link" href="leave-request"><i class="fa-solid fa-plane-departure me-1"></i>Nghỉ Phép</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-outline-light btn-sm rounded-pill px-3" onclick="window.print()">
+                        <i class="fa-solid fa-print me-1"></i>In Phiếu Lương
+                    </button>
+                    <a href="admin" class="btn btn-primary btn-sm rounded-pill px-3">
+                        <i class="fa-solid fa-gauge me-1"></i>Quản Trị
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN BODY -->
+    <main class="container py-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 no-print">
+            <div>
+                <h4 class="fw-bold mb-1"><i class="fa-solid fa-receipt text-success me-2"></i>Phiếu Lương Điện Tử Chi Tiết</h4>
+                <p class="text-muted small mb-0">Hạch toán thu nhập, các khoản phụ cấp và trích nộp bảo hiểm bắt buộc</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <select class="form-select form-select-sm" id="selectEmpPayslip" onchange="loadSelectedPayslip()">
+                    <!-- Options nạp từ JS -->
+                </select>
+                <button class="btn btn-success btn-sm rounded-pill px-3 shadow-sm" onclick="window.print()">
+                    <i class="fa-solid fa-print me-1"></i>In PDF
+                </button>
+            </div>
+        </div>
+
+        <div class="payslip-card p-4 p-md-5">
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
+                <div>
+                    <h5 class="fw-bold mb-1 text-primary">CÔNG TY CỔ PHẦN CÔNG NGHỆ TIMESHEETPAYROLL</h5>
+                    <p class="small text-muted mb-0">Địa chỉ: Tòa nhà Innovation Hub, 88 Lê Lợi, TP. Huế • MST: 3301234567</p>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-success px-3 py-2 fs-6">ĐÃ CHỐT SỔ</span>
+                    <div class="small text-muted mt-1">Kỳ lương: <strong>Tháng 10/2026</strong></div>
+                </div>
+            </div>
+
+            <!-- THÔNG TIN NHÂN SỰ -->
+            <div class="row g-3 mb-4 p-3 bg-light rounded-3 small">
+                <div class="col-sm-6">
+                    <div>Mã nhân viên: <strong id="psCode">EMP001</strong></div>
+                    <div>Họ và tên: <strong class="text-primary fs-6" id="psName">Nguyễn Văn An</strong></div>
+                    <div>Phòng ban: <strong id="psDept">Ban Giám Đốc</strong></div>
+                </div>
+                <div class="col-sm-6">
+                    <div>Số ngày công chuẩn: <strong>22 ngày</strong></div>
+                    <div>Số ngày công thực tế: <strong class="text-success" id="psWorkDays">22 ngày</strong></div>
+                    <div>Tài khoản ngân hàng: <strong>0421000123456 (Vietcombank)</strong></div>
+                </div>
+            </div>
+
+            <!-- BẢNG KÊ CHI TIẾT THU NHẬP -->
+            <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-plus-circle text-success me-1"></i>I. CÁC KHOẢN THU NHẬP (A)</h6>
+            <table class="table table-sm table-bordered small mb-4">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nội dung</th>
+                        <th class="text-center">Số lượng / Tỷ lệ</th>
+                        <th class="text-end">Thành tiền (VNĐ)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1. Mức lương cơ bản thỏa thuận hợp đồng</td>
+                        <td class="text-center">Hợp đồng chính thức</td>
+                        <td class="text-end" id="psBaseSalary">25.000.000 ₫</td>
+                    </tr>
+                    <tr>
+                        <td>2. Lương thực nhận theo ngày công thực tế</td>
+                        <td class="text-center" id="psWorkDaysRate">22 / 22 ngày</td>
+                        <td class="text-end fw-bold" id="psGrossBase">25.000.000 ₫</td>
+                    </tr>
+                    <tr>
+                        <td>3. Phụ cấp tiền ăn trưa công vụ</td>
+                        <td class="text-center">Cố định tháng</td>
+                        <td class="text-end" id="psLunch">1.000.000 ₫</td>
+                    </tr>
+                    <tr>
+                        <td>4. Phụ cấp xăng xe & điện thoại</td>
+                        <td class="text-center">Cố định tháng</td>
+                        <td class="text-end" id="psTransport">1.500.000 ₫</td>
+                    </tr>
+                    <tr>
+                        <td>5. Thưởng chuyên cần (100% công chuẩn)</td>
+                        <td class="text-center">Chính sách công ty</td>
+                        <td class="text-end text-success" id="psBonus">300.000 ₫</td>
+                    </tr>
+                    <tr class="table-light fw-bold">
+                        <td colspan="2">TỔNG THU NHẬP CHỊU THUẾ (A):</td>
+                        <td class="text-end text-success fs-6" id="psTotalIncome">27.800.000 ₫</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- BẢNG KÊ KHẤU TRỪ BẢO HIỂM -->
+            <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-minus-circle text-danger me-1"></i>II. CÁC KHOẢN TRÍCH NỘP THEO LUẬT (B)</h6>
+            <table class="table table-sm table-bordered small mb-4">
+                <thead class="table-light">
+                    <tr>
+                        <th>Khoản mục bảo hiểm luật định</th>
+                        <th class="text-center">Tỷ lệ NLĐ đóng</th>
+                        <th class="text-end">Số tiền khấu trừ (VNĐ)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1. Bảo hiểm Xã hội (BHXH)</td>
+                        <td class="text-center">8.0%</td>
+                        <td class="text-end" id="psBhxh">2.000.000 ₫</td>
+                    </tr>
+                    <tr>
+                        <td>2. Bảo hiểm Y tế (BHYT)</td>
+                        <td class="text-center">1.5%</td>
+                        <td class="text-end" id="psBhyt">375.000 ₫</td>
+                    </tr>
+                    <tr>
+                        <td>3. Bảo hiểm Thất nghiệp (BHTN)</td>
+                        <td class="text-center">1.0%</td>
+                        <td class="text-end" id="psBhtn">250.000 ₫</td>
+                    </tr>
+                    <tr class="table-light fw-bold text-danger">
+                        <td colspan="2">TỔNG CÁC KHOẢN GIẢM TRỪ (B):</td>
+                        <td class="text-end text-danger" id="psTotalDeduct">2.625.000 ₫</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- THỰC LĨNH -->
+            <div class="p-3 bg-primary bg-opacity-10 border border-primary rounded-3 text-center mb-4">
+                <span class="text-muted small fw-bold text-uppercase d-block mb-1">SỐ TIỀN THỰC LĨNH CHUYỂN KHOẢN (A - B):</span>
+                <h3 class="fw-bold text-primary mb-0" id="psNetSalary">25.175.000 ₫</h3>
+                <small class="text-muted">Bằng chữ: <em>Hai mươi lăm triệu một trăm bảy mươi lăm nghìn đồng.</em></small>
+            </div>
+
+            <!-- CHỮ KÝ PHÊ DUYỆT -->
+            <div class="row text-center mt-5 pt-3 small">
+                <div class="col-4">
+                    <strong>Người Lập Phiếu</strong><br>
+                    <span class="text-muted">(Ký, họ tên)</span><br><br><br>
+                    <strong>Trần Thị Bích</strong>
+                </div>
+                <div class="col-4">
+                    <strong>Kế Toán Trưởng</strong><br>
+                    <span class="text-muted">(Ký, họ tên)</span><br><br><br>
+                    <strong>Nguyễn Hải Yến</strong>
+                </div>
+                <div class="col-4">
+                    <strong>Giám Đốc Duyệt</strong><br>
+                    <span class="text-muted">(Ký, đóng dấu)</span><br><br><br>
+                    <strong>Nguyễn Văn An</strong>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="data/hrm_data.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var select = document.getElementById('selectEmpPayslip');
+            HRM_DATA.employees.forEach(function(e) {
+                var opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = `[${e.code}] ${e.name} - ${e.department}`;
+                select.appendChild(opt);
+            });
+            loadSelectedPayslip();
+        });
+
+        function loadSelectedPayslip() {
+            var empId = parseInt(document.getElementById('selectEmpPayslip').value);
+            var emp = HRM_DATA.employees.find(x => x.id === empId) || HRM_DATA.employees[0];
+            var sal = calculateSalaryRecord(emp);
+
+            document.getElementById('psCode').textContent = sal.code;
+            document.getElementById('psName').textContent = sal.name;
+            document.getElementById('psDept').textContent = sal.department;
+            document.getElementById('psWorkDays').textContent = sal.workDays + ' ngày';
+            document.getElementById('psWorkDaysRate').textContent = sal.workDays + ' / 22 ngày';
+            document.getElementById('psBaseSalary').textContent = formatVND(sal.baseSalary);
+            document.getElementById('psGrossBase').textContent = formatVND(sal.grossBase);
+            document.getElementById('psLunch').textContent = formatVND(emp.lunchAllowance);
+            document.getElementById('psTransport').textContent = formatVND(emp.transportAllowance);
+            document.getElementById('psBonus').textContent = formatVND(sal.attendanceBonus);
+            document.getElementById('psTotalIncome').textContent = formatVND(sal.totalIncome);
+            document.getElementById('psBhxh').textContent = formatVND(sal.bhxh);
+            document.getElementById('psBhyt').textContent = formatVND(sal.bhyt);
+            document.getElementById('psBhtn').textContent = formatVND(sal.bhtn);
+            document.getElementById('psTotalDeduct').textContent = formatVND(sal.totalDeduction);
+            document.getElementById('psNetSalary').textContent = formatVND(sal.netSalary);
+        }
+    </script>
+</body>
+</html>

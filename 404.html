@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8">
+    <title>Hệ Thống Quản Lý Nhân Sự – Chấm Công – Tính Lương</title>
+    <script type="text/javascript">
+      // Single Page Apps for GitHub Pages
+      // MIT License - https://github.com/rafgraph/spa-github-pages
+      var l = window.location;
+      var isGitHubProjectPage = l.hostname.endsWith('github.io') && l.pathname.indexOf('/TimesheetPayroll') === 0;
+      var pathSegmentsToKeep = isGitHubProjectPage ? 1 : 0;
+
+      var path = l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~');
+      var cleanRedirect = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+        path +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash;
+      
+      l.replace(cleanRedirect);
+    </script>
+  </head>
+  <body style="background: #0f172a; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+    <div style="text-align: center;">
+      <h2 style="color: #60a5fa;">HỆ THỐNG QUẢN LÝ NHÂN SỰ – CHẤM CÔNG – TÍNH LƯƠNG</h2>
+      <p style="color: #94a3b8;">Đang tải và điều hướng trang, vui lòng chờ trong giây lát...</p>
+    </div>
+  </body>
+</html>

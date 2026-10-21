@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/" />
+    <script>
+        // Single Page Apps for GitHub Pages - Dynamic Base & Redirect Handler
+        (function(l) {
+            var isGitHubProject = l.hostname.endsWith('github.io') && l.pathname.indexOf('/TimesheetPayroll') === 0;
+            var baseEl = document.querySelector('base');
+            if (baseEl) {
+                baseEl.setAttribute('href', isGitHubProject ? '/TimesheetPayroll/' : '/');
+            }
+
+            if (l.search[1] === '/' ) {
+                var decoded = l.search.slice(1).split('&').map(function(s) { 
+                    var clean = s.replace(/~and~/g, '&');
+                    return clean.startsWith('q=') ? clean.substring(2) : clean;
+                }).join('?');
+                var basePathPrefix = isGitHubProject ? '/TimesheetPayroll' : '';
+                var targetPath = decoded.startsWith('/') ? decoded : '/' + decoded;
+                window.history.replaceState(null, null,
+                    basePathPrefix + targetPath + l.hash
+                );
+            }
+        })(window.location);
+    </script>
+    <title>HỆ THỐNG QUẢN LÝ NHÂN SỰ – CHẤM CÔNG – TÍNH LƯƠNG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="app.css" onerror="this.onerror=null;this.href='style.css';">
+    <style>
+        :root {
+            --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+            --hrm-primary: #2563eb;
+            --hrm-primary-dark: #1d4ed8;
+            --hrm-bg-main: #f8fafc;
+            --hrm-slate-900: #0f172a;
+            --hrm-slate-800: #1e293b;
+        }
+        body {
+            font-family: var(--hrm-font-sans);
+            background-color: var(--hrm-bg-main);
+            color: #1e293b;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+        .hero-banner {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%);
+            color: white;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .feature-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 1.25rem;
+            transition: all 0.25s ease;
+            background: #ffffff;
+            height: 100%;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 10px 10px -5px rgba(15, 23, 42, 0.04);
+            border-color: #93c5fd;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVIGATION -->
+    <nav class="navbar navbar-expand-xl navbar-dark shadow-sm px-3 sticky-top" style="background-color: #0f172a; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold d-flex align-items-center me-4" href="./">
+                <div class="bg-primary text-white rounded-3 p-2 me-2 d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                    <i class="fa-solid fa-users-gear fs-5"></i>
+                </div>
+                <div class="d-flex flex-column">
+                    <span class="fs-5 lh-1 text-white fw-bold">HỆ THỐNG <span style="color: #60a5fa;">QUẢN LÝ NHÂN SỰ</span></span>
+                    <span class="text-white-50" style="font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 600;">CHẤM CÔNG – TÍNH LƯƠNG</span>
+                </div>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navMain">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1 small">
+                    <li class="nav-item"><a class="nav-link active fw-bold text-white" href="./"><i class="fa-solid fa-house me-1"></i>Trang Chủ</a></li>
+                    <li class="nav-item"><a class="nav-link text-white-50" href="face-checkin"><i class="fa-solid fa-camera me-1 text-info"></i>Kiosk Điểm Danh</a></li>
+                    <li class="nav-item"><a class="nav-link text-white-50" href="admin"><i class="fa-solid fa-gauge-high me-1 text-warning"></i>Trung Tâm Quản Trị</a></li>
+                    <li class="nav-item"><a class="nav-link text-white-50" href="my-timesheet"><i class="fa-solid fa-calendar me-1 text-primary"></i>Bảng Công</a></li>
+                    <li class="nav-item"><a class="nav-link text-white-50" href="my-payslip"><i class="fa-solid fa-file-invoice-dollar me-1 text-success"></i>Phiếu Lương</a></li>
+                    <li class="nav-item"><a class="nav-link text-white-50" href="leave-request"><i class="fa-solid fa-plane-departure me-1 text-danger"></i>Nghỉ Phép</a></li>
+                    <li class="nav-item"><a class="nav-link text-white-50" href="tro-ly-ai"><i class="fa-solid fa-wand-magic-sparkles me-1 text-info"></i>Trợ Lý AI</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="login" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm fw-bold">
+                        <i class="fa-solid fa-right-to-bracket me-1"></i>Đăng Nhập
+                    </a>
+                    <a href="https://github.com/ManhCuong-Code/TimesheetPayroll" target="_blank" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                        <i class="fa-brands fa-github me-1"></i>GitHub
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO BANNER -->
+    <header class="hero-banner py-5">
+        <div class="container py-4">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-8">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="badge bg-primary px-3 py-1 fw-bold"><i class="fa-solid fa-building me-1"></i>ĐỒ ÁN TỐT NGHIỆP DOANH NGHIỆP</span>
+                        <span class="badge bg-success bg-opacity-25 text-white border border-success px-2 py-1"><i class="fa-solid fa-server me-1"></i>ASP.NET Core .NET 10 + SQL Server</span>
+                    </div>
+                    <h1 class="display-6 fw-bold mb-3">HỆ THỐNG QUẢN LÝ NHÂN SỰ – CHẤM CÔNG – TÍNH LƯƠNG</h1>
+                    <p class="lead text-white-50 mb-4" style="font-size: 1.1rem;">
+                        Giải pháp tự động hóa toàn diện quy trình nhân sự, điểm danh khuôn mặt AI tự động xác định ca làm việc theo lịch phân công, quản lý nghỉ phép và hạch toán bảng lương hàng loạt chuẩn luật định.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="face-checkin" class="btn btn-primary px-4 py-2 fw-semibold rounded-pill shadow-sm">
+                            <i class="fa-solid fa-camera me-2"></i>Mở Kiosk Chấm Công Khuôn Mặt
+                        </a>
+                        <a href="admin" class="btn btn-outline-warning text-white px-4 py-2 fw-semibold rounded-pill">
+                            <i class="fa-solid fa-gauge-high me-2"></i>Vào Trung Tâm Quản Trị & Lương
+                        </a>
+                        <a href="login" class="btn btn-outline-light px-4 py-2 fw-semibold rounded-pill">
+                            <i class="fa-solid fa-user-lock me-2"></i>Đăng Nhập Phân Quyền
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-4 text-center">
+                    <div class="p-4 rounded-4 bg-white bg-opacity-10 border border-white border-opacity-20 shadow">
+                        <div class="mb-3">
+                            <i class="fa-solid fa-shield-halved display-4 text-info"></i>
+                        </div>
+                        <h5 class="fw-bold text-white mb-2">Bảo Mật & Giao Dịch An Toàn</h5>
+                        <p class="small text-white-50 mb-3">
+                            Khóa Stored Procedure <code>UPDLOCK, ROWLOCK</code> trong Microsoft SQL Server, chống trùng lặp dữ liệu chấm công.
+                        </p>
+                        <div class="d-flex justify-content-around text-center border-top border-white border-opacity-10 pt-3">
+                            <div>
+                                <h4 class="fw-bold text-white mb-0">20</h4>
+                                <small class="text-white-50" style="font-size: 0.7rem;">Nhân Sự</small>
+                            </div>
+                            <div>
+                                <h4 class="fw-bold text-warning mb-0">6</h4>
+                                <small class="text-white-50" style="font-size: 0.7rem;">Ca Làm Chuẩn</small>
+                            </div>
+                            <div>
+                                <h4 class="fw-bold text-info mb-0">1.041</h4>
+                                <small class="text-white-50" style="font-size: 0.7rem;">Lịch Phân Ca</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- CORE MODULES -->
+    <main class="container py-5">
+        <div class="text-center mb-5">
+            <span class="badge bg-primary-subtle text-primary px-3 py-1 fw-bold text-uppercase">Các Phân Hệ Chức Năng Hoạt Động</span>
+            <h2 class="fw-bold mt-2">Truy Cập Trực Tiếp Các Trang Nghiệp Vụ</h2>
+            <p class="text-muted">Lựa chọn các phân hệ bên dưới để thao tác và kiểm thử hệ thống</p>
+        </div>
+
+        <div class="row g-4">
+            <!-- MODULE 1 -->
+            <div class="col-md-6 col-lg-4">
+                <a href="face-checkin" class="text-decoration-none">
+                    <div class="feature-card p-4">
+                        <div class="bg-primary-subtle text-primary rounded-3 p-3 d-inline-flex mb-3">
+                            <i class="fa-solid fa-camera-rotate fs-4"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Kiosk Chấm Công Khuôn Mặt</h5>
+                        <p class="text-muted small mb-3">
+                            Camera WebRTC tự động quét khuôn mặt, nhận diện danh tính và tự phân ca theo lịch mà không cần thao tác chọn ca thủ công.
+                        </p>
+                        <span class="text-primary fw-bold small">Mở Kiosk Trực Tiếp <i class="fa-solid fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- MODULE 2 -->
+            <div class="col-md-6 col-lg-4">
+                <a href="admin" class="text-decoration-none">
+                    <div class="feature-card p-4">
+                        <div class="bg-warning-subtle text-warning rounded-3 p-3 d-inline-flex mb-3">
+                            <i class="fa-solid fa-gauge-high fs-4"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Trung Tâm Quản Trị & Nhân Sự</h5>
+                        <p class="text-muted small mb-3">
+                            Dashboard thống kê, quản lý 20 tài khoản nhân sự, phân quyền RBAC, xét duyệt đơn phép và hạch toán bảng lương hàng loạt.
+                        </p>
+                        <span class="text-warning fw-bold small">Vào Cổng Quản Trị <i class="fa-solid fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- MODULE 3 -->
+            <div class="col-md-6 col-lg-4">
+                <a href="my-timesheet" class="text-decoration-none">
+                    <div class="feature-card p-4">
+                        <div class="bg-info-subtle text-info rounded-3 p-3 d-inline-flex mb-3">
+                            <i class="fa-solid fa-calendar-check fs-4"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Bảng Chấm Công Cá Nhân</h5>
+                        <p class="text-muted small mb-3">
+                            Tra cứu chi tiết lịch sử vào/ra từng ngày trong tháng, thống kê số giờ làm việc, tình trạng đi muộn và ngày công tích lũy.
+                        </p>
+                        <span class="text-info fw-bold small">Xem Bảng Công <i class="fa-solid fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- MODULE 4 -->
+            <div class="col-md-6 col-lg-4">
+                <a href="my-payslip" class="text-decoration-none">
+                    <div class="feature-card p-4">
+                        <div class="bg-success-subtle text-success rounded-3 p-3 d-inline-flex mb-3">
+                            <i class="fa-solid fa-file-invoice-dollar fs-4"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Phiếu Lương Điện Tử</h5>
+                        <p class="text-muted small mb-3">
+                            Minh bạch chi tiết lương cơ bản, phụ cấp ăn trưa/xăng xe, thưởng chuyên cần, các khoản trừ bảo hiểm (BHXH, BHYT, BHTN) và thực lĩnh.
+                        </p>
+                        <span class="text-success fw-bold small">Tra Cứu & In Phiếu Lương <i class="fa-solid fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- MODULE 5 -->
+            <div class="col-md-6 col-lg-4">
+                <a href="leave-request" class="text-decoration-none">
+                    <div class="feature-card p-4">
+                        <div class="bg-danger-subtle text-danger rounded-3 p-3 d-inline-flex mb-3">
+                            <i class="fa-solid fa-plane-departure fs-4"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Nộp & Xét Duyệt Nghỉ Phép</h5>
+                        <p class="text-muted small mb-3">
+                            Quy trình nộp đơn xin nghỉ phép trực tuyến, thông báo tiến độ phê duyệt từ cấp quản lý và tự động phản ánh vào bảng công.
+                        </p>
+                        <span class="text-danger fw-bold small">Nộp Đơn Trực Tuyến <i class="fa-solid fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- MODULE 6 -->
+            <div class="col-md-6 col-lg-4">
+                <a href="tro-ly-ai" class="text-decoration-none">
+                    <div class="feature-card p-4">
+                        <div class="bg-primary-subtle text-primary rounded-3 p-3 d-inline-flex mb-3">
+                            <i class="fa-solid fa-wand-magic-sparkles fs-4"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Trợ Lý AI Tiền Lương</h5>
+                        <p class="text-muted small mb-3">
+                            Hỏi đáp tự động về chính sách tiền lương, giải thích chi tiết các khoản trừ bảo hiểm luật định và mô phỏng thu nhập theo ca làm.
+                        </p>
+                        <span class="text-primary fw-bold small">Hỏi Đáp Cùng AI <i class="fa-solid fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-dark text-white py-4 border-top border-secondary mt-5">
+        <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2 small">
+            <div>
+                <span class="badge bg-primary text-white fw-bold px-2 py-1 me-2">HRMS</span>
+                <span>&copy; 2026 <strong>HỆ THỐNG QUẢN LÝ NHÂN SỰ – CHẤM CÔNG – TÍNH LƯƠNG</strong>. Tất cả quyền được bảo lưu.</span>
+            </div>
+            <div class="d-flex align-items-center gap-3 text-white-50">
+                <a href="login" class="text-white text-decoration-none">Đăng Nhập</a>
+                <span>•</span>
+                <a href="admin" class="text-white text-decoration-none">Cổng Quản Trị</a>
+                <span>•</span>
+                <a href="https://github.com/ManhCuong-Code/TimesheetPayroll" target="_blank" class="text-white text-decoration-none">
+                    <i class="fa-brands fa-github me-1"></i>Kho Mã Nguồn GitHub
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

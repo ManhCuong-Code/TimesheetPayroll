@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/" />
+    <script>
+        (function(l) {
+            var isGitHubProject = l.hostname.endsWith('github.io') && l.pathname.indexOf('/TimesheetPayroll') === 0;
+            var baseEl = document.querySelector('base');
+            if (baseEl) {
+                baseEl.setAttribute('href', isGitHubProject ? '/TimesheetPayroll/' : '/');
+            }
+        })(window.location);
+    </script>
+    <title>Đơn Xin Nghỉ Phép — TimesheetPayroll</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+            --hrm-primary: #2563eb;
+            --hrm-slate-900: #0f172a;
+        }
+        body {
+            font-family: var(--hrm-font-sans);
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-sm px-3" style="background-color: #0f172a;">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold d-flex align-items-center me-4" href="./">
+                <div class="bg-primary text-white rounded-3 p-2 me-2 d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                    <i class="fa-solid fa-users-gear fs-5"></i>
+                </div>
+                <div class="d-flex flex-column">
+                    <span class="fs-6 lh-1 text-white fw-bold">HỆ THỐNG <span style="color: #60a5fa;">QUẢN LÝ NHÂN SỰ</span></span>
+                    <span class="text-white-50" style="font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 600;">CỔNG QUẢN LÝ NGHỈ PHÉP</span>
+                </div>
+            </a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1 small">
+                    <li class="nav-item"><a class="nav-link" href="./"><i class="fa-solid fa-house me-1"></i>Trang Chủ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="face-checkin"><i class="fa-solid fa-camera me-1 text-info"></i>Điểm Danh Mặt</a></li>
+                    <li class="nav-item"><a class="nav-link" href="my-timesheet"><i class="fa-solid fa-calendar me-1"></i>Bảng Công</a></li>
+                    <li class="nav-item"><a class="nav-link" href="my-payslip"><i class="fa-solid fa-file-invoice-dollar me-1 text-success"></i>Phiếu Lương</a></li>
+                    <li class="nav-item"><a class="nav-link active text-primary fw-bold" href="leave-request"><i class="fa-solid fa-plane-departure me-1"></i>Nghỉ Phép</a></li>
+                    <li class="nav-item"><a class="nav-link" href="tro-ly-ai"><i class="fa-solid fa-wand-magic-sparkles me-1 text-info"></i>Trợ Lý AI</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="admin" class="btn btn-primary btn-sm rounded-pill px-3">
+                        <i class="fa-solid fa-clipboard-check me-1"></i>Duyệt Đơn (Admin)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN BODY -->
+    <main class="container py-4">
+        <div class="row g-4 justify-content-center">
+            <!-- CỘT FORM NỘP ĐƠN -->
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm rounded-4 p-4">
+                    <h5 class="fw-bold mb-3"><i class="fa-solid fa-pen-to-square text-primary me-2"></i>Tạo Đơn Xin Nghỉ Phép Mới</h5>
+                    
+                    <form onsubmit="handleCreateLeave(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">Nhân viên gửi đơn:</label>
+                            <select class="form-select" id="leaveEmpSelect" required>
+                                <!-- Nạp từ JS -->
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-secondary">Loại hình nghỉ phép:</label>
+                            <select class="form-select" id="leaveTypeSelect">
+                                <option>Phép năm (Có hưởng nguyên lương)</option>
+                                <option>Nghỉ ốm / Khám bệnh (Hưởng bảo hiểm BHXH)</option>
+                                <option>Việc riêng cá nhân / Hiếu hỷ (Không lương)</option>
+                                <option>Nghỉ chế độ thai sản</option>
+                            </select>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-secondary">Từ ngày:</label>
+                                <input type="date" class="form-control" id="leaveFromDate" value="2026-10-24" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-secondary">Đến ngày:</label>
+                                <input type="date" class="form-control" id="leaveToDate" value="2026-10-25" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-secondary">Lý do nghỉ cụ thể:</label>
+                            <textarea class="form-control" id="leaveReason" rows="3" placeholder="Nhập lý do chi tiết..." required>Giải quyết công việc gia đình</textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 rounded-pill fw-bold shadow-sm">
+                            <i class="fa-solid fa-paper-plane me-1"></i>Gửi Đơn Lên Quản Lý Phê Duyệt
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- CỘT LỊCH SỬ ĐƠN ĐÃ GỬI -->
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="fa-solid fa-clock-rotate-left text-success me-2"></i>Lịch Sử & Tiến Độ Xét Duyệt</h5>
+                        <span class="badge bg-light text-secondary border">Tháng 10/2026</span>
+                    </div>
+
+                    <div class="list-group gap-2" id="leaveListGroup">
+                        <!-- Nạp từ JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="data/hrm_data.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var sel = document.getElementById('leaveEmpSelect');
+            HRM_DATA.employees.forEach(function(e) {
+                var opt = document.createElement('option');
+                opt.value = e.code;
+                opt.textContent = `[${e.code}] ${e.name} - ${e.department}`;
+                sel.appendChild(opt);
+            });
+            renderLeaveList();
+        });
+
+        function renderLeaveList() {
+            var box = document.getElementById('leaveListGroup');
+            var html = '';
+            HRM_DATA.leaveRequests.forEach(function(item) {
+                var badgeClass = item.status === 'APPROVED' ? 'bg-success' :
+                                 item.status === 'REJECTED' ? 'bg-danger' : 'bg-warning text-dark';
+                var statusText = item.status === 'APPROVED' ? 'Đã duyệt' :
+                                 item.status === 'REJECTED' ? 'Từ chối' : 'Chờ quản lý duyệt';
+                html += `
+                    <div class="list-group-item p-3 border rounded-3 mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="text-dark">[${item.empCode}] ${item.empName}</strong>
+                            <span class="badge ${badgeClass}">${statusText}</span>
+                        </div>
+                        <div class="small text-muted">
+                            Loại nghỉ: <strong>${item.leaveType}</strong> • Thời gian: <strong>${item.fromDate}</strong> đến <strong>${item.toDate}</strong> (${item.days} ngày)
+                        </div>
+                        <div class="small text-secondary fst-italic mt-1">Lý do: "${item.reason}"</div>
+                        <div class="small text-muted mt-2 text-end" style="font-size: 0.75rem;">
+                            <i class="fa-regular fa-clock me-1"></i>Gửi lúc: ${item.createdAt}
+                        </div>
+                    </div>
+                `;
+            });
+            box.innerHTML = html;
+        }
+
+        function handleCreateLeave(e) {
+            e.preventDefault();
+            var code = document.getElementById('leaveEmpSelect').value;
+            var emp = HRM_DATA.employees.find(x => x.code === code) || HRM_DATA.employees[0];
+            var type = document.getElementById('leaveTypeSelect').value.split(' ')[0];
+            var from = document.getElementById('leaveFromDate').value;
+            var to = document.getElementById('leaveToDate').value;
+            var reason = document.getElementById('leaveReason').value;
+
+            var newReq = {
+                id: Date.now(),
+                empCode: emp.code,
+                empName: emp.name,
+                leaveType: type,
+                fromDate: from,
+                toDate: to,
+                days: 1,
+                reason: reason,
+                status: 'PENDING',
+                createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+            };
+
+            HRM_DATA.leaveRequests.unshift(newReq);
+            alert('Đã gửi đơn xin nghỉ phép thành công!\nĐơn của bạn đã được chuyển đến Trưởng phòng để phê duyệt.');
+            renderLeaveList();
+        }
+    </script>
+</body>
+</html>

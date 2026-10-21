@@ -2,12 +2,20 @@
 *.docx
 *.pdf
 *.png
-*.html
-!docs/**
 *.html.bak
 *.bak
-style.css
-script.js
+
+# Web & GitHub Pages files
+!index.html
+!404.html
+!login/**
+!admin/**
+!face-checkin/**
+!my-timesheet/**
+!my-payslip/**
+!leave-request/**
+!tro-ly-ai/**
+!docs/**
 
 # Build and binary outputs
 [Bb]in/

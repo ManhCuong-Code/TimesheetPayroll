@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/" />
+    <script>
+        (function(l) {
+            var isGitHubProject = l.hostname.endsWith('github.io') && l.pathname.indexOf('/TimesheetPayroll') === 0;
+            var baseEl = document.querySelector('base');
+            if (baseEl) {
+                baseEl.setAttribute('href', isGitHubProject ? '/TimesheetPayroll/' : '/');
+            }
+        })(window.location);
+
+        // Security Guard: Kiểm tra phiên đăng nhập quản trị
+        (function() {
+            var sess = null;
+            try { sess = JSON.parse(localStorage.getItem('hrm_session')); } catch(e) {}
+            var allowedRoles = ['ROLE_ADMIN', 'ROLE_HR_ACCOUNTANT', 'ROLE_MANAGER', 'Admin', 'HR'];
+            if (!sess || !sess.role || !allowedRoles.includes(sess.role)) {
+                alert('Truy cập bị từ chối! Bạn cần đăng nhập với vai trò Quản trị viên, Kế toán hoặc Quản lý.');
+                window.location.replace('login?error=denied');
+            }
+        })();
+    </script>
+    <title>Trung Tâm Quản Trị & Nhân Sự — TimesheetPayroll</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+            --hrm-primary: #2563eb;
+            --hrm-primary-dark: #1d4ed8;
+            --hrm-slate-900: #0f172a;
+            --hrm-slate-800: #1e293b;
+        }
+        body {
+            font-family: var(--hrm-font-sans);
+            background-color: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+        .admin-nav-tabs .nav-link {
+            border: none;
+            color: #64748b;
+            font-weight: 600;
+            padding: 0.85rem 1.25rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .admin-nav-tabs .nav-link:hover {
+            color: #2563eb;
+            background-color: #f1f5f9;
+        }
+        .admin-nav-tabs .nav-link.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+            background-color: transparent;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        .table-responsive {
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-sm px-3" style="background-color: #0f172a;">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold d-flex align-items-center me-4" href="./">
+                <div class="bg-primary text-white rounded-3 p-2 me-2 d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
+                    <i class="fa-solid fa-users-gear fs-5"></i>
+                </div>
+                <div class="d-flex flex-column">
+                    <span class="fs-6 lh-1 text-white fw-bold">HỆ THỐNG <span style="color: #60a5fa;">QUẢN LÝ NHÂN SỰ</span></span>
+                    <span class="text-white-50" style="font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 600;">CỔNG QUẢN TRỊ VIÊN & NHÂN SỰ</span>
+                </div>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="adminNavbar">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1 small">
+                    <li class="nav-item"><a class="nav-link" href="./"><i class="fa-solid fa-house me-1"></i>Trang Chủ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="face-checkin"><i class="fa-solid fa-camera me-1 text-info"></i>Kiosk Điểm Danh</a></li>
+                    <li class="nav-item"><a class="nav-link" href="my-timesheet"><i class="fa-solid fa-calendar me-1 text-warning"></i>Bảng Công</a></li>
+                    <li class="nav-item"><a class="nav-link" href="my-payslip"><i class="fa-solid fa-file-invoice-dollar me-1 text-success"></i>Phiếu Lương</a></li>
+                    <li class="nav-item"><a class="nav-link" href="tro-ly-ai"><i class="fa-solid fa-wand-magic-sparkles me-1 text-primary"></i>Trợ Lý AI</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-2 bg-white bg-opacity-10 py-1 px-3 rounded-pill">
+                        <i class="fa-solid fa-circle-user text-warning fs-5"></i>
+                        <div class="lh-sm text-start">
+                            <div class="text-white fw-bold small" id="navUserName">Quản Trị Viên</div>
+                            <span class="badge bg-primary px-2" style="font-size: 0.65rem;" id="navUserRole">ROLE_ADMIN</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-light btn-sm rounded-pill px-3" onclick="handleLogout()">
+                        <i class="fa-solid fa-right-from-bracket me-1"></i>Đăng Xuất
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN BODY -->
+    <main class="container-fluid py-4 px-lg-4">
+        <!-- HEADER TITLE -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h3 class="fw-bold mb-1"><i class="fa-solid fa-chart-line text-primary me-2"></i>Trung Tâm Điều Hành Doanh Nghiệp</h3>
+                <p class="text-muted small mb-0">Quản lý toàn diện nhân sự, ca làm việc, chấm công tự động và hạch toán bảng lương</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="face-checkin" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">
+                    <i class="fa-solid fa-camera me-1"></i>Mở Kiosk Chấm Công
+                </a>
+                <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" onclick="runBatchCalculation()">
+                    <i class="fa-solid fa-calculator me-1"></i>Chạy Hạch Toán Lương Tháng
+                </button>
+            </div>
+        </div>
+
+        <!-- NAVIGATION TABS -->
+        <ul class="nav nav-tabs admin-nav-tabs mb-4 bg-white rounded-3 shadow-sm px-2 pt-2">
+            <li class="nav-item">
+                <a class="nav-link active" id="tabBtn-dashboard" href="javascript:void(0)" onclick="switchTab('dashboard')">
+                    <i class="fa-solid fa-gauge-high me-1"></i>Dashboard Tổng Quan
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="tabBtn-employees" href="javascript:void(0)" onclick="switchTab('employees')">
+                    <i class="fa-solid fa-users me-1"></i>Nhân Sự & Phân Quyền
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="tabBtn-shifts" href="javascript:void(0)" onclick="switchTab('shifts')">
+                    <i class="fa-solid fa-business-time me-1"></i>Ca Làm & Phân Ca
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="tabBtn-approvals" href="javascript:void(0)" onclick="switchTab('approvals')">
+                    <i class="fa-solid fa-clipboard-check me-1"></i>Xét Duyệt Đơn & Công
+                    <span class="badge bg-danger rounded-pill ms-1" id="badgePendingCount">3</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="tabBtn-payroll" href="javascript:void(0)" onclick="switchTab('payroll')">
+                    <i class="fa-solid fa-money-check-dollar me-1"></i>Bảng Lương Hàng Loạt
+                </a>
+            </li>
+        </ul>
+
+        <!-- ==================== TAB 1: DASHBOARD ==================== -->
+        <div id="tabContent-dashboard" class="tab-pane-content">
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small fw-bold text-uppercase">Tổng Nhân Sự</span>
+                            <div class="bg-primary-subtle text-primary p-2 rounded-3"><i class="fa-solid fa-users fs-5"></i></div>
+                        </div>
+                        <h2 class="fw-bold mb-1">20</h2>
+                        <span class="badge bg-success-subtle text-success small"><i class="fa-solid fa-check me-1"></i>100% Hoạt động</span>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small fw-bold text-uppercase">Đi Làm Hôm Nay</span>
+                            <div class="bg-success-subtle text-success p-2 rounded-3"><i class="fa-solid fa-user-check fs-5"></i></div>
+                        </div>
+                        <h2 class="fw-bold mb-1">19 / 20</h2>
+                        <span class="badge bg-info-subtle text-info small"><i class="fa-solid fa-chart-simple me-1"></i>Tỷ lệ 95%</span>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small fw-bold text-uppercase">Quỹ Lương Tháng Này</span>
+                            <div class="bg-warning-subtle text-warning p-2 rounded-3"><i class="fa-solid fa-sack-dollar fs-5"></i></div>
+                        </div>
+                        <h2 class="fw-bold mb-1 text-truncate" style="font-size: 1.5rem;" id="dashTotalPayroll">264.450.000 ₫</h2>
+                        <span class="badge bg-warning-subtle text-dark small"><i class="fa-solid fa-lock-open me-1"></i>Kỳ lương 10/2026</span>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small fw-bold text-uppercase">Đơn Chờ Xét Duyệt</span>
+                            <div class="bg-danger-subtle text-danger p-2 rounded-3"><i class="fa-solid fa-clock-rotate-left fs-5"></i></div>
+                        </div>
+                        <h2 class="fw-bold mb-1 text-danger" id="dashPendingOrders">3</h2>
+                        <span class="badge bg-danger-subtle text-danger small"><i class="fa-solid fa-bell me-1"></i>Cần xử lý ngay</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NHẬT KÝ CHẤM CÔNG THỜI GIAN THỰC -->
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm rounded-4 p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0"><i class="fa-solid fa-fingerprint text-primary me-2"></i>Lịch Sử Chấm Công Mới Nhất (Real-time SQL)</h5>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 small">
+                                <i class="fa-solid fa-satellite-dish me-1"></i>Trực tiếp từ Kiosk
+                            </span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Thời Gian</th>
+                                        <th>Nhân Viên</th>
+                                        <th>Ca Phân Công</th>
+                                        <th>Thao Tác</th>
+                                        <th>Trạng Thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>2026-10-21 08:02</td>
+                                        <td><strong>[EMP001]</strong> Nguyễn Văn An</td>
+                                        <td>Ca Hành Chính (08:00 - 17:30)</td>
+                                        <td><span class="badge bg-primary">CHECK-IN</span></td>
+                                        <td><span class="badge bg-success">Đúng giờ</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>2026-10-21 08:05</td>
+                                        <td><strong>[EMP006]</strong> Đỗ Thị Mai Linh</td>
+                                        <td>Ca Sáng (08:00 - 12:00)</td>
+                                        <td><span class="badge bg-primary">CHECK-IN</span></td>
+                                        <td><span class="badge bg-success">Đúng giờ</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>2026-10-21 06:02</td>
+                                        <td><strong>[EMP007]</strong> Vũ Quốc Anh</td>
+                                        <td>Ca Đêm (22:00 - 06:00)</td>
+                                        <td><span class="badge bg-success">CHECK-OUT</span></td>
+                                        <td><span class="badge bg-dark text-warning">8.0 giờ công</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>2026-10-21 08:25</td>
+                                        <td><strong>[EMP004]</strong> Hoàng Minh Tuấn</td>
+                                        <td>Ca Hành Chính (08:00 - 17:30)</td>
+                                        <td><span class="badge bg-primary">CHECK-IN</span></td>
+                                        <td><span class="badge bg-warning text-dark">Muộn 25p</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>2026-10-20 17:35</td>
+                                        <td><strong>[EMP002]</strong> Trần Thị Bích</td>
+                                        <td>Ca Hành Chính (08:00 - 17:30)</td>
+                                        <td><span class="badge bg-success">CHECK-OUT</span></td>
+                                        <td><span class="badge bg-success">Chuẩn 1.0 công</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                        <h5 class="fw-bold mb-3"><i class="fa-solid fa-sitemap text-info me-2"></i>Cơ Cấu Phòng Ban</h5>
+                        <ul class="list-group list-group-flush small">
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>Ban Giám Đốc</span>
+                                <span class="badge bg-primary rounded-pill">1 nhân sự</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>Hành Chính Nhân Sự & Kế Toán</span>
+                                <span class="badge bg-primary rounded-pill">5 nhân sự</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>Kinh Doanh & Tiếp Thị</span>
+                                <span class="badge bg-primary rounded-pill">5 nhân sự</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>Công Nghệ Thông Tin</span>
+                                <span class="badge bg-primary rounded-pill">4 nhân sự</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>Vận Hành & Khách Hàng</span>
+                                <span class="badge bg-primary rounded-pill">3 nhân sự</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>Kỹ Thuật & Thiết Bị</span>
+                                <span class="badge bg-primary rounded-pill">2 nhân sự</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 2: NHÂN SỰ & PHÂN QUYỀN ==================== -->
+        <div id="tabContent-employees" class="tab-pane-content d-none">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="row g-3 justify-content-between align-items-center mb-4">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input type="text" id="searchEmpInput" class="form-control" placeholder="Tìm theo tên hoặc mã nhân viên..." onkeyup="filterEmployeeList()">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" id="filterDeptSelect" onchange="filterEmployeeList()">
+                            <option value="">-- Tất cả phòng ban --</option>
+                            <option value="Ban Giám Đốc">Ban Giám Đốc</option>
+                            <option value="Hành Chính">Hành Chính & Kế Toán</option>
+                            <option value="Kinh Doanh">Kinh Doanh & Tiếp Thị</option>
+                            <option value="Công Nghệ">Công Nghệ Thông Tin</option>
+                            <option value="Vận Hành">Vận Hành & Khách Hàng</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <button class="btn btn-primary btn-sm rounded-pill px-3" onclick="alert('Chức năng thêm nhân sự mới: Nhập thông tin nhân viên và tự động sinh mã định danh.')">
+                            <i class="fa-solid fa-user-plus me-1"></i>Thêm Nhân Sự Mới
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 small" id="employeeDataTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã NV</th>
+                                <th>Họ Và Tên</th>
+                                <th>Phòng Ban</th>
+                                <th>Tài Khoản & Vai Trò RBAC</th>
+                                <th>Lương Cơ Bản</th>
+                                <th>Trạng Thái</th>
+                                <th class="text-center">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="empTableBody">
+                            <!-- Dữ liệu nạp từ JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 3: CA LÀM & PHÂN CA ==================== -->
+        <div id="tabContent-shifts" class="tab-pane-content d-none">
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                        <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-clock text-primary me-2"></i>Danh Mục 6 Ca Làm Việc Chuẩn</h5>
+                        <div class="list-group gap-2" id="shiftsListGroup">
+                            <!-- Nạp từ JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0"><i class="fa-solid fa-calendar-days text-success me-2"></i>Lịch Phân Công Ca (1,041 Bản Ghi)</h5>
+                            <span class="badge bg-light text-secondary border">Tháng 10/2026</span>
+                        </div>
+                        <p class="text-muted small">Mỗi ngày hệ thống tự động đối chiếu ca được phân công để xác định Check-in / Check-out cho nhân viên.</p>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle small mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Ngày</th>
+                                        <th>Mã NV</th>
+                                        <th>Họ Tên</th>
+                                        <th>Ca Được Phân Công</th>
+                                        <th>Trạng Thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="shiftAssignTableBody">
+                                    <!-- Nạp mẫu từ JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 4: XÉT DUYỆT ĐƠN & CÔNG ==================== -->
+        <div id="tabContent-approvals" class="tab-pane-content d-none">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                        <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-plane-departure text-warning me-2"></i>Đơn Xin Nghỉ Phép Chờ Duyệt</h5>
+                        <div id="leaveApprovalList">
+                            <!-- Nạp từ JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                        <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-clock-rotate-left text-danger me-2"></i>Yêu Cầu Bổ Sung Chấm Công (Quên Quẹt Thẻ)</h5>
+                        <div id="attendanceApprovalList">
+                            <!-- Nạp từ JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 5: BẢNG LƯƠNG HÀNG LOẠT ==================== -->
+        <div id="tabContent-payroll" class="tab-pane-content d-none">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="fa-solid fa-calculator text-success me-2"></i>Bảng Lương Tổng Hợp Kỳ Tháng 10/2026</h5>
+                        <p class="text-muted small mb-0">Chuẩn hóa 22 ngày công, BHXH (8%), BHYT (1.5%), BHTN (1%), Thưởng chuyên cần (300.000 ₫)</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm" onclick="exportPayrollExcel()">
+                            <i class="fa-solid fa-file-excel me-1"></i>Xuất Excel Bảng Lương
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm" onclick="exportBankTransferFile()">
+                            <i class="fa-solid fa-building-columns me-1"></i>Xuất File Ngân Hàng (Vietcombank)
+                        </button>
+                        <button class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm" id="lockPeriodBtn" onclick="toggleLockPayroll()">
+                            <i class="fa-solid fa-lock me-1"></i>Khóa Kỳ Lương (Lock)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle small mb-0" id="payrollSummaryTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Mã NV</th>
+                                <th>Họ Và Tên</th>
+                                <th>Phòng Ban</th>
+                                <th class="text-end">Lương Cơ Bản</th>
+                                <th class="text-center">Số Ngày Công</th>
+                                <th class="text-end">Lương Theo Công</th>
+                                <th class="text-end">Phụ Cấp</th>
+                                <th class="text-end">Trừ Bảo Hiểm</th>
+                                <th class="text-end fw-bold text-warning">Thực Lĩnh</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payrollTableBody">
+                            <!-- Nạp từ JS -->
+                        </tbody>
+                        <tfoot class="table-light fw-bold" id="payrollTableFoot">
+                            <!-- Tổng cộng từ JS -->
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-top py-3 mt-5">
+        <div class="container-fluid text-center text-muted small">
+            <span>&copy; 2026 <strong>HỆ THỐNG QUẢN LÝ NHÂN SỰ – CHẤM CÔNG – TÍNH LƯƠNG</strong>. Tích hợp Blazor Server & SQL Server.</span>
+        </div>
+    </footer>
+
+    <script src="data/hrm_data.js"></script>
+    <script>
+        // Khởi tạo trang
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserProfile();
+            renderEmployeeTable();
+            renderShifts();
+            renderShiftAssignments();
+            renderApprovals();
+            renderPayrollTable();
+
+            // Kiểm tra hash tab trên URL
+            var hash = window.location.hash.replace('#', '');
+            if (hash) {
+                switchTab(hash);
+            }
+        });
+
+        function loadUserProfile() {
+            var sess = JSON.parse(localStorage.getItem('hrm_session') || '{}');
+            if (sess.name) document.getElementById('navUserName').textContent = sess.name;
+            if (sess.role) document.getElementById('navUserRole').textContent = sess.role;
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('hrm_session');
+            window.location.replace('login');
+        }
+
+        function switchTab(tabId) {
+            ['dashboard', 'employees', 'shifts', 'approvals', 'payroll'].forEach(function(t) {
+                var btn = document.getElementById('tabBtn-' + t);
+                var pane = document.getElementById('tabContent-' + t);
+                if (btn && pane) {
+                    if (t === tabId) {
+                        btn.classList.add('active');
+                        pane.classList.remove('d-none');
+                    } else {
+                        btn.classList.remove('active');
+                        pane.classList.add('d-none');
+                    }
+                }
+            });
+            window.location.hash = tabId;
+        }
+
+        function renderEmployeeTable() {
+            var tbody = document.getElementById('empTableBody');
+            var html = '';
+            HRM_DATA.employees.forEach(function(emp) {
+                var roleBadge = emp.role === 'ROLE_ADMIN' ? 'bg-danger' : 
+                                emp.role === 'ROLE_HR_ACCOUNTANT' ? 'bg-success' :
+                                emp.role === 'ROLE_MANAGER' ? 'bg-warning text-dark' : 'bg-secondary';
+                html += `
+                    <tr>
+                        <td><strong>${emp.code}</strong></td>
+                        <td>${emp.name}</td>
+                        <td>${emp.department}</td>
+                        <td>
+                            <code>${emp.username}</code> 
+                            <span class="badge ${roleBadge} ms-1" style="font-size:0.7rem;">${emp.role}</span>
+                        </td>
+                        <td>${formatVND(emp.baseSalary)}</td>
+                        <td><span class="badge bg-success-subtle text-success">${emp.status}</span></td>
+                        <td class="text-center">
+                            <button class="btn btn-outline-primary btn-sm py-0 px-2 rounded" title="Đổi quyền" onclick="alert('Đã mở hộp thoại phân quyền tài khoản cho [${emp.code}] ${emp.name}')">
+                                <i class="fa-solid fa-user-pen"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function filterEmployeeList() {
+            var keyword = document.getElementById('searchEmpInput').value.toLowerCase();
+            var dept = document.getElementById('filterDeptSelect').value.toLowerCase();
+            var rows = document.getElementById('empTableBody').getElementsByTagName('tr');
+
+            for (var i = 0; i < rows.length; i++) {
+                var text = rows[i].textContent.toLowerCase();
+                var matchKey = !keyword || text.indexOf(keyword) > -1;
+                var matchDept = !dept || text.indexOf(dept) > -1;
+                rows[i].style.display = (matchKey && matchDept) ? '' : 'none';
+            }
+        }
+
+        function renderShifts() {
+            var box = document.getElementById('shiftsListGroup');
+            var html = '';
+            HRM_DATA.shifts.forEach(function(s) {
+                html += `
+                    <div class="list-group-item p-3 border rounded-3 mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="fw-bold mb-0 text-${s.color}"><i class="fa-solid fa-clock me-1"></i>${s.shift_name}</h6>
+                            <span class="badge bg-${s.color}">${s.shift_code}</span>
+                        </div>
+                        <div class="small text-muted">
+                            Thời gian: <strong>${s.start_time} - ${s.end_time}</strong> (${s.standard_hours} giờ công)
+                            ${s.is_overnight ? '<span class="badge bg-dark ms-1"><i class="fa-solid fa-moon me-1"></i>Ca qua đêm</span>' : ''}
+                        </div>
+                        <div class="small text-secondary mt-1">
+                            Cửa sổ chấm công: Sớm ${s.checkin_start_window_minutes}p • Trễ ân hạn ${s.checkin_late_grace_minutes}p
+                        </div>
+                    </div>
+                `;
+            });
+            box.innerHTML = html;
+        }
+
+        function renderShiftAssignments() {
+            var tbody = document.getElementById('shiftAssignTableBody');
+            var html = '';
+            var sampleDays = ['2026-10-21', '2026-10-22', '2026-10-23'];
+            HRM_DATA.employees.slice(0, 10).forEach(function(emp, idx) {
+                var day = sampleDays[idx % 3];
+                var shift = HRM_DATA.shifts[idx % HRM_DATA.shifts.length];
+                html += `
+                    <tr>
+                        <td>${day}</td>
+                        <td><strong>${emp.code}</strong></td>
+                        <td>${emp.name}</td>
+                        <td><span class="badge bg-${shift.color}">${shift.shift_name}</span></td>
+                        <td><span class="badge bg-success-subtle text-success">Đã phân ca</span></td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function renderApprovals() {
+            // Đơn nghỉ phép
+            var leaveBox = document.getElementById('leaveApprovalList');
+            var lHtml = '';
+            HRM_DATA.leaveRequests.forEach(function(item) {
+                lHtml += `
+                    <div class="card p-3 mb-2 border ${item.status === 'PENDING' ? 'border-warning' : 'border-light'}">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-dark">[${item.empCode}] ${item.empName}</span>
+                            <span class="badge ${item.status === 'PENDING' ? 'bg-warning text-dark' : 'bg-success'}">${item.status}</span>
+                        </div>
+                        <div class="small text-muted">
+                            Loại nghỉ: <strong>${item.leaveType}</strong> • Số ngày: <strong>${item.days} ngày</strong> (${item.fromDate} đến ${item.toDate})
+                        </div>
+                        <div class="small text-secondary fst-italic mt-1">Lý do: "${item.reason}"</div>
+                        ${item.status === 'PENDING' ? `
+                            <div class="d-flex gap-2 mt-2 pt-2 border-top">
+                                <button class="btn btn-success btn-sm px-3 rounded-pill" onclick="approveLeave(${item.id})">
+                                    <i class="fa-solid fa-check me-1"></i>Duyệt Đơn
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm px-3 rounded-pill" onclick="rejectLeave(${item.id})">
+                                    <i class="fa-solid fa-xmark me-1"></i>Từ Chối
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            leaveBox.innerHTML = lHtml;
+
+            // Bổ sung công
+            var attBox = document.getElementById('attendanceApprovalList');
+            var aHtml = '';
+            HRM_DATA.attendanceRequests.forEach(function(item) {
+                aHtml += `
+                    <div class="card p-3 mb-2 border ${item.status === 'PENDING' ? 'border-danger' : 'border-light'}">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-dark">[${item.empCode}] ${item.empName}</span>
+                            <span class="badge ${item.status === 'PENDING' ? 'bg-danger' : 'bg-success'}">${item.status}</span>
+                        </div>
+                        <div class="small text-muted">
+                            Ngày: <strong>${item.date}</strong> • ${item.requestType}: <strong>${item.recordedTime}</strong>
+                        </div>
+                        <div class="small text-secondary fst-italic mt-1">Lý do: "${item.reason}"</div>
+                        ${item.status === 'PENDING' ? `
+                            <div class="d-flex gap-2 mt-2 pt-2 border-top">
+                                <button class="btn btn-success btn-sm px-3 rounded-pill" onclick="approveAttendance(${item.id})">
+                                    <i class="fa-solid fa-check me-1"></i>Chấp Thuận & Cập Nhật Công
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm px-3 rounded-pill" onclick="rejectAttendance(${item.id})">
+                                    <i class="fa-solid fa-xmark me-1"></i>Từ Chối
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            attBox.innerHTML = aHtml;
+        }
+
+        function approveLeave(id) {
+            var target = HRM_DATA.leaveRequests.find(function(x) { return x.id === id; });
+            if (target) {
+                target.status = 'APPROVED';
+                alert('Đã phê duyệt thành công đơn nghỉ phép của ' + target.empName + '!');
+                renderApprovals();
+                updatePendingCount();
+            }
+        }
+
+        function rejectLeave(id) {
+            var target = HRM_DATA.leaveRequests.find(function(x) { return x.id === id; });
+            if (target) {
+                target.status = 'REJECTED';
+                alert('Đã từ chối đơn nghỉ phép của ' + target.empName + '.');
+                renderApprovals();
+                updatePendingCount();
+            }
+        }
+
+        function approveAttendance(id) {
+            var target = HRM_DATA.attendanceRequests.find(function(x) { return x.id === id; });
+            if (target) {
+                target.status = 'APPROVED';
+                alert('Đã duyệt yêu cầu bổ sung công và cập nhật vào bảng chấm công SQL!');
+                renderApprovals();
+                updatePendingCount();
+            }
+        }
+
+        function rejectAttendance(id) {
+            var target = HRM_DATA.attendanceRequests.find(function(x) { return x.id === id; });
+            if (target) {
+                target.status = 'REJECTED';
+                alert('Đã từ chối yêu cầu bổ sung công.');
+                renderApprovals();
+                updatePendingCount();
+            }
+        }
+
+        function updatePendingCount() {
+            var pLeaves = HRM_DATA.leaveRequests.filter(function(x) { return x.status === 'PENDING'; }).length;
+            var pAtts = HRM_DATA.attendanceRequests.filter(function(x) { return x.status === 'PENDING'; }).length;
+            var total = pLeaves + pAtts;
+            document.getElementById('badgePendingCount').textContent = total;
+            document.getElementById('dashPendingOrders').textContent = total;
+        }
+
+        function renderPayrollTable() {
+            var tbody = document.getElementById('payrollTableBody');
+            var tfoot = document.getElementById('payrollTableFoot');
+            var html = '';
+            var totalBase = 0, totalGross = 0, totalAllow = 0, totalDeduct = 0, totalNet = 0;
+
+            HRM_DATA.employees.forEach(function(emp) {
+                var sal = calculateSalaryRecord(emp);
+                totalBase += sal.baseSalary;
+                totalGross += sal.grossBase;
+                totalAllow += sal.allowances + sal.attendanceBonus;
+                totalDeduct += sal.totalDeduction;
+                totalNet += sal.netSalary;
+
+                html += `
+                    <tr>
+                        <td><strong>${sal.code}</strong></td>
+                        <td>${sal.name}</td>
+                        <td>${sal.department}</td>
+                        <td class="text-end">${formatVND(sal.baseSalary)}</td>
+                        <td class="text-center"><strong>${sal.workDays}</strong> / 22</td>
+                        <td class="text-end">${formatVND(sal.grossBase)}</td>
+                        <td class="text-end text-success">+${formatVND(sal.allowances + sal.attendanceBonus)}</td>
+                        <td class="text-end text-danger">-${formatVND(sal.totalDeduction)}</td>
+                        <td class="text-end fw-bold text-primary">${formatVND(sal.netSalary)}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            tfoot.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-uppercase text-center">TỔNG CỘNG TOÀN DOANH NGHIỆP:</td>
+                    <td class="text-end">${formatVND(totalBase)}</td>
+                    <td class="text-center">-</td>
+                    <td class="text-end">${formatVND(totalGross)}</td>
+                    <td class="text-end text-success">+${formatVND(totalAllow)}</td>
+                    <td class="text-end text-danger">-${formatVND(totalDeduct)}</td>
+                    <td class="text-end text-primary fs-6">${formatVND(totalNet)}</td>
+                </tr>
+            `;
+
+            document.getElementById('dashTotalPayroll').textContent = formatVND(totalNet);
+        }
+
+        function runBatchCalculation() {
+            alert('Đang chạy Stored Procedure [sp_CalculatePayrollBatch] hạch toán cho 20 nhân viên...\nThành công! Đã cập nhật bảng công và tính thuế/bảo hiểm tự động.');
+            renderPayrollTable();
+            switchTab('payroll');
+        }
+
+        var isLocked = false;
+        function toggleLockPayroll() {
+            isLocked = !isLocked;
+            var btn = document.getElementById('lockPeriodBtn');
+            if (isLocked) {
+                btn.className = 'btn btn-secondary btn-sm rounded-pill px-3 shadow-sm';
+                btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Đã Khóa Kỳ Lương (Mở Khóa)';
+                alert('ĐÃ KHÓA KỲ LƯƠNG THÁNG 10/2026!\nDữ liệu bảng công và lương hiện đã được chốt sổ, ngăn chặn việc sửa đổi.');
+            } else {
+                btn.className = 'btn btn-danger btn-sm rounded-pill px-3 shadow-sm';
+                btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Khóa Kỳ Lương (Lock)';
+                alert('Đã mở khóa kỳ lương tháng 10/2026.');
+            }
+        }
+
+        function exportPayrollExcel() {
+            var csv = "\uFEFFMã NV,Họ Tên,Phòng Ban,Lương Cơ Bản,Ngày Công,Lương Theo Công,Phụ Cấp,Bảo Hiểm,Thực Lĩnh\n";
+            HRM_DATA.employees.forEach(function(e) {
+                var s = calculateSalaryRecord(e);
+                csv += `"${s.code}","${s.name}","${s.department}",${s.baseSalary},${s.workDays},${s.grossBase},${s.allowances + s.attendanceBonus},${s.totalDeduction},${s.netSalary}\n`;
+            });
+            downloadCSV(csv, 'BangLuong_Thang10_2026.csv');
+        }
+
+        function exportBankTransferFile() {
+            var csv = "\uFEFFSTT,Mã NV,Họ Tên,Số Tài Khoản,Ngân Hàng,Số Tiền Chuyển Khoản (VNĐ),Nội Dung\n";
+            HRM_DATA.employees.forEach(function(e, i) {
+                var s = calculateSalaryRecord(e);
+                csv += `${i+1},"${s.code}","${s.name}","0421000${123456+i}","Vietcombank",${s.netSalary},"Chi tra luong thang 10-2026"\n`;
+            });
+            downloadCSV(csv, 'UyNhiemChi_VCB_Thang10_2026.csv');
+        }
+
+        function downloadCSV(content, filename) {
+            var blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement("a");
+            var url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
