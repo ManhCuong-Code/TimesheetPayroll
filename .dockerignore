@@ -1,4 +1,6 @@
 **/bin
 **/obj
 .git
+.vs
+docs
 uml
