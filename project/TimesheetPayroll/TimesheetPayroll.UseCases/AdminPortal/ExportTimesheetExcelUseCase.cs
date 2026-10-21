@@ -5,13 +5,13 @@ namespace TimesheetPayroll.UseCases.AdminPortal;
 
 public interface IExportTimesheetExcelUseCase
 {
-    byte[] ExportTimesheetToExcelHtml(int month, int year, IEnumerable<EmployeeTimesheetSummaryItem> items, string companyName = "KIM LONG ECOSTAY - CÔNG TY TNHH MTV");
-    byte[] ExportDailyTimesheetsToExcelHtml(int month, int year, IEnumerable<Timesheet> timesheets, string companyName = "KIM LONG ECOSTAY - CÔNG TY TNHH MTV");
+    byte[] ExportTimesheetToExcelHtml(int month, int year, IEnumerable<EmployeeTimesheetSummaryItem> items, string companyName = "CÔNG TY TNHH HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP");
+    byte[] ExportDailyTimesheetsToExcelHtml(int month, int year, IEnumerable<Timesheet> timesheets, string companyName = "CÔNG TY TNHH HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP");
 }
 
 public class ExportTimesheetExcelUseCase : IExportTimesheetExcelUseCase
 {
-    public byte[] ExportTimesheetToExcelHtml(int month, int year, IEnumerable<EmployeeTimesheetSummaryItem> items, string companyName = "KIM LONG ECOSTAY - CÔNG TY TNHH MTV")
+    public byte[] ExportTimesheetToExcelHtml(int month, int year, IEnumerable<EmployeeTimesheetSummaryItem> items, string companyName = "CÔNG TY TNHH HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP")
     {
         var list = items.ToList();
         var sb = new StringBuilder();
@@ -169,7 +169,7 @@ public class ExportTimesheetExcelUseCase : IExportTimesheetExcelUseCase
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
-    public byte[] ExportDailyTimesheetsToExcelHtml(int month, int year, IEnumerable<Timesheet> timesheets, string companyName = "KIM LONG ECOSTAY - CÔNG TY TNHH MTV")
+    public byte[] ExportDailyTimesheetsToExcelHtml(int month, int year, IEnumerable<Timesheet> timesheets, string companyName = "CÔNG TY TNHH HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP")
     {
         var list = timesheets.OrderBy(t => t.WorkDate).ThenBy(t => t.EmployeeCode).ToList();
         var sb = new StringBuilder();

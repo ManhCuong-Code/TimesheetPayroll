@@ -20,18 +20,18 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavManager
 
-<PageTitle>Lịch Chấm Công & Điểm Danh - KimLongEcoStay</PageTitle>
+<PageTitle>Lịch Chấm Công & Điểm Danh - HỆ THỐNG QUẢN LÝ NHÂN SỰ</PageTitle>
 
 <div class="container-fluid py-3">
     <!-- TIÊU ĐỀ TRANG & PHÂN HỆ ĐIỂM DANH -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom gap-2 d-print-none">
         <div>
             <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-bold">
-                    <i class="fa-solid fa-hotel me-1"></i>KIM LONG ECOSTAY
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold">
+                    <i class="fa-solid fa-building me-1"></i>HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP
                 </span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
-                    <i class="fa-solid fa-calendar-check me-1"></i>Hệ Thống Quản Lý Ca & Chấm Công
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
+                    <i class="fa-solid fa-calendar-check me-1"></i>Quản Lý Ca Làm Việc & Chấm Công
                 </span>
             </div>
             <h2 class="h4 mb-0 text-dark fw-bold">
@@ -82,36 +82,58 @@
         </div>
     }
 
-    <!-- TAB ĐIỀU HƯỚNG CHÍNH -->
-    <ul class="nav nav-pills mb-3 p-1 bg-white rounded shadow-sm border gap-1 d-print-none">
-        <li class="nav-item">
-            <button type="button" class="nav-link fw-bold @(currentTab == "calendar" ? "active bg-primary text-white" : "text-dark")" 
-                    @onclick='() => currentTab = "calendar"'>
-                <i class="fa-solid fa-calendar-days me-2"></i>Lịch Chấm Công (Tháng / Tuần)
-            </button>
-        </li>
-        <li class="nav-item">
-            <button type="button" class="nav-link fw-bold @(currentTab == "report" ? "active bg-primary text-white" : "text-dark")" 
-                    @onclick='() => currentTab = "report"'>
-                <i class="fa-solid fa-table-list me-2"></i>Bảng Chấm Công Tổng Hợp & In Báo Cáo
-                <span class="badge @(currentTab == "report" ? "bg-light text-dark" : "bg-primary text-white") ms-2">
+    <!-- THANH ĐIỀU HƯỚNG VÀ NÚT CHỨC NĂNG BẢNG CHẤM CÔNG TỔNG HỢP & IN BÁO CÁO -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2 d-print-none">
+        <ul class="nav nav-pills p-1 bg-white rounded shadow-sm border gap-1">
+            <li class="nav-item">
+                <button type="button" class="nav-link fw-bold @(currentTab == "calendar" ? "active bg-primary text-white" : "text-dark")" 
+                        @onclick='() => currentTab = "calendar"'>
+                    <i class="fa-solid fa-calendar-days me-2"></i>Lịch Chấm Công (Tháng / Tuần)
+                </button>
+            </li>
+            @if (canManage)
+            {
+                <li class="nav-item">
+                    <button type="button" class="nav-link fw-bold @(currentTab == "audit" ? "active bg-primary text-white" : "text-dark")" 
+                            @onclick='() => currentTab = "audit"'>
+                        <i class="fa-solid fa-clock-rotate-left me-2"></i>Lịch Sử Điều Chỉnh (Audit Log)
+                        <span class="badge @(currentTab == "audit" ? "bg-light text-dark" : "bg-secondary text-white") ms-2">
+                            @auditLogs.Count
+                        </span>
+                    </button>
+                </li>
+            }
+        </ul>
+
+        @if (canManage)
+        {
+            <!-- NÚT CHỨC NĂNG BẢNG CHẤM CÔNG TỔNG HỢP & IN BÁO CÁO (CHUẨN THEO ẢNH MẪU ĐỒ ÁN) -->
+            <button type="button" 
+                    id="btn-summary-report"
+                    class="btn text-white fw-bold shadow-sm d-inline-flex align-items-center px-3 py-2" 
+                    style="background-color: #0d6efd; border-radius: 8px; border: none; font-size: 0.95rem;" 
+                    @onclick="OpenSummaryReportView"
+                    title="Mở bảng chấm công tổng hợp toàn bộ nhân sự và in báo cáo">
+                <i class="fa-solid fa-table-list me-2 fs-5"></i>
+                <span class="me-1">Bảng Chấm Công Tổng Hợp & In Báo Cáo</span>
+                <span class="badge bg-white text-dark rounded-pill ms-2 px-3 py-1 fw-bold font-monospace" style="font-size: 0.85rem;">
                     @summaryList.Count nhân sự
                 </span>
             </button>
-        </li>
-        @if (canManage)
-        {
-            <li class="nav-item">
-                <button type="button" class="nav-link fw-bold @(currentTab == "audit" ? "active bg-primary text-white" : "text-dark")" 
-                        @onclick='() => currentTab = "audit"'>
-                    <i class="fa-solid fa-clock-rotate-left me-2"></i>Lịch Sử Điều Chỉnh (Audit Log)
-                    <span class="badge @(currentTab == "audit" ? "bg-light text-dark" : "bg-secondary text-white") ms-2">
-                        @auditLogs.Count
-                    </span>
-                </button>
-            </li>
         }
-    </ul>
+        else
+        {
+            <!-- DÀNH CHO NHÂN VIÊN: GỬI YÊU CẦU CHẤM CÔNG THỦ CÔNG & ĐƠN NGHỈ PHÉP -->
+            <div class="d-flex align-items-center gap-2">
+                <a href="/my-attendance-requests" class="btn btn-primary btn-sm fw-semibold shadow-sm">
+                    <i class="fa-solid fa-clock-rotate-left me-1"></i>Gửi Yêu Cầu Chấm Công Bù
+                </a>
+                <a href="/leave-request" class="btn btn-outline-secondary btn-sm fw-semibold shadow-sm">
+                    <i class="fa-solid fa-calendar-check me-1"></i>Nộp Đơn Nghỉ Phép
+                </a>
+            </div>
+        }
+    </div>
 
     @if (currentTab == "calendar")
     {
@@ -385,15 +407,20 @@
     else if (currentTab == "report")
     {
         <!-- ========================================================================= -->
-        <!-- MỤC 5: HOÀN THIỆN QUẢN LÝ BẢNG CHẤM CÔNG & IN ẤN (MẪU KIM LONG ECOSTAY)     -->
+        <!-- BẢNG CHẤM CÔNG TỔNG HỢP & IN BÁO CÁO                                        -->
         <!-- ========================================================================= -->
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-header bg-white py-3 px-4 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2 d-print-none">
-                <div>
-                    <h5 class="h6 mb-0 fw-bold text-dark">
-                        <i class="fa-solid fa-file-invoice text-primary me-2"></i>Bảng Tổng Hợp Chấm Công & Theo Dõi Ngày Công Tháng @currentMonth/@currentYear
-                    </h5>
-                    <small class="text-muted">Đơn vị: <strong>KIM LONG ECOSTAY - CÔNG TY TNHH MTV</strong></small>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-outline-secondary btn-sm me-3" @onclick='() => currentTab = "calendar"' title="Quay lại giao diện lịch">
+                        <i class="fa-solid fa-arrow-left me-1"></i>Quay lại Lịch
+                    </button>
+                    <div>
+                        <h5 class="h6 mb-0 fw-bold text-dark">
+                            <i class="fa-solid fa-file-invoice text-primary me-2"></i>Bảng Tổng Hợp Chấm Công & Theo Dõi Ngày Công Tháng @currentMonth/@currentYear
+                        </h5>
+                        <small class="text-muted">Đơn vị: <strong>CÔNG TY TNHH HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP</strong></small>
+                    </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <button class="btn btn-primary fw-semibold shadow-sm" @onclick="OpenPrintPreviewModal">
@@ -718,8 +745,8 @@
                     <!-- TIÊU ĐỀ ĐƠN VỊ & BÁO CÁO -->
                     <div class="d-flex justify-content-between align-items-start border-bottom pb-3 mb-4">
                         <div>
-                            <div class="fw-bold fs-6 text-uppercase" style="color: #1e3a8a;">KIM LONG ECOSTAY - CÔNG TY TNHH MTV</div>
-                            <div class="small text-muted italic">Địa chỉ: Thôn Kim Long, Hương Long, TP. Huế</div>
+                            <div class="fw-bold fs-6 text-uppercase text-primary">CÔNG TY TNHH HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP</div>
+                            <div class="small text-muted italic">Hệ Thống Quản Lý Nhân Sự – Chấm Công – Tính Lương</div>
                             <div class="small text-muted">Bộ phận: Phòng Hành Chính Nhân Sự & Kế Toán</div>
                         </div>
                         <div class="text-end">
@@ -914,15 +941,30 @@
         {
             CalculateCalendarDays();
 
-            // Tải dữ liệu thật từ SQL Server Dapper
-            allLoadedTimesheets = (await ViewTimesheetSummaryUseCase.ExecuteByMonthAsync(currentMonth, currentYear)).ToList();
-
-            // Tổng hợp danh sách bảng công
-            summaryList = BuildSummaryItems(allEmployees, allLoadedTimesheets);
-
             if (canManage)
             {
+                // Tải dữ liệu thật theo thẩm quyền (Admin/Kế toán: toàn công ty; Quản lý: bộ phận phụ trách)
+                var emps = allEmployees.Where(e => e.IsActiveEmployee());
+                if (isManager && !string.IsNullOrEmpty(UserSession.CurrentUser?.DepartmentName))
+                {
+                    emps = emps.Where(e => string.Equals(e.DepartmentName, UserSession.CurrentUser.DepartmentName, StringComparison.OrdinalIgnoreCase));
+                }
+                var allowedEmps = emps.ToList();
+                var empIds = allowedEmps.Select(e => e.Id).ToHashSet();
+
+                var allTs = (await ViewTimesheetSummaryUseCase.ExecuteByMonthAsync(currentMonth, currentYear)).ToList();
+                allLoadedTimesheets = allTs.Where(t => empIds.Contains(t.EmployeeId)).ToList();
+                summaryList = BuildSummaryItems(allowedEmps, allLoadedTimesheets);
                 auditLogs = (await ManageTimesheetUseCase.GetAuditLogsAsync(null, UserSession.CurrentUser?.Role)).ToList();
+            }
+            else
+            {
+                // Nhân viên thông thường: CHỈ xem dữ liệu cá nhân của mình, tuyệt đối không lộ dữ liệu nhân viên khác
+                currentTab = "calendar";
+                long myEmpId = UserSession.CurrentUser?.EmployeeId ?? 1;
+                allLoadedTimesheets = (await ViewTimesheetUseCase.ExecuteAsync(myEmpId, currentMonth, currentYear)).ToList();
+                summaryList.Clear();
+                auditLogs.Clear();
             }
         }
         catch (Exception ex)
@@ -1235,13 +1277,21 @@
         await JSRuntime.InvokeVoidAsync("window.print");
     }
 
+    private void OpenSummaryReportView()
+    {
+        if (canManage)
+        {
+            currentTab = "report";
+        }
+    }
+
     private async Task HandleExportTimesheetExcelAsync()
     {
         try
         {
             var bytes = ExportTimesheetExcelUseCase.ExportTimesheetToExcelHtml(currentMonth, currentYear, summaryList);
             string base64 = Convert.ToBase64String(bytes);
-            string fileName = $"Bang_Cham_Cong_KimLongEcoStay_Thang_{currentMonth:D2}_{currentYear}.xls";
+            string fileName = $"Bang_Cham_Cong_Thang_{currentMonth:D2}_{currentYear}.xls";
             await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", fileName, "application/vnd.ms-excel", base64);
             statusMessage = $"Đã xuất thành công file Excel bảng chấm công {fileName}.";
             statusType = "success";

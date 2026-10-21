@@ -587,7 +587,7 @@ public class LeaveRequestRepository : ILeaveRequestRepository
             SELECT l.id AS Id, l.employee_id AS EmployeeId, e.employee_code AS EmployeeCode, e.full_name AS EmployeeName, d.department_name AS DepartmentName,
                    l.leave_type AS LeaveType, l.start_date AS StartDate, l.end_date AS EndDate,
                    l.total_days AS TotalDays, l.reason AS Reason, l.approval_status AS ApprovalStatus,
-                   l.approved_by AS ApprovedBy, l.approved_at AS ApprovedAt
+                   l.approved_by AS ApprovedBy, l.approved_at AS ApprovedAt, l.reject_reason AS RejectReason
             FROM leave_requests l
             JOIN employees e ON l.employee_id = e.id
             LEFT JOIN departments d ON e.department_id = d.id
@@ -602,7 +602,7 @@ public class LeaveRequestRepository : ILeaveRequestRepository
             SELECT l.id AS Id, l.employee_id AS EmployeeId, e.employee_code AS EmployeeCode, e.full_name AS EmployeeName, d.department_name AS DepartmentName,
                    l.leave_type AS LeaveType, l.start_date AS StartDate, l.end_date AS EndDate,
                    l.total_days AS TotalDays, l.reason AS Reason, l.approval_status AS ApprovalStatus,
-                   l.approved_by AS ApprovedBy, l.approved_at AS ApprovedAt
+                   l.approved_by AS ApprovedBy, l.approved_at AS ApprovedAt, l.reject_reason AS RejectReason
             FROM leave_requests l
             JOIN employees e ON l.employee_id = e.id
             LEFT JOIN departments d ON e.department_id = d.id
@@ -618,7 +618,7 @@ public class LeaveRequestRepository : ILeaveRequestRepository
             SELECT l.id AS Id, l.employee_id AS EmployeeId, e.full_name AS EmployeeName,
                    l.leave_type AS LeaveType, l.start_date AS StartDate, l.end_date AS EndDate,
                    l.total_days AS TotalDays, l.reason AS Reason, l.approval_status AS ApprovalStatus,
-                   l.approved_by AS ApprovedBy, l.approved_at AS ApprovedAt
+                   l.approved_by AS ApprovedBy, l.approved_at AS ApprovedAt, l.reject_reason AS RejectReason
             FROM leave_requests l
             JOIN employees e ON l.employee_id = e.id
             WHERE l.employee_id = @EmployeeId
@@ -642,17 +642,18 @@ public class LeaveRequestRepository : ILeaveRequestRepository
         });
     }
 
-    public async Task ApproveOrRejectLeaveRequestAsync(long requestId, ApprovalStatus status, string reviewer)
+    public async Task ApproveOrRejectLeaveRequestAsync(long requestId, ApprovalStatus status, string reviewer, string? rejectReason = null)
     {
         using var conn = _db.CreateConnection();
         const string sql = @"
             UPDATE leave_requests
             SET approval_status = @Status,
                 approved_by = @Reviewer,
+                reject_reason = @RejectReason,
                 approved_at = GETDATE(),
                 updated_at = GETDATE()
             WHERE id = @RequestId;";
-        await conn.ExecuteAsync(sql, new { RequestId = requestId, Status = status.ToString(), Reviewer = reviewer });
+        await conn.ExecuteAsync(sql, new { RequestId = requestId, Status = status.ToString(), Reviewer = reviewer, RejectReason = rejectReason });
 
         if (status == ApprovalStatus.APPROVED)
         {
@@ -666,7 +667,7 @@ public class LeaveRequestRepository : ILeaveRequestRepository
 
                     const string checkSql = "SELECT COUNT(*) FROM timesheets WHERE employee_id = @EmpId AND work_date = @WorkDate;";
                     var count = await conn.ExecuteScalarAsync<int>(checkSql, new { EmpId = req.EmployeeId, WorkDate = d });
-                    var note = $"Nghỉ phép: {req.Reason}";
+                    var note = $"Nghỉ phép ({req.LeaveType}): {req.Reason}";
                     var workUnits = req.LeaveType == LeaveType.ANNUAL_LEAVE ? 1.0m : 0.0m;
 
                     if (count > 0)
@@ -690,6 +691,275 @@ public class LeaveRequestRepository : ILeaveRequestRepository
                 }
             }
         }
+    }
+}
+
+public class AttendanceRequestRepository : IAttendanceRequestRepository
+{
+    private readonly IDataAccess _db;
+    public AttendanceRequestRepository(IDataAccess db) => _db = db;
+
+    public async Task<long> CreateAttendanceRequestAsync(AttendanceRequest r)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            INSERT INTO attendance_requests (
+                employee_id, work_date, request_type, proposed_check_in, proposed_check_out, 
+                shift_id, reason, evidence_file_name, approval_status, created_at, updated_at
+            )
+            VALUES (
+                @EmployeeId, @WorkDate, @RequestType, @ProposedCheckIn, @ProposedCheckOut, 
+                @ShiftId, @Reason, @EvidenceFileName, 'PENDING', GETDATE(), GETDATE()
+            );
+            SELECT CAST(SCOPE_IDENTITY() as BIGINT);";
+        return await conn.ExecuteScalarAsync<long>(sql, new {
+            r.EmployeeId,
+            r.WorkDate,
+            r.RequestType,
+            r.ProposedCheckIn,
+            r.ProposedCheckOut,
+            r.ShiftId,
+            r.Reason,
+            r.EvidenceFileName
+        });
+    }
+
+    public async Task<AttendanceRequest?> GetAttendanceRequestByIdAsync(long id)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT ar.id AS Id, ar.employee_id AS EmployeeId, e.employee_code AS EmployeeCode, 
+                   e.full_name AS EmployeeName, d.department_name AS DepartmentName,
+                   ar.work_date AS WorkDate, ar.request_type AS RequestType, 
+                   ar.proposed_check_in AS ProposedCheckIn, ar.proposed_check_out AS ProposedCheckOut,
+                   ar.shift_id AS ShiftId, ws.shift_name AS ShiftName,
+                   ar.reason AS Reason, ar.evidence_file_name AS EvidenceFileName,
+                   ar.approval_status AS ApprovalStatus, ar.approved_by AS ApprovedBy,
+                   ar.approved_at AS ApprovedAt, ar.rejection_reason AS RejectionReason,
+                   ar.created_at AS CreatedAt, ar.updated_at AS UpdatedAt
+            FROM attendance_requests ar
+            JOIN employees e ON ar.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            LEFT JOIN work_shifts ws ON ar.shift_id = ws.id
+            WHERE ar.id = @Id;";
+        return await conn.QueryFirstOrDefaultAsync<AttendanceRequest>(sql, new { Id = id });
+    }
+
+    public async Task<IEnumerable<AttendanceRequest>> GetAllAttendanceRequestsAsync()
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT ar.id AS Id, ar.employee_id AS EmployeeId, e.employee_code AS EmployeeCode, 
+                   e.full_name AS EmployeeName, d.department_name AS DepartmentName,
+                   ar.work_date AS WorkDate, ar.request_type AS RequestType, 
+                   ar.proposed_check_in AS ProposedCheckIn, ar.proposed_check_out AS ProposedCheckOut,
+                   ar.shift_id AS ShiftId, ws.shift_name AS ShiftName,
+                   ar.reason AS Reason, ar.evidence_file_name AS EvidenceFileName,
+                   ar.approval_status AS ApprovalStatus, ar.approved_by AS ApprovedBy,
+                   ar.approved_at AS ApprovedAt, ar.rejection_reason AS RejectionReason,
+                   ar.created_at AS CreatedAt, ar.updated_at AS UpdatedAt
+            FROM attendance_requests ar
+            JOIN employees e ON ar.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            LEFT JOIN work_shifts ws ON ar.shift_id = ws.id
+            ORDER BY ar.created_at DESC;";
+        return await conn.QueryAsync<AttendanceRequest>(sql);
+    }
+
+    public async Task<IEnumerable<AttendanceRequest>> GetPendingAttendanceRequestsAsync()
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT ar.id AS Id, ar.employee_id AS EmployeeId, e.employee_code AS EmployeeCode, 
+                   e.full_name AS EmployeeName, d.department_name AS DepartmentName,
+                   ar.work_date AS WorkDate, ar.request_type AS RequestType, 
+                   ar.proposed_check_in AS ProposedCheckIn, ar.proposed_check_out AS ProposedCheckOut,
+                   ar.shift_id AS ShiftId, ws.shift_name AS ShiftName,
+                   ar.reason AS Reason, ar.evidence_file_name AS EvidenceFileName,
+                   ar.approval_status AS ApprovalStatus, ar.approved_by AS ApprovedBy,
+                   ar.approved_at AS ApprovedAt, ar.rejection_reason AS RejectionReason,
+                   ar.created_at AS CreatedAt, ar.updated_at AS UpdatedAt
+            FROM attendance_requests ar
+            JOIN employees e ON ar.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            LEFT JOIN work_shifts ws ON ar.shift_id = ws.id
+            WHERE ar.approval_status = 'PENDING'
+            ORDER BY ar.work_date ASC, ar.created_at ASC;";
+        return await conn.QueryAsync<AttendanceRequest>(sql);
+    }
+
+    public async Task<IEnumerable<AttendanceRequest>> GetAttendanceRequestsByEmployeeAsync(long employeeId)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SELECT ar.id AS Id, ar.employee_id AS EmployeeId, e.employee_code AS EmployeeCode, 
+                   e.full_name AS EmployeeName, d.department_name AS DepartmentName,
+                   ar.work_date AS WorkDate, ar.request_type AS RequestType, 
+                   ar.proposed_check_in AS ProposedCheckIn, ar.proposed_check_out AS ProposedCheckOut,
+                   ar.shift_id AS ShiftId, ws.shift_name AS ShiftName,
+                   ar.reason AS Reason, ar.evidence_file_name AS EvidenceFileName,
+                   ar.approval_status AS ApprovalStatus, ar.approved_by AS ApprovedBy,
+                   ar.approved_at AS ApprovedAt, ar.rejection_reason AS RejectionReason,
+                   ar.created_at AS CreatedAt, ar.updated_at AS UpdatedAt
+            FROM attendance_requests ar
+            JOIN employees e ON ar.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            LEFT JOIN work_shifts ws ON ar.shift_id = ws.id
+            WHERE ar.employee_id = @EmployeeId
+            ORDER BY ar.created_at DESC;";
+        return await conn.QueryAsync<AttendanceRequest>(sql, new { EmployeeId = employeeId });
+    }
+
+    public async Task<bool> ApproveAttendanceRequestAsync(long requestId, string approvedBy)
+    {
+        using var conn = _db.CreateConnection();
+        if (conn.State != ConnectionState.Open) conn.Open();
+        using var tx = conn.BeginTransaction();
+
+        try
+        {
+            // 1. Kiểm tra trạng thái hiện tại (Idempotency)
+            const string getReqSql = "SELECT * FROM attendance_requests WHERE id = @RequestId;";
+            var req = await conn.QueryFirstOrDefaultAsync<AttendanceRequest>(getReqSql, new { RequestId = requestId }, tx);
+            if (req == null || !req.IsPending)
+            {
+                tx.Rollback();
+                return false;
+            }
+
+            // 2. Cập nhật trạng thái yêu cầu
+            const string updateReqSql = @"
+                UPDATE attendance_requests 
+                SET approval_status = 'APPROVED',
+                    approved_by = @ApprovedBy,
+                    approved_at = GETDATE(),
+                    updated_at = GETDATE()
+                WHERE id = @RequestId;";
+            await conn.ExecuteAsync(updateReqSql, new { RequestId = requestId, ApprovedBy = approvedBy }, tx);
+
+            // 3. Tự động tạo hoặc cập nhật bản ghi chấm công chính thức (timesheets)
+            decimal actualHours = 8.0m;
+            decimal workUnits = 1.0m;
+
+            if (req.ProposedCheckIn.HasValue && req.ProposedCheckOut.HasValue)
+            {
+                var duration = req.ProposedCheckOut.Value - req.ProposedCheckIn.Value;
+                if (duration.TotalHours > 0)
+                {
+                    double netHours = duration.TotalHours >= 5.0 ? Math.Max(0.0, duration.TotalHours - 1.0) : duration.TotalHours;
+                    actualHours = (decimal)Math.Round(netHours, 1);
+                    workUnits = actualHours >= 7.0m ? 1.0m : (actualHours >= 3.5m ? 0.5m : Math.Round(actualHours / 8.0m, 2));
+                }
+            }
+
+            string note = $"Chấm công bù đã duyệt ({req.GetRequestTypeDisplay()}). Lý do: {req.Reason}";
+
+            const string checkTsSql = "SELECT id, check_in_time, check_out_time FROM timesheets WHERE employee_id = @EmployeeId AND work_date = @WorkDate;";
+            var existingTs = await conn.QueryFirstOrDefaultAsync(checkTsSql, new { req.EmployeeId, req.WorkDate }, tx);
+
+            if (existingTs != null)
+            {
+                const string updateTsSql = @"
+                    UPDATE timesheets
+                    SET check_in_time = COALESCE(@InTime, check_in_time),
+                        check_out_time = COALESCE(@OutTime, check_out_time),
+                        work_shift_id = COALESCE(@ShiftId, work_shift_id),
+                        actual_hours_worked = @ActualHours,
+                        work_units = @WorkUnits,
+                        work_shift_status = 'PRESENT',
+                        note = @Note,
+                        updated_at = GETDATE()
+                    WHERE employee_id = @EmployeeId AND work_date = @WorkDate;";
+                await conn.ExecuteAsync(updateTsSql, new {
+                    req.EmployeeId,
+                    req.WorkDate,
+                    InTime = req.ProposedCheckIn,
+                    OutTime = req.ProposedCheckOut,
+                    req.ShiftId,
+                    ActualHours = actualHours,
+                    WorkUnits = workUnits,
+                    Note = note
+                }, tx);
+            }
+            else
+            {
+                const string insertTsSql = @"
+                    INSERT INTO timesheets (
+                        employee_id, work_date, check_in_time, check_out_time, work_shift_id,
+                        actual_hours_worked, work_shift_status, work_units, is_locked, note, created_at, updated_at
+                    )
+                    VALUES (
+                        @EmployeeId, @WorkDate, @InTime, @OutTime, @ShiftId,
+                        @ActualHours, 'PRESENT', @WorkUnits, 0, @Note, GETDATE(), GETDATE()
+                    );";
+                await conn.ExecuteAsync(insertTsSql, new {
+                    req.EmployeeId,
+                    req.WorkDate,
+                    InTime = req.ProposedCheckIn,
+                    OutTime = req.ProposedCheckOut,
+                    req.ShiftId,
+                    ActualHours = actualHours,
+                    WorkUnits = workUnits,
+                    Note = note
+                }, tx);
+            }
+
+            // 4. Ghi nhật ký kiểm toán (Audit Log)
+            const string auditSql = @"
+                INSERT INTO timesheet_audit_logs (
+                    employee_id, work_date, action_type, old_values_json, new_values_json, 
+                    modified_by, reason, modified_at
+                )
+                VALUES (
+                    @EmployeeId, @WorkDate, 'APPROVE_MANUAL_PUNCH', 
+                    @OldValues, @NewValues, @ApprovedBy, @Reason, GETDATE()
+                );";
+            string oldValuesJson = existingTs != null ? "{\"status\":\"EXISTS\"}" : "{\"status\":\"NONE\"}";
+            string newValuesJson = $"{{\"checkIn\":\"{req.ProposedCheckIn}\",\"checkOut\":\"{req.ProposedCheckOut}\",\"workUnits\":{workUnits},\"status\":\"PRESENT\"}}";
+            await conn.ExecuteAsync(auditSql, new {
+                req.EmployeeId,
+                req.WorkDate,
+                OldValues = oldValuesJson,
+                NewValues = newValuesJson,
+                ApprovedBy = approvedBy,
+                Reason = $"Duyệt yêu cầu chấm công bù ID={requestId}: {req.Reason}"
+            }, tx);
+
+            tx.Commit();
+            return true;
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<bool> RejectAttendanceRequestAsync(long requestId, string approvedBy, string rejectionReason)
+    {
+        using var conn = _db.CreateConnection();
+        const string checkSql = "SELECT approval_status FROM attendance_requests WHERE id = @RequestId;";
+        var status = await conn.ExecuteScalarAsync<string>(checkSql, new { RequestId = requestId });
+        if (status == null || !string.Equals(status, "PENDING", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        const string sql = @"
+            UPDATE attendance_requests
+            SET approval_status = 'REJECTED',
+                approved_by = @ApprovedBy,
+                rejection_reason = @RejectionReason,
+                approved_at = GETDATE(),
+                updated_at = GETDATE()
+            WHERE id = @RequestId;";
+        var affected = await conn.ExecuteAsync(sql, new { RequestId = requestId, ApprovedBy = approvedBy, RejectionReason = rejectionReason });
+        return affected > 0;
+    }
+
+    public async Task<int> CountPendingAttendanceRequestsAsync()
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = "SELECT COUNT(*) FROM attendance_requests WHERE approval_status = 'PENDING';";
+        return await conn.ExecuteScalarAsync<int>(sql);
     }
 }
 

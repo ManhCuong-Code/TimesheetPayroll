@@ -373,3 +373,58 @@ public class GetEmployeeProfileUseCase : IGetEmployeeProfileUseCase
 }
 
 #endregion
+
+#region 6. GỬI YÊU CẦU CHẤM CÔNG THỦ CÔNG (UC_EMP_MANUAL_ATTENDANCE)
+
+/// <summary>
+/// Ca sử dụng: Nhân viên nộp yêu cầu chấm công bổ sung / điều chỉnh giờ làm việc (quên chấm công, lỗi thiết bị).
+/// </summary>
+public interface ICreateAttendanceRequestUseCase
+{
+    Task<long> SubmitRequestAsync(AttendanceRequest request);
+    Task<IEnumerable<AttendanceRequest>> GetMyRequestsAsync(long employeeId);
+}
+
+public class CreateAttendanceRequestUseCase : ICreateAttendanceRequestUseCase
+{
+    private readonly IAttendanceRequestRepository _attendanceRequestRepo;
+
+    public CreateAttendanceRequestUseCase(IAttendanceRequestRepository attendanceRequestRepo)
+    {
+        _attendanceRequestRepo = attendanceRequestRepo;
+    }
+
+    public async Task<long> SubmitRequestAsync(AttendanceRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.EmployeeId <= 0)
+            throw new ArgumentException("Mã nhân viên không hợp lệ.", nameof(request.EmployeeId));
+
+        if (string.IsNullOrWhiteSpace(request.Reason))
+            throw new ArgumentException("Vui lòng ghi rõ lý do yêu cầu chấm công thủ công.", nameof(request.Reason));
+
+        if (request.WorkDate.Date > DateTime.Today)
+            throw new ArgumentException("Không thể gửi yêu cầu chấm công bổ sung cho ngày trong tương lai.", nameof(request.WorkDate));
+
+        if (request.RequestType == "BOTH" && request.ProposedCheckIn.HasValue && request.ProposedCheckOut.HasValue)
+        {
+            if (request.ProposedCheckOut.Value <= request.ProposedCheckIn.Value)
+                throw new ArgumentException("Giờ ra đề nghị phải sau giờ vào đề nghị.");
+        }
+
+        request.ApprovalStatus = "PENDING";
+        return await _attendanceRequestRepo.CreateAttendanceRequestAsync(request);
+    }
+
+    public async Task<IEnumerable<AttendanceRequest>> GetMyRequestsAsync(long employeeId)
+    {
+        if (employeeId <= 0)
+            return Enumerable.Empty<AttendanceRequest>();
+
+        return await _attendanceRequestRepo.GetAttendanceRequestsByEmployeeAsync(employeeId);
+    }
+}
+
+#endregion
+

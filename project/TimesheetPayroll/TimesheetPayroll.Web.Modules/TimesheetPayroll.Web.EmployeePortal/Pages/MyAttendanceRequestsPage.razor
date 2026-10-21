@@ -1,0 +1,369 @@
+@page "/my-attendance-requests"
+@attribute [Authorize]
+@inject ICreateAttendanceRequestUseCase AttendanceUseCase
+@inject IGetWorkShiftsUseCase GetWorkShiftsUseCase
+@inject IUserSessionService UserSession
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using TimesheetPayroll.CoreBusiness.Models
+@using TimesheetPayroll.UseCases.EmployeePortal
+@using TimesheetPayroll.UseCases.AdminPortal
+@using TimesheetPayroll.UseCases.Authentication
+@using System.Globalization
+
+<PageTitle>Yêu Cầu Chấm Công Thủ Công - Cổng Nhân Viên</PageTitle>
+
+<div class="container-fluid py-3">
+    <!-- TIÊU ĐỀ TRANG -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2 border-bottom pb-3">
+        <div>
+            <h2 class="h4 mb-1 text-dark fw-bold">
+                <i class="fa-solid fa-clock-rotate-left text-primary me-2"></i>Yêu Cầu Chấm Công Thủ Công
+            </h2>
+            <p class="text-muted small mb-0">
+                Gửi yêu cầu bổ sung giờ vào/ra hoặc điều chỉnh ca trong trường hợp quên chấm công, lỗi thiết bị nhận diện khuôn mặt hoặc công tác bên ngoài.
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="/my-timesheet" class="btn btn-outline-primary btn-sm shadow-sm">
+                <i class="fa-solid fa-calendar-days me-1"></i>Xem Lịch Chấm Công
+            </a>
+            <button class="btn btn-outline-secondary btn-sm shadow-sm" @onclick="LoadRequestsAsync" disabled="@isLoading">
+                <i class="fa-solid fa-arrows-rotate me-1 @(isLoading ? "fa-spin" : "")"></i>Làm Mới
+            </button>
+        </div>
+    </div>
+
+    <!-- THÔNG BÁO HỆ THỐNG -->
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert alert-@statusType alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fa-solid @(statusType == "success" ? "fa-circle-check" : "fa-triangle-exclamation") me-2"></i>
+            @statusMessage
+            <button type="button" class="btn-close" @onclick="() => statusMessage = string.Empty"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- FORM GỬI YÊU CẦU MỚI (BÊN TRÁI) -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4">
+                    <h5 class="h6 fw-bold mb-0">
+                        <i class="fa-solid fa-paper-plane me-2"></i>Tạo Yêu Cầu Chấm Công Bù
+                    </h5>
+                    <small class="opacity-75">Tự động gắn tài khoản nhân viên của bạn</small>
+                </div>
+                <div class="card-body p-4 bg-white">
+                    <div class="mb-3 p-3 bg-light rounded-3 border">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary text-white rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark">@(UserSession.CurrentUser?.FullName ?? "Nhân viên")</div>
+                                <div class="small text-muted font-monospace">Mã NV: @(UserSession.CurrentUser?.EmployeeCode ?? "EMP") • @(UserSession.CurrentUser?.DepartmentName ?? "Doanh nghiệp")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form @onsubmit="HandleSubmitRequestAsync">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-secondary">
+                                NGÀY CẦN BỔ SUNG CHẤM CÔNG <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control" max="@DateTime.Today.ToString("yyyy-MM-dd")" @bind="newRequest.WorkDate" required />
+                            <div class="form-text small text-muted">Chỉ áp dụng cho hôm nay hoặc các ngày trong quá khứ.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-secondary">
+                                LOẠI YÊU CẦU <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" @bind="newRequest.RequestType">
+                                <option value="BOTH">Điều chỉnh cả Giờ Vào & Giờ Ra</option>
+                                <option value="CHECK_IN_ONLY">Bổ sung Giờ Vào (Check-In)</option>
+                                <option value="CHECK_OUT_ONLY">Bổ sung Giờ Ra (Check-Out)</option>
+                            </select>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            @if (newRequest.RequestType == "BOTH" || newRequest.RequestType == "CHECK_IN_ONLY")
+                            {
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold text-success">
+                                        <i class="fa-solid fa-right-to-bracket me-1"></i>GIỜ VÀO ĐỀ NGHỊ
+                                    </label>
+                                    <input type="time" class="form-control font-monospace" @bind="proposedInTime" />
+                                </div>
+                            }
+                            @if (newRequest.RequestType == "BOTH" || newRequest.RequestType == "CHECK_OUT_ONLY")
+                            {
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold text-primary">
+                                        <i class="fa-solid fa-right-from-bracket me-1"></i>GIỜ RA ĐỀ NGHỊ
+                                    </label>
+                                    <input type="time" class="form-control font-monospace" @bind="proposedOutTime" />
+                                </div>
+                            }
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-secondary">
+                                CA LÀM VIỆC LIÊN QUAN
+                            </label>
+                            <select class="form-select" @bind="newRequest.ShiftId">
+                                <option value="">-- Mặc định (Ca hành chính) --</option>
+                                @foreach (var s in availableShifts)
+                                {
+                                    <option value="@s.Id">@s.ShiftName (@s.StartTime.ToString(@"hh\:mm") - @s.EndTime.ToString(@"hh\:mm"))</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-secondary">
+                                LÝ DO YÊU CẦU <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" rows="3" placeholder="Ghi rõ lý do (ví dụ: Camera lỗi góc chụp, quên bấm vân tay/khuôn mặt, đi gặp khách hàng từ đầu giờ...)" @bind="newRequest.Reason" required></textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-semibold text-secondary">
+                                TÊN TỆP MINH CHỨNG (NẾU CÓ)
+                            </label>
+                            <input type="text" class="form-control" placeholder="Ví dụ: GiayXacNhanCongTac_202610.pdf" @bind="newRequest.EvidenceFileName" />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Đang gửi yêu cầu...</span>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-paper-plane me-2"></i>
+                                <span>Gửi Yêu Cầu Chấm Công Bù</span>
+                            }
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- DANH SÁCH YÊU CẦU ĐÃ GỬI (BÊN PHẢI) -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+                <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="h6 fw-bold mb-0 text-dark">
+                        <i class="fa-solid fa-list-check text-primary me-2"></i>Lịch Sử Yêu Cầu Chấm Công Của Bạn
+                    </h5>
+                    <span class="badge bg-light text-dark border">@myRequests.Count yêu cầu</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-light text-uppercase">
+                            <tr>
+                                <th style="width: 120px;">Ngày Công</th>
+                                <th style="width: 140px;">Loại Yêu Cầu</th>
+                                <th style="width: 130px;">Giờ Đề Nghị</th>
+                                <th>Lý Do</th>
+                                <th class="text-center" style="width: 130px;">Trạng Thái</th>
+                                <th style="width: 140px;">Người Duyệt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (isLoading)
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                        <div class="mt-1">Đang tải lịch sử...</div>
+                                    </td>
+                                </tr>
+                            }
+                            else if (!myRequests.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="fa-regular fa-folder-open fs-2 d-block mb-2 text-secondary"></i>
+                                        Bạn chưa gửi yêu cầu chấm công bổ sung nào.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var item in myRequests)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-bold text-dark">@item.WorkDate.ToString("dd/MM/yyyy")</div>
+                                            <div class="text-muted" style="font-size: 0.72rem;">@item.WorkDate.ToString("dddd", new CultureInfo("vi-VN"))</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border">
+                                                @item.GetRequestTypeDisplay()
+                                            </span>
+                                        </td>
+                                        <td class="font-monospace">
+                                            @if (item.ProposedCheckIn.HasValue)
+                                            {
+                                                <div><span class="text-muted">Vào:</span> <strong class="text-success">@item.ProposedCheckIn.Value.ToString(@"hh\:mm")</strong></div>
+                                            }
+                                            @if (item.ProposedCheckOut.HasValue)
+                                            {
+                                                <div><span class="text-muted">Ra:</span> <strong class="text-primary">@item.ProposedCheckOut.Value.ToString(@"hh\:mm")</strong></div>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="text-dark">@item.Reason</div>
+                                            @if (!string.IsNullOrEmpty(item.EvidenceFileName))
+                                            {
+                                                <div class="text-muted" style="font-size: 0.72rem;">
+                                                    <i class="fa-solid fa-paperclip me-1"></i>@item.EvidenceFileName
+                                                </div>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge @item.GetStatusBadgeClass() px-2 py-1">
+                                                @item.GetStatusDisplay()
+                                            </span>
+                                            @if (item.IsRejected && !string.IsNullOrEmpty(item.RejectionReason))
+                                            {
+                                                <div class="text-danger small fst-italic mt-1" style="font-size: 0.72rem;">
+                                                    Lý do: @item.RejectionReason
+                                                </div>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(item.ApprovedBy))
+                                            {
+                                                <div class="fw-semibold text-dark">@item.ApprovedBy</div>
+                                                <div class="text-muted" style="font-size: 0.72rem;">
+                                                    @(item.ApprovedAt?.ToString("dd/MM/yyyy HH:mm") ?? "")
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">--</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private AttendanceRequest newRequest = new()
+    {
+        WorkDate = DateTime.Today,
+        RequestType = "BOTH"
+    };
+
+    private TimeOnly? proposedInTime = new TimeOnly(8, 0);
+    private TimeOnly? proposedOutTime = new TimeOnly(17, 30);
+    private List<AttendanceRequest> myRequests = new();
+    private List<WorkShift> availableShifts = new();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string statusMessage = string.Empty;
+    private string statusType = "success";
+    private long employeeId = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        employeeId = UserSession.CurrentUser?.EmployeeId ?? 1;
+        newRequest.EmployeeId = employeeId;
+
+        try
+        {
+            var shifts = await GetWorkShiftsUseCase.ExecuteAsync();
+            availableShifts = shifts.Where(s => s.IsActive).ToList();
+        }
+        catch { }
+
+        await LoadRequestsAsync();
+    }
+
+    private async Task LoadRequestsAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var data = await AttendanceUseCase.GetMyRequestsAsync(employeeId);
+            myRequests = data.ToList();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Lỗi khi tải lịch sử: {ex.Message}";
+            statusType = "danger";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleSubmitRequestAsync()
+    {
+        statusMessage = string.Empty;
+        isSubmitting = true;
+
+        try
+        {
+            newRequest.EmployeeId = employeeId;
+
+            // Parse times
+            if (newRequest.RequestType == "BOTH" || newRequest.RequestType == "CHECK_IN_ONLY")
+            {
+                newRequest.ProposedCheckIn = proposedInTime?.ToTimeSpan() ?? new TimeSpan(8, 0, 0);
+            }
+            else
+            {
+                newRequest.ProposedCheckIn = null;
+            }
+
+            if (newRequest.RequestType == "BOTH" || newRequest.RequestType == "CHECK_OUT_ONLY")
+            {
+                newRequest.ProposedCheckOut = proposedOutTime?.ToTimeSpan() ?? new TimeSpan(17, 30, 0);
+            }
+            else
+            {
+                newRequest.ProposedCheckOut = null;
+            }
+
+            await AttendanceUseCase.SubmitRequestAsync(newRequest);
+
+            statusMessage = "Gửi yêu cầu chấm công bù thành công! Yêu cầu đang ở trạng thái 'Chờ duyệt' và sẽ được Quản lý / Admin xem xét.";
+            statusType = "success";
+
+            // Reset form
+            newRequest = new AttendanceRequest
+            {
+                WorkDate = DateTime.Today,
+                RequestType = "BOTH",
+                EmployeeId = employeeId
+            };
+            proposedInTime = new TimeOnly(8, 0);
+            proposedOutTime = new TimeOnly(17, 30);
+
+            await LoadRequestsAsync();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Không thể gửi yêu cầu: {ex.Message}";
+            statusType = "danger";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

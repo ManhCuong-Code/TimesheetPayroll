@@ -42,6 +42,7 @@ builder.Services.AddScoped<ITimesheetStateStore, TimesheetStateStore>();
 builder.Services.AddScoped<IFaceProfileRepository, FaceProfileRepository>();
 builder.Services.AddScoped<IFaceAuditLogRepository, FaceAuditLogRepository>();
 builder.Services.AddScoped<ITimesheetAuditLogRepository, TimesheetAuditLogRepository>();
+builder.Services.AddScoped<IAttendanceRequestRepository, AttendanceRequestRepository>();
 
 // 3. CORE SERVICES & AI ASSISTANT
 builder.Services.AddHttpClient();
@@ -117,6 +118,7 @@ builder.Services.AddTransient<IExportPayrollExcelUseCase, ExportPayrollExcelUseC
 builder.Services.AddTransient<IFaceManagementUseCases, FaceManagementUseCases>();
 builder.Services.AddTransient<IExportTimesheetExcelUseCase, ExportTimesheetExcelUseCase>();
 builder.Services.AddTransient<IManageTimesheetUseCase, ManageTimesheetUseCase>();
+builder.Services.AddTransient<IProcessAttendanceRequestUseCase, ProcessAttendanceRequestUseCase>();
 
 // 6. EMPLOYEE PORTAL USE CASES
 builder.Services.AddTransient<IViewMyPayslipUseCase, ViewMyPayslipUseCase>();
@@ -129,6 +131,7 @@ builder.Services.AddTransient<IGetEmployeePayslipHistoryUseCase, GetEmployeePays
 builder.Services.AddTransient<ICompareSalaryUseCase, CompareSalaryUseCase>();
 builder.Services.AddTransient<IAskSalaryAiUseCase, AskSalaryAiUseCase>();
 builder.Services.AddTransient<ISimulateSalaryUseCase, SimulateSalaryUseCase>();
+builder.Services.AddTransient<ICreateAttendanceRequestUseCase, CreateAttendanceRequestUseCase>();
 
 var app = builder.Build();
 

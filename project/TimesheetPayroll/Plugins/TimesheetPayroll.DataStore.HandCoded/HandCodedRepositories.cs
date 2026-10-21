@@ -162,13 +162,14 @@ public class HandCodedRepositories :
         return Task.CompletedTask; 
     }
 
-    public Task ApproveOrRejectLeaveRequestAsync(long requestId, ApprovalStatus status, string reviewer)
+    public Task ApproveOrRejectLeaveRequestAsync(long requestId, ApprovalStatus status, string reviewer, string? rejectReason = null)
     {
         var req = _leaveRequests.FirstOrDefault(r => r.Id == requestId);
         if (req != null) 
         { 
             req.ApprovalStatus = status; 
             req.ApprovedBy = reviewer; 
+            req.RejectReason = rejectReason;
             req.ApprovedAt = DateTime.Now; 
         }
         return Task.CompletedTask;

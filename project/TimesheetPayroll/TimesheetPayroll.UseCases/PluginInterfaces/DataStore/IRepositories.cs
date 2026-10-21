@@ -189,9 +189,9 @@ public interface ILeaveRequestRepository
     Task CreateLeaveRequestAsync(LeaveRequest request);
 
     /// <summary>
-    /// Phê duyệt (APPROVED) hoặc từ chối (REJECTED) đơn xin nghỉ phép.
+    /// Phê duyệt (APPROVED) hoặc từ chối (REJECTED) đơn xin nghỉ phép kèm lý do nếu từ chối.
     /// </summary>
-    Task ApproveOrRejectLeaveRequestAsync(long requestId, ApprovalStatus status, string reviewer);
+    Task ApproveOrRejectLeaveRequestAsync(long requestId, ApprovalStatus status, string reviewer, string? rejectReason = null);
 }
 
 /// <summary>
@@ -291,4 +291,20 @@ public interface ITimesheetAuditLogRepository
     Task<IEnumerable<TimesheetAuditLog>> GetLogsByEmployeeAsync(long employeeId, int limit = 50);
     Task<IEnumerable<TimesheetAuditLog>> GetRecentLogsAsync(int limit = 100);
 }
+
+/// <summary>
+/// Cổng giao tiếp dữ liệu yêu cầu chấm công thủ công (bổ sung giờ vào/ra, điều chỉnh ca làm việc).
+/// </summary>
+public interface IAttendanceRequestRepository
+{
+    Task<long> CreateAttendanceRequestAsync(AttendanceRequest request);
+    Task<AttendanceRequest?> GetAttendanceRequestByIdAsync(long id);
+    Task<IEnumerable<AttendanceRequest>> GetAllAttendanceRequestsAsync();
+    Task<IEnumerable<AttendanceRequest>> GetPendingAttendanceRequestsAsync();
+    Task<IEnumerable<AttendanceRequest>> GetAttendanceRequestsByEmployeeAsync(long employeeId);
+    Task<bool> ApproveAttendanceRequestAsync(long requestId, string approvedBy);
+    Task<bool> RejectAttendanceRequestAsync(long requestId, string approvedBy, string rejectionReason);
+    Task<int> CountPendingAttendanceRequestsAsync();
+}
+
 

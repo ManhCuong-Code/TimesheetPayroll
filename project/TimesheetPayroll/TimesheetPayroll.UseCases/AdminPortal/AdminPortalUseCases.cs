@@ -263,7 +263,7 @@ public interface IProcessLeaveRequestUseCase
     Task<IEnumerable<LeaveRequest>> GetAllRequestsAsync();
     Task<IEnumerable<LeaveRequest>> GetPendingRequestsAsync();
     Task ApproveAsync(long requestId, string reviewer);
-    Task RejectAsync(long requestId, string reviewer);
+    Task RejectAsync(long requestId, string reviewer, string? reason = null);
 }
 
 public class ProcessLeaveRequestUseCase : IProcessLeaveRequestUseCase
@@ -290,9 +290,9 @@ public class ProcessLeaveRequestUseCase : IProcessLeaveRequestUseCase
         await _leaveRepo.ApproveOrRejectLeaveRequestAsync(requestId, ApprovalStatus.APPROVED, reviewer);
     }
 
-    public async Task RejectAsync(long requestId, string reviewer)
+    public async Task RejectAsync(long requestId, string reviewer, string? reason = null)
     {
-        await _leaveRepo.ApproveOrRejectLeaveRequestAsync(requestId, ApprovalStatus.REJECTED, reviewer);
+        await _leaveRepo.ApproveOrRejectLeaveRequestAsync(requestId, ApprovalStatus.REJECTED, reviewer, reason);
     }
 }
 
@@ -350,3 +350,72 @@ public class ExportBankTransferUseCase : IExportBankTransferUseCase
 }
 
 #endregion
+
+#region 7. XÉT DUYỆT CHẤM CÔNG THỦ CÔNG (MANUAL ATTENDANCE APPROVAL)
+
+/// <summary>
+/// Ca sử dụng: Xét duyệt hoặc từ chối yêu cầu chấm công bổ sung / điều chỉnh ca làm việc.
+/// </summary>
+public interface IProcessAttendanceRequestUseCase
+{
+    Task<IEnumerable<AttendanceRequest>> GetAllRequestsAsync();
+    Task<IEnumerable<AttendanceRequest>> GetPendingRequestsAsync();
+    Task<AttendanceRequest?> GetByIdAsync(long id);
+    Task<bool> ApproveAsync(long requestId, string reviewer, long currentUserId);
+    Task<bool> RejectAsync(long requestId, string reviewer, string rejectionReason, long currentUserId);
+}
+
+public class ProcessAttendanceRequestUseCase : IProcessAttendanceRequestUseCase
+{
+    private readonly IAttendanceRequestRepository _attendanceRequestRepo;
+
+    public ProcessAttendanceRequestUseCase(IAttendanceRequestRepository attendanceRequestRepo)
+    {
+        _attendanceRequestRepo = attendanceRequestRepo;
+    }
+
+    public async Task<IEnumerable<AttendanceRequest>> GetAllRequestsAsync()
+    {
+        return await _attendanceRequestRepo.GetAllAttendanceRequestsAsync();
+    }
+
+    public async Task<IEnumerable<AttendanceRequest>> GetPendingRequestsAsync()
+    {
+        return await _attendanceRequestRepo.GetPendingAttendanceRequestsAsync();
+    }
+
+    public async Task<AttendanceRequest?> GetByIdAsync(long id)
+    {
+        return await _attendanceRequestRepo.GetAttendanceRequestByIdAsync(id);
+    }
+
+    public async Task<bool> ApproveAsync(long requestId, string reviewer, long currentUserId)
+    {
+        var req = await _attendanceRequestRepo.GetAttendanceRequestByIdAsync(requestId);
+        if (req == null)
+            throw new InvalidOperationException("Không tìm thấy yêu cầu chấm công.");
+
+        if (req.EmployeeId == currentUserId)
+            throw new InvalidOperationException("Người dùng không được phép tự phê duyệt yêu cầu chấm công của chính mình.");
+
+        return await _attendanceRequestRepo.ApproveAttendanceRequestAsync(requestId, reviewer);
+    }
+
+    public async Task<bool> RejectAsync(long requestId, string reviewer, string rejectionReason, long currentUserId)
+    {
+        if (string.IsNullOrWhiteSpace(rejectionReason))
+            throw new ArgumentException("Bắt buộc phải nhập lý do khi từ chối yêu cầu chấm công.", nameof(rejectionReason));
+
+        var req = await _attendanceRequestRepo.GetAttendanceRequestByIdAsync(requestId);
+        if (req == null)
+            throw new InvalidOperationException("Không tìm thấy yêu cầu chấm công.");
+
+        if (req.EmployeeId == currentUserId)
+            throw new InvalidOperationException("Người dùng không được phép tự từ chối yêu cầu của chính mình.");
+
+        return await _attendanceRequestRepo.RejectAttendanceRequestAsync(requestId, reviewer, rejectionReason.Trim());
+    }
+}
+
+#endregion
+

@@ -15,17 +15,17 @@
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavManager
 
-<PageTitle>Chấm Công Bằng Khuôn Mặt - KimLongEcoStay HRMS</PageTitle>
+<PageTitle>Chấm Công Bằng Khuôn Mặt - HỆ THỐNG QUẢN LÝ NHÂN SỰ</PageTitle>
 
 <div class="container-fluid py-3">
     <!-- TIÊU ĐỀ ĐƠN VỊ & PHÂN HỆ -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-2 border-bottom gap-2">
         <div>
             <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-bold">
-                    <i class="fa-solid fa-hotel me-1"></i>KIM LONG ECOSTAY
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold">
+                    <i class="fa-solid fa-building me-1"></i>HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP
                 </span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
                     <i class="fa-solid fa-camera me-1"></i>Trạm Điểm Danh Sinh Trắc Học
                 </span>
             </div>
@@ -400,7 +400,7 @@
                 LivenessScore = (decimal)captureRes.LivenessScore,
                 PreferredPunchType = punchMode,
                 ShiftId = selectedShiftId,
-                DeviceInfo = "KimLongEcoStay Camera Terminal",
+                DeviceInfo = "Trạm Camera Điểm Danh Văn Phòng",
                 PerformedBy = UserSession.CurrentUser?.Username ?? "KIOSK"
             };
 

@@ -240,6 +240,12 @@
                                             <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
                                                 <i class="fa-solid fa-circle-xmark me-1"></i>Từ Chối
                                             </span>
+                                            @if (!string.IsNullOrEmpty(r.RejectReason))
+                                            {
+                                                <div class="text-danger small fst-italic mt-1" style="font-size: 0.72rem;">
+                                                    Lý do: @r.RejectReason
+                                                </div>
+                                            }
                                             break;
                                     }
                                 </td>
@@ -259,22 +265,31 @@
                                 <td class="text-center">
                                     @if (r.ApprovalStatus == ApprovalStatus.PENDING)
                                     {
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-success fw-semibold py-1 px-2 shadow-sm" 
-                                                    @onclick="() => HandleApproveAsync(r.Id)"
-                                                    title="Chấp thuận đơn xin nghỉ phép này">
-                                                <i class="fa-solid fa-check me-1"></i>Duyệt
-                                            </button>
-                                            <button class="btn btn-outline-danger fw-semibold py-1 px-2" 
-                                                    @onclick="() => HandleRejectAsync(r.Id)"
-                                                    title="Từ chối đơn xin nghỉ phép này">
-                                                <i class="fa-solid fa-xmark me-1"></i>Từ Chối
-                                            </button>
-                                        </div>
+                                        @if (r.EmployeeId == currentEmployeeId)
+                                        {
+                                            <span class="badge bg-light text-muted border py-1 px-2" title="Không thể tự phê duyệt đơn của bản thân">
+                                                <i class="fa-solid fa-ban me-1"></i>Đơn cá nhân
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-success fw-semibold py-1 px-2 shadow-sm" 
+                                                        @onclick="() => HandleApproveAsync(r.Id)"
+                                                        title="Chấp thuận đơn xin nghỉ phép này">
+                                                    <i class="fa-solid fa-check me-1"></i>Duyệt
+                                                </button>
+                                                <button class="btn btn-outline-danger fw-semibold py-1 px-2" 
+                                                        @onclick="() => OpenRejectModal(r)"
+                                                        title="Từ chối đơn xin nghỉ phép này (nhập lý do)">
+                                                    <i class="fa-solid fa-xmark me-1"></i>Từ Chối
+                                                </button>
+                                            </div>
+                                        }
                                     }
                                     else
                                     {
-                                        <span class="text-muted small">Đã xử lý xong</span>
+                                        <span class="text-muted small">Đã xử lý</span>
                                     }
                                 </td>
                             </tr>
@@ -285,6 +300,40 @@
         </div>
     </div>
 </div>
+
+<!-- MODAL NHẬP LÝ DO TỪ CHỐI ĐƠN NGHỈ PHÉP -->
+@if (showRejectModal && targetRequest != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-danger text-white py-3">
+                    <h5 class="modal-title h6 fw-bold mb-0">
+                        <i class="fa-solid fa-circle-xmark me-2"></i>Từ Chối Đơn Xin Nghỉ Phép
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => showRejectModal = false"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border small text-dark mb-3">
+                        <div>Nhân viên: <strong>@(targetRequest.EmployeeName ?? $"NV #{targetRequest.EmployeeId}")</strong></div>
+                        <div>Thời gian nghỉ: <strong>@targetRequest.StartDate.ToString("dd/MM/yyyy") - @targetRequest.EndDate.ToString("dd/MM/yyyy")</strong> (@targetRequest.TotalDays ngày)</div>
+                        <div>Lý do xin nghỉ: <em>@targetRequest.Reason</em></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">Lý do từ chối phê duyệt <span class="text-danger">*</span></label>
+                        <textarea class="form-control" rows="3" placeholder="Ghi rõ lý do từ chối để nhân viên nắm thông tin..." @bind="rejectionReasonInput"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => showRejectModal = false">Hủy</button>
+                    <button type="button" class="btn btn-danger btn-sm px-3 fw-bold" @onclick="ConfirmRejectAsync" disabled="@string.IsNullOrWhiteSpace(rejectionReasonInput)">
+                        <i class="fa-solid fa-xmark me-1"></i>Xác Nhận Từ Chối
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     [CascadingParameter]
@@ -297,6 +346,12 @@
     private string statusMessage = string.Empty;
     private string statusType = "success";
     private string reviewerName = "Kế toán / Quản trị viên";
+    private long currentEmployeeId = 0;
+
+    // Modal rejection
+    private bool showRejectModal = false;
+    private LeaveRequest? targetRequest;
+    private string rejectionReasonInput = string.Empty;
 
     private int pendingCount => allRequests.Count(r => r.ApprovalStatus == ApprovalStatus.PENDING);
     private int approvedCount => allRequests.Count(r => r.ApprovalStatus == ApprovalStatus.APPROVED);
@@ -338,6 +393,12 @@
             reviewerName = auth.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value 
                 ?? auth.User.Identity?.Name 
                 ?? "Kế toán / Quản trị viên";
+
+            var empIdStr = auth.User.FindFirst("EmployeeId")?.Value;
+            if (long.TryParse(empIdStr, out var empId))
+            {
+                currentEmployeeId = empId;
+            }
         }
         await LoadRequestsAsync();
     }
@@ -375,6 +436,14 @@
     private async Task HandleApproveAsync(long requestId)
     {
         statusMessage = string.Empty;
+        var r = allRequests.FirstOrDefault(x => x.Id == requestId);
+        if (r != null && r.EmployeeId == currentEmployeeId)
+        {
+            statusMessage = "Bạn không được phép tự phê duyệt đơn xin nghỉ phép của chính mình.";
+            statusType = "danger";
+            return;
+        }
+
         try
         {
             await ProcessLeaveUseCase.ApproveAsync(requestId, reviewerName);
@@ -389,13 +458,25 @@
         }
     }
 
-    private async Task HandleRejectAsync(long requestId)
+    private void OpenRejectModal(LeaveRequest req)
     {
+        targetRequest = req;
+        rejectionReasonInput = string.Empty;
+        showRejectModal = true;
+    }
+
+    private async Task ConfirmRejectAsync()
+    {
+        if (targetRequest == null || string.IsNullOrWhiteSpace(rejectionReasonInput))
+            return;
+
         statusMessage = string.Empty;
+        showRejectModal = false;
+
         try
         {
-            await ProcessLeaveUseCase.RejectAsync(requestId, reviewerName);
-            statusMessage = "Đã từ chối đơn xin nghỉ phép.";
+            await ProcessLeaveUseCase.RejectAsync(targetRequest.Id, reviewerName, rejectionReasonInput.Trim());
+            statusMessage = $"Đã từ chối đơn xin nghỉ phép của {targetRequest.EmployeeName} với lý do: {rejectionReasonInput.Trim()}";
             statusType = "warning";
             await LoadRequestsAsync();
         }

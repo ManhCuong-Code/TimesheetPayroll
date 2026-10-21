@@ -1,0 +1,488 @@
+@page "/admin/attendance-approval"
+@attribute [Authorize(Roles = "ROLE_ADMIN, ROLE_MANAGER")]
+@inject IProcessAttendanceRequestUseCase AttendanceRequestUseCase
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using TimesheetPayroll.CoreBusiness.Models
+@using TimesheetPayroll.UseCases.AdminPortal
+@using TimesheetPayroll.UseCases.PluginInterfaces.DataStore
+@using System.Globalization
+
+<PageTitle>Xét Duyệt Chấm Công Thủ Công - Quản Trị Hệ Thống</PageTitle>
+
+<div class="container-fluid py-3">
+    <!-- TIÊU ĐỀ TRANG -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2 border-bottom pb-3">
+        <div>
+            <h2 class="h4 mb-1 text-dark fw-bold">
+                <i class="fa-solid fa-user-clock text-primary me-2"></i>Xét Duyệt Chấm Công Thủ Công
+            </h2>
+            <p class="text-muted small mb-0">
+                Phân hệ dành cho <strong>Quản lý / Quản trị viên</strong>: Kiểm tra lý do, đối chiếu ca làm việc, phê duyệt bổ sung giờ vào/ra và tự động đồng bộ vào lịch chấm công & bảng lương.
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary btn-sm shadow-sm" @onclick="LoadRequestsAsync" disabled="@isLoading" title="Tải lại danh sách">
+                <i class="fa-solid fa-arrows-rotate me-1 @(isLoading ? "fa-spin" : "")"></i>Làm Mới
+            </button>
+        </div>
+    </div>
+
+    <!-- THÔNG BÁO HỆ THỐNG -->
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert alert-@statusType alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fa-solid @(statusType == "success" ? "fa-circle-check" : "fa-triangle-exclamation") me-2"></i>
+            @statusMessage
+            <button type="button" class="btn-close" @onclick="() => statusMessage = string.Empty"></button>
+        </div>
+    }
+
+    <!-- THỐNG KÊ TỔNG QUAN (KPI CARDS) -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm p-3 border-start border-4 border-warning bg-white h-100" style="cursor: pointer;" @onclick='() => SetFilterStatus("PENDING")'>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-muted fw-semibold text-uppercase">CHỜ DUYỆT</div>
+                        <div class="fs-3 fw-bold text-warning mt-1">@pendingCount yêu cầu</div>
+                        <div class="small text-muted">Cần xem xét</div>
+                    </div>
+                    <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-3 fs-4">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm p-3 border-start border-4 border-success bg-white h-100" style="cursor: pointer;" @onclick='() => SetFilterStatus("APPROVED")'>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-muted fw-semibold text-uppercase">ĐÃ PHÊ DUYỆT</div>
+                        <div class="fs-3 fw-bold text-success mt-1">@approvedCount yêu cầu</div>
+                        <div class="small text-muted">Đã tạo công chính thức</div>
+                    </div>
+                    <div class="bg-success bg-opacity-10 text-success rounded-circle p-3 fs-4">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm p-3 border-start border-4 border-danger bg-white h-100" style="cursor: pointer;" @onclick='() => SetFilterStatus("REJECTED")'>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-muted fw-semibold text-uppercase">ĐÃ TỪ CHỐI</div>
+                        <div class="fs-3 fw-bold text-danger mt-1">@rejectedCount yêu cầu</div>
+                        <div class="small text-muted">Không chấp thuận</div>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-3 fs-4">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm p-3 border-start border-4 border-primary bg-white h-100" style="cursor: pointer;" @onclick='() => SetFilterStatus("ALL")'>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-muted fw-semibold text-uppercase">TỔNG YÊU CẦU</div>
+                        <div class="fs-3 fw-bold text-primary mt-1">@allRequests.Count</div>
+                        <div class="small text-muted">Tất cả lịch sử</div>
+                    </div>
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 fs-4">
+                        <i class="fa-solid fa-file-lines"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- THANH TÌM KIẾM & BỘ LỌC -->
+    <div class="card border-0 shadow-sm mb-4 bg-light">
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0 shadow-none" 
+                               placeholder="Tìm theo tên nhân viên, mã NV hoặc lý do..." 
+                               @bind="searchTerm" @bind:event="oninput" />
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small fw-semibold text-nowrap">Trạng thái:</span>
+                        <select class="form-select shadow-none" value="@filterStatus" @onchange="OnFilterChanged">
+                            <option value="ALL">Tất Cả (@allRequests.Count)</option>
+                            <option value="PENDING">Chờ Duyệt (@pendingCount)</option>
+                            <option value="APPROVED">Đã Duyệt (@approvedCount)</option>
+                            <option value="REJECTED">Đã Từ Chối (@rejectedCount)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-3 text-md-end text-start">
+                    <span class="text-muted small">
+                        Hiển thị <strong>@FilteredRequests.Count()</strong> / @allRequests.Count yêu cầu
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BẢNG DANH SÁCH YÊU CẦU CHẤM CÔNG -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th scope="col" style="width: 50px;" class="text-center">STT</th>
+                        <th scope="col" style="width: 200px;">Nhân Viên</th>
+                        <th scope="col" style="width: 140px;">Ngày Chấm Công</th>
+                        <th scope="col" style="width: 170px;">Loại Yêu Cầu</th>
+                        <th scope="col" style="width: 170px;">Giờ Đề Nghị</th>
+                        <th scope="col" style="width: 150px;">Ca Làm Việc</th>
+                        <th scope="col">Lý Do Đề Nghị</th>
+                        <th scope="col" class="text-center" style="width: 120px;">Trạng Thái</th>
+                        <th scope="col" style="width: 160px;">Người Duyệt</th>
+                        <th scope="col" class="text-center" style="width: 160px;">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (isLoading)
+                    {
+                        <tr>
+                            <td colspan="10" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status"></div>
+                                <div class="mt-2 text-muted">Đang tải danh sách yêu cầu chấm công...</div>
+                            </td>
+                        </tr>
+                    }
+                    else if (!FilteredRequests.Any())
+                    {
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <i class="fa-regular fa-folder-open fs-2 d-block mb-2 text-secondary"></i>
+                                Không tìm thấy yêu cầu chấm công nào phù hợp.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        int stt = 1;
+                        @foreach (var r in FilteredRequests)
+                        {
+                            <tr>
+                                <td class="text-center text-muted small fw-semibold">@(stt++)</td>
+                                <td>
+                                    <div class="fw-bold text-dark">@(r.EmployeeName ?? $"Nhân viên #{r.EmployeeId}")</div>
+                                    <div class="small text-muted">
+                                        <span class="badge bg-light text-primary border me-1 font-monospace">@(r.EmployeeCode ?? $"EMP00{r.EmployeeId}")</span>
+                                        @(r.DepartmentName ?? "Nhân viên chính thức")
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">@r.WorkDate.ToString("dd/MM/yyyy")</div>
+                                    <div class="text-muted small">@r.WorkDate.ToString("dddd", new CultureInfo("vi-VN"))</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                                        <i class="fa-solid fa-clock-rotate-left me-1"></i>@r.GetRequestTypeDisplay()
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="font-monospace small">
+                                        @if (r.ProposedCheckIn.HasValue)
+                                        {
+                                            <div><span class="text-muted">Vào:</span> <strong class="text-success">@r.ProposedCheckIn.Value.ToString(@"hh\:mm")</strong></div>
+                                        }
+                                        @if (r.ProposedCheckOut.HasValue)
+                                        {
+                                            <div><span class="text-muted">Ra:</span> <strong class="text-primary">@r.ProposedCheckOut.Value.ToString(@"hh\:mm")</strong></div>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">
+                                        @(r.ShiftName ?? "Ca Hành Chính")
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="text-dark small">@r.Reason</div>
+                                    @if (!string.IsNullOrEmpty(r.EvidenceFileName))
+                                    {
+                                        <div class="small text-muted mt-1">
+                                            <i class="fa-solid fa-paperclip me-1"></i>Minh chứng: @r.EvidenceFileName
+                                        </div>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge @r.GetStatusBadgeClass() px-2 py-1">
+                                        @r.GetStatusDisplay()
+                                    </span>
+                                    @if (r.IsRejected && !string.IsNullOrEmpty(r.RejectionReason))
+                                    {
+                                        <div class="text-danger small fst-italic mt-1" style="font-size: 0.72rem;">
+                                            Lý do: @r.RejectionReason
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(r.ApprovedBy))
+                                    {
+                                        <div class="small fw-semibold text-dark">@r.ApprovedBy</div>
+                                        <div class="small text-muted" style="font-size: 0.75rem;">
+                                            @(r.ApprovedAt?.ToString("dd/MM/yyyy HH:mm") ?? "")
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">--</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (r.IsPending)
+                                    {
+                                        @if (r.EmployeeId == currentEmployeeId)
+                                        {
+                                            <span class="badge bg-light text-muted border py-1 px-2" title="Không thể tự duyệt yêu cầu của bản thân">
+                                                <i class="fa-solid fa-ban me-1"></i>Yêu cầu cá nhân
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-success fw-semibold py-1 px-2 shadow-sm" 
+                                                        @onclick="() => HandleApproveAsync(r.Id)"
+                                                        title="Duyệt yêu cầu chấm công và cập nhật bảng công chính thức">
+                                                    <i class="fa-solid fa-check me-1"></i>Duyệt
+                                                </button>
+                                                <button class="btn btn-outline-danger fw-semibold py-1 px-2" 
+                                                        @onclick="() => OpenRejectModal(r)"
+                                                        title="Từ chối yêu cầu chấm công (yêu cầu nhập lý do)">
+                                                    <i class="fa-solid fa-xmark me-1"></i>Từ Chối
+                                                </button>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Đã xử lý</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL TỪ CHỐI YÊU CẦU CHẤM CÔNG -->
+@if (showRejectModal && targetRequest != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-danger text-white py-3">
+                    <h5 class="modal-title h6 fw-bold mb-0">
+                        <i class="fa-solid fa-circle-xmark me-2"></i>Từ Chối Yêu Cầu Chấm Công
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => showRejectModal = false"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border small text-dark mb-3">
+                        <div>Nhân viên: <strong>@(targetRequest.EmployeeName ?? $"NV #{targetRequest.EmployeeId}")</strong></div>
+                        <div>Ngày chấm công: <strong>@targetRequest.WorkDate.ToString("dd/MM/yyyy")</strong></div>
+                        <div>Loại đề nghị: <strong>@targetRequest.GetRequestTypeDisplay()</strong></div>
+                        <div>Lý do nhân viên gửi: <em>@targetRequest.Reason</em></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">Lý do từ chối yêu cầu <span class="text-danger">*</span></label>
+                        <textarea class="form-control" rows="3" placeholder="Ghi rõ lý do từ chối để phản hồi nhân viên..." @bind="rejectionReasonInput"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => showRejectModal = false">Hủy</button>
+                    <button type="button" class="btn btn-danger btn-sm px-3 fw-bold" @onclick="ConfirmRejectAsync" disabled="@string.IsNullOrWhiteSpace(rejectionReasonInput)">
+                        <i class="fa-solid fa-xmark me-1"></i>Xác Nhận Từ Chối
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private List<AttendanceRequest> allRequests = new();
+    private bool isLoading = true;
+    private string searchTerm = string.Empty;
+    private string filterStatus = "PENDING";
+    private string statusMessage = string.Empty;
+    private string statusType = "success";
+    private string reviewerName = "Quản lý / Quản trị viên";
+    private long currentEmployeeId = 0;
+
+    // Modal reject
+    private bool showRejectModal = false;
+    private AttendanceRequest? targetRequest;
+    private string rejectionReasonInput = string.Empty;
+
+    private int pendingCount => allRequests.Count(r => r.IsPending);
+    private int approvedCount => allRequests.Count(r => r.IsApproved);
+    private int rejectedCount => allRequests.Count(r => r.IsRejected);
+
+    private IEnumerable<AttendanceRequest> FilteredRequests
+    {
+        get
+        {
+            var query = allRequests.AsEnumerable();
+
+            if (filterStatus != "ALL")
+            {
+                query = query.Where(r => string.Equals(r.ApprovalStatus, filterStatus, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var term = searchTerm.Trim().ToLower();
+                query = query.Where(r =>
+                    (r.EmployeeName != null && r.EmployeeName.ToLower().Contains(term)) ||
+                    (r.EmployeeCode != null && r.EmployeeCode.ToLower().Contains(term)) ||
+                    (r.Reason != null && r.Reason.ToLower().Contains(term))
+                );
+            }
+
+            return query;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthStateTask != null)
+        {
+            var auth = await AuthStateTask;
+            reviewerName = auth.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value 
+                ?? auth.User.Identity?.Name 
+                ?? "Quản lý / Quản trị viên";
+
+            var empIdStr = auth.User.FindFirst("EmployeeId")?.Value;
+            if (long.TryParse(empIdStr, out var empId))
+            {
+                currentEmployeeId = empId;
+            }
+        }
+        await LoadRequestsAsync();
+    }
+
+    private async Task LoadRequestsAsync()
+    {
+        isLoading = true;
+        statusMessage = string.Empty;
+        try
+        {
+            var data = await AttendanceRequestUseCase.GetAllRequestsAsync();
+            allRequests = data.ToList();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Lỗi khi tải danh sách: {ex.Message}";
+            statusType = "danger";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SetFilterStatus(string status)
+    {
+        filterStatus = status;
+    }
+
+    private void OnFilterChanged(ChangeEventArgs e)
+    {
+        filterStatus = e.Value?.ToString() ?? "ALL";
+    }
+
+    private async Task HandleApproveAsync(long requestId)
+    {
+        statusMessage = string.Empty;
+        var r = allRequests.FirstOrDefault(x => x.Id == requestId);
+        if (r != null && r.EmployeeId == currentEmployeeId)
+        {
+            statusMessage = "Bạn không được phép tự phê duyệt yêu cầu chấm công của chính mình.";
+            statusType = "danger";
+            return;
+        }
+
+        try
+        {
+            bool ok = await AttendanceRequestUseCase.ApproveAsync(requestId, reviewerName, currentEmployeeId);
+            if (ok)
+            {
+                statusMessage = "Đã phê duyệt yêu cầu chấm công thành công! Bản ghi chấm công chính thức đã được tự động tạo/cập nhật vào Lịch chấm công.";
+                statusType = "success";
+                await LoadRequestsAsync();
+            }
+            else
+            {
+                statusMessage = "Yêu cầu này đã được xử lý trước đó.";
+                statusType = "warning";
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Lỗi khi phê duyệt yêu cầu: {ex.Message}";
+            statusType = "danger";
+        }
+    }
+
+    private void OpenRejectModal(AttendanceRequest req)
+    {
+        targetRequest = req;
+        rejectionReasonInput = string.Empty;
+        showRejectModal = true;
+    }
+
+    private async Task ConfirmRejectAsync()
+    {
+        if (targetRequest == null || string.IsNullOrWhiteSpace(rejectionReasonInput))
+            return;
+
+        statusMessage = string.Empty;
+        showRejectModal = false;
+
+        try
+        {
+            bool ok = await AttendanceRequestUseCase.RejectAsync(targetRequest.Id, reviewerName, rejectionReasonInput.Trim(), currentEmployeeId);
+            if (ok)
+            {
+                statusMessage = $"Đã từ chối yêu cầu chấm công của {targetRequest.EmployeeName} với lý do: {rejectionReasonInput.Trim()}";
+                statusType = "warning";
+                await LoadRequestsAsync();
+            }
+            else
+            {
+                statusMessage = "Yêu cầu này đã được xử lý trước đó.";
+                statusType = "warning";
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Lỗi khi từ chối yêu cầu: {ex.Message}";
+            statusType = "danger";
+        }
+    }
+}

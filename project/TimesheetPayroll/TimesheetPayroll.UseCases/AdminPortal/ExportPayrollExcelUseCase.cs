@@ -11,7 +11,7 @@ public interface IExportPayrollExcelUseCase
     /// <summary>
     /// Xuất bảng thanh toán lương chi tiết ra định dạng Excel (.xls HTML Spreadsheet) với đầy đủ bảng biểu, màu sắc kế toán và định dạng tiền tệ.
     /// </summary>
-    byte[] ExportToExcelHtml(PayrollPeriod period, IEnumerable<Payslip> payslips, string companyName = "KIM LONG ECOSTAY - CÔNG TY TNHH MTV");
+    byte[] ExportToExcelHtml(PayrollPeriod period, IEnumerable<Payslip> payslips, string companyName = "CÔNG TY TNHH HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP");
 
     /// <summary>
     /// Xuất danh sách bảng lương ra định dạng CSV chuẩn UTF-8 kèm BOM tương thích ngân hàng và Excel.
@@ -21,7 +21,7 @@ public interface IExportPayrollExcelUseCase
 
 public class ExportPayrollExcelUseCase : IExportPayrollExcelUseCase
 {
-    public byte[] ExportToExcelHtml(PayrollPeriod period, IEnumerable<Payslip> payslips, string companyName = "KIM LONG ECOSTAY - CÔNG TY TNHH MTV")
+    public byte[] ExportToExcelHtml(PayrollPeriod period, IEnumerable<Payslip> payslips, string companyName = "CÔNG TY TNHH HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP")
     {
         var list = payslips.ToList();
         var sb = new StringBuilder();
