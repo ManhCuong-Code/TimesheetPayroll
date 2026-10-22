@@ -337,16 +337,15 @@
     }
 
     <!-- 2. NÚT KÍCH HOẠT NỔI Ở GÓC MÀN HÌNH (FLOATING ACTION BUTTON) -->
-    <button type="button" class="floating-ai-trigger" @onclick="ToggleOpen" title="Trợ Lý Lương AI & Tinh Chỉnh Cấu Hình (Bấm để mở)">
+    <button type="button" class="floating-ai-trigger" @onclick="ToggleOpen" 
+            title="@(isOpen ? "Thu nhỏ Trợ Lý Lương AI" : "Mở Trợ Lý Lương AI (Bấm để hỏi đáp)")" 
+            aria-label="@(isOpen ? "Thu nhỏ Trợ Lý Lương AI" : "Mở Trợ Lý Lương AI")">
         <div class="trigger-icon-wrap">
-            <i class="fa-solid fa-robot"></i>
-            <span class="online-pulse-dot"></span>
-        </div>
-        <div class="trigger-text-group">
-            <span class="trigger-main-title">Trợ Lý Lương AI</span>
-            <span class="trigger-sub-badge">
-                @(LlmClient.IsConfigured ? LlmClient.ProviderName : "AI Sẵn Sàng")
-            </span>
+            <i class="fa-solid @(isOpen ? "fa-xmark" : "fa-robot")"></i>
+            @if (!isOpen)
+            {
+                <span class="online-pulse-dot"></span>
+            }
         </div>
     </button>
 

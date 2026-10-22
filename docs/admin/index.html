@@ -42,8 +42,18 @@
             --hrm-slate-800: #1e293b;
         }
                         *, *::before, *::after {
-            font-family: 'Be Vietnam Pro', Arial, sans-serif;
+            box-sizing: border-box;
         }
+        .fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands,
+        i.fa, i.fas, i.far, i.fab, i.fa-solid, i.fa-regular, i.fa-brands,
+        [class*="fa-"], [class*="fa-"]::before, [class*="fa-"]::after {
+            font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "FontAwesome" !important;
+            font-style: normal !important;
+            line-height: 1;
+        }
+        .fa-brands, .fab { font-family: "Font Awesome 6 Brands" !important; font-weight: 400 !important; }
+        .fa-regular, .far { font-family: "Font Awesome 6 Free" !important; font-weight: 400 !important; }
+        .fa-solid, .fas { font-family: "Font Awesome 6 Free" !important; font-weight: 900 !important; }
         html, body {
             font-family: var(--font-body);
             font-size: 16px;
@@ -56,13 +66,11 @@
             text-rendering: optimizeLegibility;
         }
         h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
-            font-family: var(--font-heading) !important;
+            font-family: var(--font-heading);
             line-height: 1.3;
             font-weight: 600;
         }
-        button, input, optgroup, select, textarea, .btn, .form-control, .form-select, .table, .dropdown-menu, .modal, .card, .badge, .alert, .nav-link, .navbar-brand {
-            font-family: 'Be Vietnam Pro', Arial, sans-serif !important;
-        }
+        button, input, optgroup, select, textarea, .form-control, .form-select { font-family: inherit; }
         code, kbd, pre, samp, .font-mono {
             font-family: 'JetBrains Mono', Consolas, monospace !important;
         }
@@ -496,6 +504,7 @@
     </footer>
 
     <script src="data/hrm_data.js"></script>
+    <script src="data/database_sync.js"></script>
     <script>
         // Khởi tạo trang
         document.addEventListener('DOMContentLoaded', function() {
@@ -727,7 +736,8 @@
         }
 
         function updatePendingCount() {
-            var pLeaves = HRM_DATA.leaveRequests.filter(function(x) { return x.status === 'PENDING'; }).length;
+            var curLeaves = (window.HRM_DB && HRM_DB.getLeaveRequests().length > 0) ? HRM_DB.getLeaveRequests() : HRM_DATA.leaveRequests;
+            var pLeaves = curLeaves.filter(function(x) { return x.status === 'PENDING'; }).length;
             var pAtts = HRM_DATA.attendanceRequests.filter(function(x) { return x.status === 'PENDING'; }).length;
             var total = pLeaves + pAtts;
             document.getElementById('badgePendingCount').textContent = total;
@@ -780,23 +790,39 @@
         }
 
         function runBatchCalculation() {
-            alert('Đang chạy Stored Procedure [sp_CalculatePayrollBatch] hạch toán cho 20 nhân viên...\nThành công! Đã cập nhật bảng công và tính thuế/bảo hiểm tự động.');
-            renderPayrollTable();
-            switchTab('payroll');
+            if (window.HRM_DB) {
+                HRM_DB.runBatchPayroll(10, function() {
+                    renderPayrollTable();
+                    switchTab('payroll');
+                });
+            } else {
+                renderPayrollTable();
+                switchTab('payroll');
+            }
         }
 
         var isLocked = false;
         function toggleLockPayroll() {
             isLocked = !isLocked;
             var btn = document.getElementById('lockPeriodBtn');
-            if (isLocked) {
-                btn.className = 'btn btn-secondary btn-sm rounded-pill px-3 shadow-sm';
-                btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Đã Khóa Kỳ Lương (Mở Khóa)';
-                alert('ĐÃ KHÓA KỲ LƯƠNG THÁNG 10/2026!\nDữ liệu bảng công và lương hiện đã được chốt sổ, ngăn chặn việc sửa đổi.');
+            if (window.HRM_DB) {
+                HRM_DB.toggleLockPeriod(10, !isLocked, function() {
+                    if (isLocked) {
+                        btn.className = 'btn btn-secondary btn-sm rounded-pill px-3 shadow-sm';
+                        btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Đã Khóa Kỳ Lương (Mở Khóa)';
+                    } else {
+                        btn.className = 'btn btn-danger btn-sm rounded-pill px-3 shadow-sm';
+                        btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Khóa Kỳ Lương (Lock)';
+                    }
+                });
             } else {
-                btn.className = 'btn btn-danger btn-sm rounded-pill px-3 shadow-sm';
-                btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Khóa Kỳ Lương (Lock)';
-                alert('Đã mở khóa kỳ lương tháng 10/2026.');
+                if (isLocked) {
+                    btn.className = 'btn btn-secondary btn-sm rounded-pill px-3 shadow-sm';
+                    btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Đã Khóa Kỳ Lương (Mở Khóa)';
+                } else {
+                    btn.className = 'btn btn-danger btn-sm rounded-pill px-3 shadow-sm';
+                    btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Khóa Kỳ Lương (Lock)';
+                }
             }
         }
 

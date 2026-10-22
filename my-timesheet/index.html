@@ -13,7 +13,7 @@
             }
         })(window.location);
     </script>
-    <title>Bảng Chấm Công Cá Nhân — TimesheetPayroll</title>
+    <title>Bảng Chấm Công & Theo Dõi Ngày Công — TimesheetPayroll</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -26,14 +26,27 @@
             --font-heading: 'Be Vietnam Pro', Arial, sans-serif;
             --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', Arial, sans-serif;
             --hrm-primary: #2563eb;
+            --hrm-primary-dark: #1d4ed8;
             --hrm-slate-900: #0f172a;
+            --hrm-slate-800: #1e293b;
+            --hrm-bg-main: #f8fafc;
         }
-                        *, *::before, *::after {
-            font-family: 'Be Vietnam Pro', Arial, sans-serif;
+        *, *::before, *::after {
+            box-sizing: border-box;
         }
+        .fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands,
+        i.fa, i.fas, i.far, i.fab, i.fa-solid, i.fa-regular, i.fa-brands,
+        [class*="fa-"], [class*="fa-"]::before, [class*="fa-"]::after {
+            font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "FontAwesome" !important;
+            font-style: normal !important;
+            line-height: 1;
+        }
+        .fa-brands, .fab { font-family: "Font Awesome 6 Brands" !important; font-weight: 400 !important; }
+        .fa-regular, .far { font-family: "Font Awesome 6 Free" !important; font-weight: 400 !important; }
+        .fa-solid, .fas { font-family: "Font Awesome 6 Free" !important; font-weight: 900 !important; }
         html, body {
             font-family: var(--font-body);
-            font-size: 16px;
+            font-size: 15px;
             line-height: 1.6;
             font-weight: 400;
             background-color: var(--hrm-bg-main);
@@ -43,13 +56,11 @@
             text-rendering: optimizeLegibility;
         }
         h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
-            font-family: var(--font-heading) !important;
+            font-family: var(--font-heading);
             line-height: 1.3;
             font-weight: 600;
         }
-        button, input, optgroup, select, textarea, .btn, .form-control, .form-select, .table, .dropdown-menu, .modal, .card, .badge, .alert, .nav-link, .navbar-brand {
-            font-family: 'Be Vietnam Pro', Arial, sans-serif !important;
-        }
+        button, input, optgroup, select, textarea, .form-control, .form-select { font-family: inherit; }
         code, kbd, pre, samp, .font-mono {
             font-family: 'JetBrains Mono', Consolas, monospace !important;
         }
@@ -59,13 +70,57 @@
             border-radius: 1rem;
             padding: 1.25rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        .view-tab-btn {
+            border: 1px solid #cbd5e1;
+            padding: 0.6rem 1.25rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            color: #475569;
+        }
+        .view-tab-btn.active {
+            background-color: #2563eb;
+            color: white;
+            border-color: #2563eb;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+        }
+        .badge-shift {
+            font-size: 0.75rem;
+            padding: 0.35em 0.65em;
+        }
+        @media print {
+            .no-print, nav, footer, .btn, .d-print-none {
+                display: none !important;
+            }
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            .card {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+            .print-header {
+                display: block !important;
+            }
+        }
+        .print-header {
+            display: none;
         }
     </style>
 </head>
 <body>
 
     <!-- TOP NAVBAR -->
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-sm px-3" style="background-color: #0f172a;">
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-sm px-3 no-print" style="background-color: #0f172a;">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold d-flex align-items-center me-4" href="./">
                 <div class="bg-primary text-white rounded-3 p-2 me-2 d-inline-flex align-items-center justify-content-center shadow-sm" style="width: 38px; height: 38px;">
@@ -73,7 +128,7 @@
                 </div>
                 <div class="d-flex flex-column">
                     <span class="fs-6 lh-1 text-white fw-bold">HỆ THỐNG <span style="color: #60a5fa;">QUẢN LÝ NHÂN SỰ</span></span>
-                    <span class="text-white-50" style="font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 600;">CỔNG THÔNG TIN NHÂN VIÊN</span>
+                    <span class="text-white-50" style="font-size: 0.65rem; letter-spacing: 0.08em; font-weight: 600;">PHÂN HỆ CHẤM CÔNG & ĐIỂM DANH</span>
                 </div>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNav">
@@ -82,141 +137,638 @@
             <div class="collapse navbar-collapse" id="userNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1 small">
                     <li class="nav-item"><a class="nav-link" href="./"><i class="fa-solid fa-house me-1"></i>Trang Chủ</a></li>
-                    <li class="nav-item"><a class="nav-link" href="face-checkin"><i class="fa-solid fa-camera me-1 text-info"></i>Điểm Danh Mặt</a></li>
-                    <li class="nav-item"><a class="nav-link active text-primary fw-bold" href="my-timesheet"><i class="fa-solid fa-calendar me-1"></i>Bảng Công Cá Nhân</a></li>
+                    <li class="nav-item"><a class="nav-link" href="face-checkin"><i class="fa-solid fa-camera me-1 text-info"></i>Kiosk Điểm Danh</a></li>
+                    <li class="nav-item"><a class="nav-link active text-primary fw-bold" href="my-timesheet"><i class="fa-solid fa-calendar-check me-1"></i>Bảng Chấm Công</a></li>
                     <li class="nav-item"><a class="nav-link" href="my-payslip"><i class="fa-solid fa-file-invoice-dollar me-1 text-success"></i>Phiếu Lương</a></li>
                     <li class="nav-item"><a class="nav-link" href="leave-request"><i class="fa-solid fa-plane-departure me-1 text-warning"></i>Nghỉ Phép</a></li>
                     <li class="nav-item"><a class="nav-link" href="tro-ly-ai"><i class="fa-solid fa-wand-magic-sparkles me-1 text-info"></i>Trợ Lý AI</a></li>
                 </ul>
                 <div class="d-flex align-items-center gap-2">
-                    <a href="admin" class="btn btn-outline-light btn-sm rounded-pill px-3">
+                    <div class="d-flex align-items-center gap-2 bg-white bg-opacity-10 py-1 px-3 rounded-pill" id="userNavBadge">
+                        <i class="fa-solid fa-circle-user text-warning fs-5"></i>
+                        <div class="lh-sm text-start">
+                            <div class="text-white fw-bold small" id="navUserName">Nhân Viên</div>
+                            <span class="badge bg-primary px-2" style="font-size: 0.65rem;" id="navUserRole">ROLE_EMPLOYEE</span>
+                        </div>
+                    </div>
+                    <a href="admin" class="btn btn-outline-light btn-sm rounded-pill px-3" id="adminPortalBtn">
                         <i class="fa-solid fa-gauge me-1"></i>Cổng Quản Trị
                     </a>
+                    <button class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="handleLogout()" title="Đăng xuất">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
+    <!-- PRINT HEADER -->
+    <div class="print-header container py-3 mb-3 border-bottom text-center">
+        <h4 class="fw-bold mb-1">CÔNG TY CỔ PHẦN CÔNG NGHỆ & THƯƠNG MẠI TIMESHEETPAYROLL</h4>
+        <p class="small text-muted mb-2">Tòa nhà Innovation Hub, Số 88 Đường Lê Lợi, TP. Huế • Mã số thuế: 3301234567</p>
+        <h3 class="fw-bold text-uppercase mt-3 mb-1" id="printDocTitle">BẢNG CHẤM CÔNG & THEO DÕI NGÀY CÔNG LAO ĐỘNG</h3>
+        <p class="text-muted small" id="printDocPeriod">Kỳ chấm công: Tháng 10 / 2026 (Từ 01/10/2026 đến 31/10/2026)</p>
+    </div>
+
     <!-- MAIN BODY -->
-    <main class="container py-4">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <main class="container-fluid py-4 px-lg-4">
+        <!-- HEADER TITLE & CONTROLS -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 no-print">
             <div>
-                <h3 class="fw-bold mb-1"><i class="fa-solid fa-calendar-check text-primary me-2"></i>Bảng Chấm Công Cá Nhân</h3>
-                <p class="text-muted small mb-0">Theo dõi thời gian vào/ra, ca làm việc thực tế và ngày công tích lũy</p>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold">
+                        <i class="fa-solid fa-building me-1"></i>HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP
+                    </span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-bold">
+                        <i class="fa-solid fa-shield-check me-1"></i>Chuẩn Hóa 22 Ngày Công
+                    </span>
+                </div>
+                <h3 class="fw-bold mb-1 text-dark">
+                    <i class="fa-solid fa-calendar-check text-primary me-2"></i>Bảng Chấm Công & Theo Dõi Ngày Công
+                </h3>
+                <p class="text-muted small mb-0">Theo dõi ca làm việc, đối soát giờ vào/ra thực tế, ngày công tích lũy và điều chỉnh có lưu vết kiểm toán</p>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <label class="small fw-bold text-muted">Kỳ chấm công:</label>
-                <select class="form-select form-select-sm" style="width: 180px;">
-                    <option selected>Tháng 10 / 2026</option>
-                    <option>Tháng 09 / 2026</option>
-                    <option>Tháng 08 / 2026</option>
-                </select>
+
+            <!-- CHẾ ĐỘ XEM & CHỨC NĂNG -->
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <button type="button" class="view-tab-btn active shadow-sm" id="btnViewPersonal" onclick="switchTimesheetView('personal')">
+                    <i class="fa-solid fa-user-clock me-1"></i>Xem Theo Nhân Viên
+                </button>
+                <button type="button" class="view-tab-btn shadow-sm" id="btnViewSummary" onclick="switchTimesheetView('summary')">
+                    <i class="fa-solid fa-table-list me-1"></i>Bảng Tổng Hợp 20 Nhân Sự
+                    <span class="badge bg-light text-dark rounded-pill ms-1 font-monospace">20</span>
+                </button>
+                <button class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm" onclick="window.print()">
+                    <i class="fa-solid fa-print me-1"></i>In Bảng Công
+                </button>
+                <button class="btn btn-success btn-sm rounded-pill px-3 shadow-sm" onclick="exportTimesheetExcel()">
+                    <i class="fa-solid fa-file-excel me-1"></i>Xuất Excel (.xls)
+                </button>
             </div>
         </div>
 
-        <!-- STAT METRICS -->
-        <div class="row g-3 mb-4">
-            <div class="col-sm-6 col-lg-3">
-                <div class="stat-card">
-                    <span class="text-muted small fw-bold text-uppercase">Ngày Công Tích Lũy</span>
-                    <h3 class="fw-bold mb-0 text-primary mt-1">21.5 / 22</h3>
-                    <small class="text-success"><i class="fa-solid fa-circle-check me-1"></i>Đạt 97.7% chuẩn</small>
+        <!-- FILTER TOOLBAR -->
+        <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white no-print">
+            <div class="row g-3 align-items-center justify-content-between">
+                <div class="col-lg-3 col-md-6" id="empSelectCol">
+                    <label class="small fw-bold text-muted mb-1 d-block"><i class="fa-solid fa-user me-1 text-primary"></i>Chọn nhân sự đối soát:</label>
+                    <select class="form-select form-select-sm fw-semibold" id="timesheetEmpSelect" onchange="onEmployeeChanged()">
+                        <!-- Nạp 20 nhân viên từ JS -->
+                    </select>
                 </div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-                <div class="stat-card">
-                    <span class="text-muted small fw-bold text-uppercase">Số Giờ Làm Việc</span>
-                    <h3 class="fw-bold mb-0 text-dark mt-1">172.0 h</h3>
-                    <small class="text-muted">Trung bình 8h / ngày</small>
+                <div class="col-lg-2 col-md-6">
+                    <label class="small fw-bold text-muted mb-1 d-block"><i class="fa-solid fa-calendar me-1 text-primary"></i>Kỳ chấm công:</label>
+                    <select class="form-select form-select-sm" id="timesheetMonthSelect" onchange="onMonthChanged()">
+                        <option value="10" selected>Tháng 10 / 2026</option>
+                        <option value="9">Tháng 09 / 2026</option>
+                        <option value="8">Tháng 08 / 2026</option>
+                    </select>
                 </div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-                <div class="stat-card">
-                    <span class="text-muted small fw-bold text-uppercase">Số Lần Đi Muộn</span>
-                    <h3 class="fw-bold mb-0 text-warning mt-1">1 lần</h3>
-                    <small class="text-muted">Tổng 25 phút</small>
+                <div class="col-lg-3 col-md-6">
+                    <label class="small fw-bold text-muted mb-1 d-block"><i class="fa-solid fa-filter me-1 text-primary"></i>Lọc phòng ban:</label>
+                    <select class="form-select form-select-sm" id="timesheetDeptFilter" onchange="onFilterChanged()">
+                        <option value="ALL">Tất cả phòng ban (Toàn công ty)</option>
+                        <option value="Ban Giám Đốc">Ban Giám Đốc</option>
+                        <option value="Phòng Công Nghệ Thông Tin">Phòng Công Nghệ Thông Tin</option>
+                        <option value="Phòng Kinh Doanh & Tiếp Thị">Phòng Kinh Doanh & Tiếp Thị</option>
+                        <option value="Phòng Hành Chính Nhân Sự & Kế Toán">Phòng Hành Chính Nhân Sự & Kế Toán</option>
+                        <option value="Phòng Kế Toán Quản Trị & Thuế">Phòng Kế Toán Quản Trị & Thuế</option>
+                        <option value="Phòng Kỹ Thuật & Hạ Tầng Thiết Bị">Phòng Kỹ Thuật & Hạ Tầng Thiết Bị</option>
+                        <option value="Phòng Vận Hành & Dịch Vụ Khách Hàng">Phòng Vận Hành & Dịch Vụ Khách Hàng</option>
+                    </select>
                 </div>
-            </div>
-            <div class="col-sm-6 col-lg-3">
-                <div class="stat-card">
-                    <span class="text-muted small fw-bold text-uppercase">Nghỉ Phép Có Lương</span>
-                    <h3 class="fw-bold mb-0 text-info mt-1">0.5 ngày</h3>
-                    <small class="text-muted">Phép năm đã duyệt</small>
+                <div class="col-lg-4 col-md-6 text-lg-end pt-lg-3">
+                    <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#requestModal">
+                        <i class="fa-solid fa-clock-rotate-left me-1"></i>Gửi Yêu Cầu Chấm Công Bù
+                    </button>
+                    <a href="face-checkin" target="_blank" class="btn btn-outline-info btn-sm rounded-pill px-3 shadow-sm ms-1">
+                        <i class="fa-solid fa-camera me-1"></i>Mở Kiosk FaceID
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- TABLE CHI TIẾT CHẤM CÔNG -->
-        <div class="card border-0 shadow-sm rounded-4 p-4">
-            <h5 class="fw-bold mb-3"><i class="fa-solid fa-list-check text-primary me-2"></i>Nhật Ký Chấm Công Hàng Ngày (Tháng 10/2026)</h5>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle small mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Ngày</th>
-                            <th>Ca Phân Công</th>
-                            <th>Giờ Vào (Check-In)</th>
-                            <th>Giờ Ra (Check-Out)</th>
-                            <th>Giờ Làm Việc</th>
-                            <th>Công Quy Đổi</th>
-                            <th>Trạng Thái</th>
-                        </tr>
-                    </thead>
-                    <tbody id="timesheetTbody">
-                        <!-- Nạp mẫu -->
-                        <tr>
-                            <td><strong>21/10/2026 (Thứ 4)</strong></td>
-                            <td>Ca Hành Chính (08:00 - 17:30)</td>
-                            <td>08:02 <span class="badge bg-success-subtle text-success">Đúng giờ</span></td>
-                            <td>--:-- (Đang làm việc)</td>
-                            <td>--</td>
-                            <td>--</td>
-                            <td><span class="badge bg-primary">Đang trong ca</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>20/10/2026 (Thứ 3)</strong></td>
-                            <td>Ca Hành Chính (08:00 - 17:30)</td>
-                            <td>08:00</td>
-                            <td>17:35</td>
-                            <td>8.0 giờ</td>
-                            <td>1.0 công</td>
-                            <td><span class="badge bg-success">Hợp lệ</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>19/10/2026 (Thứ 2)</strong></td>
-                            <td>Ca Hành Chính (08:00 - 17:30)</td>
-                            <td>08:25 <span class="badge bg-warning-subtle text-dark">Muộn 25p</span></td>
-                            <td>17:30</td>
-                            <td>7.6 giờ</td>
-                            <td>0.95 công</td>
-                            <td><span class="badge bg-warning text-dark">Đi muộn</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>16/10/2026 (Thứ 6)</strong></td>
-                            <td>Ca Hành Chính (08:00 - 17:30)</td>
-                            <td>07:55</td>
-                            <td>17:40</td>
-                            <td>8.0 giờ</td>
-                            <td>1.0 công</td>
-                            <td><span class="badge bg-success">Hợp lệ</span></td>
-                        </tr>
-                        <tr>
-                            <td><strong>15/10/2026 (Thứ 5)</strong></td>
-                            <td>Ca Chiều (Nghỉ phép buổi sáng)</td>
-                            <td>13:25</td>
-                            <td>17:30</td>
-                            <td>4.0 giờ</td>
-                            <td>0.5 công + 0.5 phép</td>
-                            <td><span class="badge bg-info text-dark">Nghỉ phép 0.5d</span></td>
-                        </tr>
-                    </tbody>
-                </table>
+        <!-- ========================================================================= -->
+        <!-- CHẾ ĐỘ 1: XEM THEO NHÂN VIÊN (BẢNG CÔNG CÁ NHÂN CHI TIẾT 31 NGÀY)        -->
+        <!-- ========================================================================= -->
+        <div id="personalTimesheetView">
+            <!-- EMPLOYEE PROFILE BANNER -->
+            <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-primary text-white rounded-circle p-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 56px; height: 56px;">
+                            <i class="fa-solid fa-user-tie fs-3"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="fw-bold mb-0 text-dark" id="dispEmpName">Nguyễn Văn An</h5>
+                                <span class="badge bg-primary px-2" id="dispEmpCode">EMP001</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle" id="dispEmpStatus">Đang Làm Việc</span>
+                            </div>
+                            <div class="small text-muted mt-1">
+                                <span id="dispEmpDept">Ban Giám Đốc</span> • Vai trò: <strong class="text-primary" id="dispEmpRole">Quản Trị Viên</strong> • Ca mặc định: <strong>Ca Hành Chính (08:00 - 17:30)</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 text-end">
+                        <div class="small text-muted">
+                            Kỳ lương hiện hành: <strong class="text-dark">Tháng 10/2026</strong><br>
+                            Trạng thái bảng công: <span class="badge bg-warning text-dark"><i class="fa-solid fa-hourglass-half me-1"></i>Chờ Duyệt Kỳ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STAT METRICS -->
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stat-card">
+                        <span class="text-muted small fw-bold text-uppercase">Ngày Công Tích Lũy</span>
+                        <h3 class="fw-bold mb-0 text-primary mt-1" id="statWorkUnits">21.5 / 22</h3>
+                        <small class="text-success" id="statWorkRate"><i class="fa-solid fa-circle-check me-1"></i>Đạt 97.7% công chuẩn</small>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stat-card">
+                        <span class="text-muted small fw-bold text-uppercase">Số Giờ Làm Việc Thực Tế</span>
+                        <h3 class="fw-bold mb-0 text-dark mt-1" id="statTotalHours">172.0 h</h3>
+                        <small class="text-muted">Trung bình 8.0 giờ / ngày</small>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stat-card">
+                        <span class="text-muted small fw-bold text-uppercase">Số Lần Đi Muộn / Về Sớm</span>
+                        <h3 class="fw-bold mb-0 text-warning mt-1" id="statLateCount">1 lần</h3>
+                        <small class="text-muted" id="statLateMinutes">Tổng cộng 25 phút</small>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stat-card">
+                        <span class="text-muted small fw-bold text-uppercase">Nghỉ Phép Có Lương</span>
+                        <h3 class="fw-bold mb-0 text-info mt-1" id="statPaidLeave">0.5 ngày</h3>
+                        <small class="text-muted">Đã duyệt theo chế độ</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLE CHI TIẾT CHẤM CÔNG 31 NGÀY -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="fa-solid fa-list-check text-primary me-2"></i>Nhật Ký Chấm Công Hàng Ngày (<span id="dispTableMonthYear">Tháng 10/2026</span>)
+                    </h5>
+                    <div class="small text-muted">
+                        Mốc giờ chuẩn: <code>08:00 - 17:30</code> • Nghỉ trưa: <code>12:00 - 13:30 (1.5h)</code> • Ân hạn muộn: <code>15 phút</code>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle small mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 170px;">Ngày & Thứ</th>
+                                <th>Ca Phân Công</th>
+                                <th style="width: 170px;">Giờ Vào (Check-In)</th>
+                                <th style="width: 180px;">Giờ Ra (Check-Out)</th>
+                                <th class="text-center" style="width: 120px;">Giờ Làm Việc</th>
+                                <th class="text-center" style="width: 130px;">Công Quy Đổi</th>
+                                <th class="text-center" style="width: 140px;">Trạng Thái</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timesheetTbody">
+                            <!-- Nạp tự động từ JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- CHẾ ĐỘ 2: BẢNG CHẤM CÔNG TỔNG HỢP TOÀN DOANH NGHIỆP (20 NHÂN SỰ)         -->
+        <!-- ========================================================================= -->
+        <div id="summaryTimesheetView" class="d-none">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                    <div>
+                        <h5 class="fw-bold mb-1 text-dark">
+                            <i class="fa-solid fa-table-cells text-primary me-2"></i>Bảng Chấm Công Tổng Hợp Toàn Doanh Nghiệp (Tháng 10/2026)
+                        </h5>
+                        <p class="text-muted small mb-0">Tổng hợp ngày công, phân loại ca làm việc, tổng giờ làm, giờ làm thêm (OT) và tỷ lệ hoàn thành kỳ công</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 no-print">
+                        <div class="input-group input-group-sm" style="width: 260px;">
+                            <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input type="text" class="form-control" id="summarySearchInput" placeholder="Tìm theo mã NV, tên..." onkeyup="filterSummaryTable()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle small mb-0" id="summaryMatrixTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="text-center" style="width: 50px;">STT</th>
+                                <th style="width: 95px;">Mã NV</th>
+                                <th>Họ và Tên</th>
+                                <th>Phòng Ban</th>
+                                <th class="text-center" style="width: 85px;" title="Ca chuẩn 8h hành chính">Ca Chuẩn</th>
+                                <th class="text-center" style="width: 80px;" title="Ca gãy dịch vụ 8h">Ca Gãy</th>
+                                <th class="text-center" style="width: 80px;" title="Nửa ca 4h">Nửa Ca</th>
+                                <th class="text-center" style="width: 80px;" title="Ca trực đêm">Ca Đêm</th>
+                                <th class="text-center" style="width: 95px;" title="Lượt đi muộn hoặc về sớm">Muộn/Sớm</th>
+                                <th class="text-center" style="width: 90px;" title="Ngày nghỉ phép có hưởng lương">Nghỉ Phép</th>
+                                <th class="text-end" style="width: 100px;">Tổng Giờ</th>
+                                <th class="text-center fw-bold text-warning" style="width: 110px;">Tổng Công</th>
+                                <th class="text-center" style="width: 100px;">Trạng Thái</th>
+                                <th class="text-center no-print" style="width: 80px;">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summaryMatrixTbody">
+                            <!-- Nạp từ JS -->
+                        </tbody>
+                        <tfoot class="table-light fw-bold">
+                            <tr>
+                                <td colspan="4" class="text-end text-uppercase">TỔNG TOÀN DOANH NGHIỆP:</td>
+                                <td class="text-center" id="sumStandard8h">0</td>
+                                <td class="text-center" id="sumSplit">0</td>
+                                <td class="text-center" id="sumHalf">0</td>
+                                <td class="text-center" id="sumNight">0</td>
+                                <td class="text-center text-warning" id="sumLate">0</td>
+                                <td class="text-center text-info" id="sumLeave">0</td>
+                                <td class="text-end" id="sumTotalHours">0 h</td>
+                                <td class="text-center text-primary fs-6" id="sumTotalUnits">0 công</td>
+                                <td class="text-center"><span class="badge bg-success">Chuẩn 100%</span></td>
+                                <td class="no-print"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
         </div>
     </main>
 
-    <footer class="bg-white border-top py-3 mt-5 text-center text-muted small">
+    <!-- MODAL GỬI YÊU CẦU CHẤM CÔNG BÙ -->
+    <div class="modal fade" id="requestModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-bottom bg-light">
+                    <h6 class="modal-title fw-bold text-dark"><i class="fa-solid fa-clock-rotate-left text-primary me-2"></i>Gửi Yêu Cầu Chấm Công Bù (Quên Quẹt Thẻ)</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form onsubmit="handleAttendanceRequest(event)">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Nhân viên gửi yêu cầu:</label>
+                            <input type="text" class="form-control form-control-sm" id="reqEmpName" readonly>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">Ngày cần bổ sung:</label>
+                                <input type="date" class="form-control form-control-sm" id="reqDate" value="2026-10-21" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">Loại bổ sung:</label>
+                                <select class="form-select form-select-sm" id="reqType">
+                                    <option value="Bổ sung giờ vào (Check-in)">Giờ Vào (Check-in)</option>
+                                    <option value="Bổ sung giờ ra (Check-out)">Giờ Ra (Check-out)</option>
+                                    <option value="Bổ sung cả ca">Cả giờ vào và ra</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">Ca làm việc:</label>
+                                <select class="form-select form-select-sm" id="reqShift">
+                                    <option value="Ca Hành Chính (08:00 - 17:30)">Ca Hành Chính (08:00 - 17:30)</option>
+                                    <option value="Ca Sáng (08:00 - 12:00)">Ca Sáng (08:00 - 12:00)</option>
+                                    <option value="Ca Chiều (13:30 - 17:30)">Ca Chiều (13:30 - 17:30)</option>
+                                    <option value="Ca Đêm (22:00 - 06:00)">Ca Đêm (22:00 - 06:00)</option>
+                                    <option value="Ca Gãy (10:00 - 14:00 & 17:00 - 21:00)">Ca Gãy</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">Thời gian thực tế có mặt:</label>
+                                <input type="time" class="form-control form-control-sm" id="reqTime" value="08:00" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Lý do quên hoặc không chấm công được:</label>
+                            <textarea class="form-control form-control-sm" id="reqReason" rows="3" placeholder="Nhập lý do chi tiết (ví dụ: Kiosk bị kẹt mạng, quên thẻ, đi công tác ngoại kiểm...)" required></textarea>
+                        </div>
+                        <div class="alert alert-info py-2 px-3 small mb-0">
+                            <i class="fa-solid fa-circle-info me-1"></i>Yêu cầu sẽ được chuyển đến Trưởng phòng và Nhân sự để đối soát dữ liệu và phê duyệt.
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top bg-light">
+                        <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 fw-bold">Gửi Phê Duyệt</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-white border-top py-3 mt-5 text-center text-muted small no-print">
         &copy; 2026 <strong>TimesheetPayroll</strong> — Cổng Thông Tin & Quản Lý Nhân Sự Toàn Diện.
     </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="data/hrm_data.js"></script>
+    <script src="data/database_sync.js"></script>
+    <script>
+        var currentSession = null;
+        var currentSelectedEmpId = 1;
+        var currentMonth = 10;
+        var currentYear = 2026;
+        var currentView = 'personal'; // 'personal' hoặc 'summary'
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. Đọc phiên làm việc
+            try {
+                currentSession = JSON.parse(localStorage.getItem('hrm_session'));
+            } catch(e) {}
+
+            if (currentSession && currentSession.name) {
+                document.getElementById('navUserName').textContent = currentSession.name;
+                document.getElementById('navUserRole').textContent = currentSession.role || 'ROLE_EMPLOYEE';
+                currentSelectedEmpId = currentSession.empId || 1;
+            } else {
+                // Mặc định nhân viên mẫu
+                currentSelectedEmpId = 1;
+            }
+
+            // 2. Điền danh sách 20 nhân viên vào dropdown
+            var select = document.getElementById('timesheetEmpSelect');
+            select.innerHTML = '';
+            HRM_DATA.employees.forEach(function(e) {
+                var opt = document.createElement('option');
+                opt.value = e.id;
+                opt.textContent = `[${e.code}] ${e.name} - ${e.department}`;
+                if (e.id === currentSelectedEmpId) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            // 3. Phân quyền hiển thị
+            var isAdminOrManager = currentSession && ['ROLE_ADMIN', 'ROLE_HR_ACCOUNTANT', 'ROLE_MANAGER'].includes(currentSession.role);
+            if (!isAdminOrManager && currentSession) {
+                document.getElementById('adminPortalBtn').classList.add('d-none');
+            }
+
+            // 4. Kiểm tra tham số URL (?view=summary hoặc ?empId=...)
+            var urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('view') === 'summary') {
+                switchTimesheetView('summary');
+            } else {
+                if (urlParams.get('empId')) {
+                    currentSelectedEmpId = parseInt(urlParams.get('empId'));
+                    select.value = currentSelectedEmpId;
+                }
+                renderPersonalTimesheet();
+            }
+        });
+
+        function switchTimesheetView(view) {
+            currentView = view;
+            var btnP = document.getElementById('btnViewPersonal');
+            var btnS = document.getElementById('btnViewSummary');
+            var boxP = document.getElementById('personalTimesheetView');
+            var boxS = document.getElementById('summaryTimesheetView');
+            var empCol = document.getElementById('empSelectCol');
+
+            if (view === 'summary') {
+                btnP.classList.remove('active');
+                btnS.classList.add('active');
+                boxP.classList.add('d-none');
+                boxS.classList.remove('d-none');
+                empCol.classList.add('d-none');
+                renderSummaryTimesheet();
+            } else {
+                btnS.classList.remove('active');
+                btnP.classList.add('active');
+                boxS.classList.add('d-none');
+                boxP.classList.remove('d-none');
+                empCol.classList.remove('d-none');
+                renderPersonalTimesheet();
+            }
+        }
+
+        function onEmployeeChanged() {
+            currentSelectedEmpId = parseInt(document.getElementById('timesheetEmpSelect').value);
+            renderPersonalTimesheet();
+        }
+
+        function onMonthChanged() {
+            currentMonth = parseInt(document.getElementById('timesheetMonthSelect').value);
+            document.getElementById('dispTableMonthYear').textContent = `Tháng ${currentMonth.toString().padStart(2, '0')}/${currentYear}`;
+            if (currentView === 'summary') {
+                renderSummaryTimesheet();
+            } else {
+                renderPersonalTimesheet();
+            }
+        }
+
+        function onFilterChanged() {
+            if (currentView === 'summary') {
+                filterSummaryTable();
+            } else {
+                var dept = document.getElementById('timesheetDeptFilter').value;
+                if (dept !== 'ALL') {
+                    var empInDept = HRM_DATA.employees.find(e => e.department === dept);
+                    if (empInDept) {
+                        currentSelectedEmpId = empInDept.id;
+                        document.getElementById('timesheetEmpSelect').value = currentSelectedEmpId;
+                        renderPersonalTimesheet();
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // HIỂN THỊ BẢNG CÔNG CÁ NHÂN (CHI TIẾT 31 NGÀY)
+        // =========================================================================
+        function renderPersonalTimesheet() {
+            var data = getEmployeeTimesheetRecords(currentSelectedEmpId, currentMonth, currentYear);
+            var emp = data.employee;
+
+            // Cập nhật thông tin nhân viên
+            document.getElementById('dispEmpName').textContent = emp.name;
+            document.getElementById('dispEmpCode').textContent = emp.code;
+            document.getElementById('dispEmpDept').textContent = emp.department;
+            document.getElementById('dispEmpRole').textContent = emp.role.replace('ROLE_', '');
+            document.getElementById('reqEmpName').value = `[${emp.code}] ${emp.name} - ${emp.department}`;
+
+            // Cập nhật thẻ chỉ số thống kê (KPIs)
+            document.getElementById('statWorkUnits').textContent = `${data.metrics.accumulatedUnits} / ${data.metrics.standardUnits}`;
+            document.getElementById('statWorkRate').innerHTML = `<i class="fa-solid fa-circle-check me-1"></i>Đạt ${data.metrics.completionRate}% công chuẩn`;
+            document.getElementById('statTotalHours').textContent = `${data.metrics.totalHours.toFixed(1)} h`;
+            document.getElementById('statLateCount').textContent = `${data.metrics.lateCount} lần`;
+            document.getElementById('statLateMinutes').textContent = `Tổng cộng ${data.metrics.lateMinutes} phút`;
+            document.getElementById('statPaidLeave').textContent = `${data.metrics.paidLeaveDays} ngày`;
+
+            // Đổ dữ liệu 31 ngày vào bảng
+            var tbody = document.getElementById('timesheetTbody');
+            var html = '';
+
+            data.records.forEach(function(r) {
+                var rowClass = r.status === 'WEEKEND' ? 'table-light text-muted' : (r.status === 'IN_PROGRESS' ? 'table-primary table-opacity-10' : '');
+                var isTodayHighlight = r.day === 22 ? 'style="border-left: 4px solid #2563eb;"' : '';
+
+                html += `
+                    <tr class="${rowClass}" ${isTodayHighlight}>
+                        <td><strong>${r.dateStr}</strong></td>
+                        <td>${r.shiftName}</td>
+                        <td>
+                            ${r.checkIn !== '--' ? `<strong>${r.checkIn}</strong>` : '<span class="text-muted">--</span>'}
+                            ${r.status === 'LATE' ? '<span class="badge bg-warning-subtle text-dark ms-1">Muộn 25p</span>' : ''}
+                            ${r.status === 'IN_PROGRESS' && r.checkIn !== '--' ? '<span class="badge bg-success-subtle text-success ms-1">Đúng giờ</span>' : ''}
+                        </td>
+                        <td>
+                            ${r.checkOut !== '--' ? `<strong>${r.checkOut}</strong>` : '<span class="text-muted">--</span>'}
+                        </td>
+                        <td class="text-center font-monospace">${typeof r.hours === 'number' ? r.hours.toFixed(1) + ' giờ' : r.hours}</td>
+                        <td class="text-center fw-bold font-monospace text-primary">${typeof r.workUnits === 'number' ? r.workUnits.toFixed(2) + ' công' : r.workUnits}</td>
+                        <td class="text-center"><span class="badge ${r.badgeClass}">${r.statusLabel}</span></td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // =========================================================================
+        // HIỂN THỊ BẢNG CHẤM CÔNG TỔNG HỢP (20 NHÂN SỰ)
+        // =========================================================================
+        function renderSummaryTimesheet() {
+            var list = getAllEmployeesTimesheetSummary(currentMonth, currentYear);
+            var tbody = document.getElementById('summaryMatrixTbody');
+            var html = '';
+
+            var totalStd = 0, totalSplit = 0, totalHalf = 0, totalNight = 0, totalLate = 0, totalLeave = 0, totalHours = 0, totalUnits = 0;
+
+            list.forEach(function(item) {
+                totalStd += item.standard8h;
+                totalSplit += item.splitShift;
+                totalHalf += item.halfShift;
+                totalNight += item.nightShift;
+                totalLate += item.lateEarly;
+                totalLeave += item.paidLeave;
+                totalHours += item.totalHours;
+                totalUnits += item.totalUnits;
+
+                html += `
+                    <tr class="summary-row" data-dept="${item.department}">
+                        <td class="text-center text-muted font-monospace">${item.order}</td>
+                        <td><span class="badge bg-light text-dark border font-monospace">${item.code}</span></td>
+                        <td class="fw-bold">${item.name}</td>
+                        <td><small class="text-muted">${item.department}</small></td>
+                        <td class="text-center font-monospace">${item.standard8h}</td>
+                        <td class="text-center font-monospace text-primary">${item.splitShift}</td>
+                        <td class="text-center font-monospace">${item.halfShift}</td>
+                        <td class="text-center font-monospace text-dark">${item.nightShift}</td>
+                        <td class="text-center font-monospace ${item.lateEarly > 0 ? 'text-warning fw-bold' : 'text-muted'}">${item.lateEarly}</td>
+                        <td class="text-center font-monospace ${item.paidLeave > 0 ? 'text-info fw-bold' : 'text-muted'}">${item.paidLeave}</td>
+                        <td class="text-end font-monospace">${item.totalHours.toFixed(1)} h</td>
+                        <td class="text-center font-monospace fw-bold text-primary">${item.totalUnits.toFixed(2)}</td>
+                        <td class="text-center"><span class="badge bg-warning-subtle text-dark border border-warning-subtle">${item.statusLabel}</span></td>
+                        <td class="text-center no-print">
+                            <button class="btn btn-outline-primary btn-sm py-0 px-2" onclick="viewEmployeeDetail(${item.id})" title="Xem chi tiết">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+
+            document.getElementById('sumStandard8h').textContent = totalStd;
+            document.getElementById('sumSplit').textContent = totalSplit;
+            document.getElementById('sumHalf').textContent = totalHalf;
+            document.getElementById('sumNight').textContent = totalNight;
+            document.getElementById('sumLate').textContent = totalLate;
+            document.getElementById('sumLeave').textContent = totalLeave;
+            document.getElementById('sumTotalHours').textContent = totalHours.toFixed(1) + ' h';
+            document.getElementById('sumTotalUnits').textContent = totalUnits.toFixed(2) + ' công';
+        }
+
+        function filterSummaryTable() {
+            var q = (document.getElementById('summarySearchInput').value || '').toLowerCase();
+            var dept = document.getElementById('timesheetDeptFilter').value;
+            var rows = document.querySelectorAll('#summaryMatrixTbody tr.summary-row');
+
+            rows.forEach(function(row) {
+                var rowDept = row.getAttribute('data-dept');
+                var text = row.textContent.toLowerCase();
+                var matchesDept = (dept === 'ALL' || rowDept === dept);
+                var matchesQuery = (q === '' || text.indexOf(q) !== -1);
+                row.style.display = (matchesDept && matchesQuery) ? '' : 'none';
+            });
+        }
+
+        function viewEmployeeDetail(empId) {
+            currentSelectedEmpId = empId;
+            document.getElementById('timesheetEmpSelect').value = empId;
+            switchTimesheetView('personal');
+        }
+
+        // =========================================================================
+        // XUẤT FILE EXCEL BẢNG CHẤM CÔNG (.XLS / CSV)
+        // =========================================================================
+        function exportTimesheetExcel() {
+            var list = getAllEmployeesTimesheetSummary(currentMonth, currentYear);
+            var csv = "\uFEFF"; // BOM cho UTF-8 tiếng Việt trong Excel
+            csv += "STT,Mã Nhân Viên,Họ và Tên,Phòng Ban,Ca Chuẩn 8h,Ca Gãy,Nửa Ca,Ca Đêm,Lượt Muộn Sớm,Nghỉ Phép,Tổng Giờ Làm,Tổng Ngày Công,Trạng Thái\n";
+
+            list.forEach(function(item) {
+                csv += `"${item.order}","${item.code}","${item.name}","${item.department}","${item.standard8h}","${item.splitShift}","${item.halfShift}","${item.nightShift}","${item.lateEarly}","${item.paidLeave}","${item.totalHours.toFixed(1)}","${item.totalUnits.toFixed(2)}","${item.statusLabel}"\n`;
+            });
+
+            var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `BangChamCong_TongHop_Thang_${currentMonth}_${currentYear}.csv`;
+            link.click();
+        }
+
+        // =========================================================================
+        // XỬ LÝ GỬI YÊU CẦU CHẤM CÔNG BÙ
+        // =========================================================================
+        function handleAttendanceRequest(e) {
+            e.preventDefault();
+            var emp = HRM_DATA.employees.find(x => x.id === currentSelectedEmpId) || HRM_DATA.employees[0];
+            var date = document.getElementById('reqDate').value;
+            var type = document.getElementById('reqType').value;
+            var shift = document.getElementById('reqShift').value;
+            var time = document.getElementById('reqTime').value;
+            var reason = document.getElementById('reqReason').value;
+
+            var newReq = {
+                id: Date.now(),
+                empCode: emp.code,
+                empName: emp.name,
+                date: date,
+                shiftName: shift,
+                requestType: type,
+                recordedTime: time,
+                reason: reason,
+                status: 'PENDING'
+            };
+
+            HRM_DATA.attendanceRequests.unshift(newReq);
+
+            var modalEl = document.getElementById('requestModal');
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            alert('Đã gửi yêu cầu chấm công bù thành công!\nYêu cầu đang ở trạng thái CHỜ DUYỆT bởi Quản trị viên/Trưởng phòng.');
+        }
+
+        function handleLogout() {
+            if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?')) {
+                localStorage.removeItem('hrm_session');
+                window.location.replace('login');
+            }
+        }
+    </script>
 </body>
 </html>

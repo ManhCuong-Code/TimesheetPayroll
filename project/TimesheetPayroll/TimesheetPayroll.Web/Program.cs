@@ -24,6 +24,17 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.C
     });
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
+
+// Bật CORS cho phép kết nối giao tiếp 2 chiều từ mọi trình duyệt và Client
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
 builder.Services.AddScoped<IUserSessionService>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
@@ -148,8 +159,12 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStatusCodePagesWithReExecute("/404");
+app.UseCors("AllowAll");
 app.UseAntiforgery();
 app.UseStaticFiles();
+
+// Đăng ký toàn bộ các Endpoint REST API giao tiếp 2 chiều với CSDL SQL Server (BangChamCongDB)
+app.MapTimesheetPayrollApi();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

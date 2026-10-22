@@ -10,6 +10,7 @@ public interface IFaceManagementUseCases
     Task RegisterFaceProfileAsync(long employeeId, float[] descriptor, string? notes, string callerUsername, string? callerRole);
     Task ToggleFaceProfileLockAsync(long employeeId, bool isActive, string callerUsername, string? callerRole);
     Task RevokeFaceProfileAsync(long employeeId, string callerUsername, string? callerRole);
+    Task UpdateProfileMetadataAsync(long employeeId, string? notes, decimal livenessThreshold, string callerUsername, string? callerRole);
     Task<IEnumerable<FaceAuditLog>> GetAuditLogsAsync(string? callerRole, int limit = 100);
 }
 
@@ -116,6 +117,24 @@ public class FaceManagementUseCases : IFaceManagementUseCases
             SimilarityScore = null,
             PerformedBy = callerUsername,
             DeviceInfo = "Admin Portal Biometric Revocation",
+            IsSuccess = true,
+            FailureReason = null
+        });
+    }
+
+    public async Task UpdateProfileMetadataAsync(long employeeId, string? notes, decimal livenessThreshold, string callerUsername, string? callerRole)
+    {
+        EnsureAdmin(callerRole);
+
+        await _faceProfileRepo.UpdateProfileMetadataAsync(employeeId, notes, livenessThreshold);
+
+        await _faceAuditRepo.LogActionAsync(new FaceAuditLog
+        {
+            EmployeeId = employeeId,
+            ActionType = "UPDATE_METADATA",
+            SimilarityScore = null,
+            PerformedBy = callerUsername,
+            DeviceInfo = "Admin Portal Biometric Update",
             IsSuccess = true,
             FailureReason = null
         });

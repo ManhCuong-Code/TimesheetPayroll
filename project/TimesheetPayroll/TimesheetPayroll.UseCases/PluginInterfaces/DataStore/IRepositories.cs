@@ -271,6 +271,7 @@ public interface IFaceProfileRepository
     Task SaveProfileAsync(EmployeeFaceProfile profile);
     Task DeleteProfileAsync(long employeeId);
     Task ToggleStatusAsync(long employeeId, bool isActive);
+    Task UpdateProfileMetadataAsync(long employeeId, string? notes, decimal livenessThreshold);
 }
 
 /// <summary>

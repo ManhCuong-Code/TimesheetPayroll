@@ -736,6 +736,19 @@ SET
 WHERE id = @PeriodId;
 GO
 
+-- 8.5. KHỞI TẠO DỮ LIỆU MẪU SINH TRẮC HỌC KHUÔN MẶT
+IF NOT EXISTS (SELECT 1 FROM employee_face_profiles)
+BEGIN
+    INSERT INTO employee_face_profiles (employee_id, face_descriptor_json, registered_at, registered_by, is_active, liveness_threshold, notes, updated_at)
+    VALUES 
+    ((SELECT id FROM employees WHERE employee_code = 'EMP001'), '[]', DATEADD(DAY, -15, GETDATE()), 'admin.trong', 1, 0.70, N'Đăng ký cập nhật cho nhân viên [EMP001] Nguyễn Văn A', GETDATE()),
+    ((SELECT id FROM employees WHERE employee_code = 'EMP002'), '[]', DATEADD(DAY, -12, GETDATE()), 'admin.trong', 1, 0.70, N'Đăng ký cập nhật cho nhân viên [EMP002] Lê Thị Thu Thảo', GETDATE()),
+    ((SELECT id FROM employees WHERE employee_code = 'EMP003'), '[]', DATEADD(DAY, -10, GETDATE()), 'admin.trong', 1, 0.70, N'Đăng ký sinh trắc học bởi Admin', GETDATE()),
+    ((SELECT id FROM employees WHERE employee_code = 'EMP004'), '[]', DATEADD(DAY, -8, GETDATE()), 'admin.trong', 1, 0.70, N'Đăng ký sinh trắc học bởi Admin', GETDATE()),
+    ((SELECT id FROM employees WHERE employee_code = 'EMP005'), '[]', DATEADD(DAY, -5, GETDATE()), 'admin.trong', 1, 0.70, N'Đăng ký sinh trắc học bởi Admin', GETDATE());
+END
+GO
+
 -- 9. KIỂM TRA TỔNG KẾT DỮ LIỆU
 SELECT 
     (SELECT COUNT(*) FROM departments) AS TongPhongBan,

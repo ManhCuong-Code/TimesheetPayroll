@@ -42,8 +42,18 @@
             --hrm-slate-800: #1e293b;
         }
                         *, *::before, *::after {
-            font-family: 'Be Vietnam Pro', Arial, sans-serif;
+            box-sizing: border-box;
         }
+        .fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands,
+        i.fa, i.fas, i.far, i.fab, i.fa-solid, i.fa-regular, i.fa-brands,
+        [class*="fa-"], [class*="fa-"]::before, [class*="fa-"]::after {
+            font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "FontAwesome" !important;
+            font-style: normal !important;
+            line-height: 1;
+        }
+        .fa-brands, .fab { font-family: "Font Awesome 6 Brands" !important; font-weight: 400 !important; }
+        .fa-regular, .far { font-family: "Font Awesome 6 Free" !important; font-weight: 400 !important; }
+        .fa-solid, .fas { font-family: "Font Awesome 6 Free" !important; font-weight: 900 !important; }
         html, body {
             font-family: var(--font-body);
             font-size: 16px;
@@ -56,13 +66,11 @@
             text-rendering: optimizeLegibility;
         }
         h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
-            font-family: var(--font-heading) !important;
+            font-family: var(--font-heading);
             line-height: 1.3;
             font-weight: 600;
         }
-        button, input, optgroup, select, textarea, .btn, .form-control, .form-select, .table, .dropdown-menu, .modal, .card, .badge, .alert, .nav-link, .navbar-brand {
-            font-family: 'Be Vietnam Pro', Arial, sans-serif !important;
-        }
+        button, input, optgroup, select, textarea, .form-control, .form-select { font-family: inherit; }
         code, kbd, pre, samp, .font-mono {
             font-family: 'JetBrains Mono', Consolas, monospace !important;
         }
@@ -181,6 +189,11 @@
                 <a class="nav-link" id="tabBtn-approvals" href="javascript:void(0)" onclick="switchTab('approvals')">
                     <i class="fa-solid fa-clipboard-check me-1"></i>Xét Duyệt Đơn & Công
                     <span class="badge bg-danger rounded-pill ms-1" id="badgePendingCount">3</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="tabBtn-timesheet" href="javascript:void(0)" onclick="switchTab('timesheet')">
+                    <i class="fa-solid fa-calendar-check me-1"></i>Bảng Chấm Công Tổng Hợp
                 </a>
             </li>
             <li class="nav-item">
@@ -440,6 +453,86 @@
             </div>
         </div>
 
+        <!-- ==================== TAB: BẢNG CHẤM CÔNG TỔNG HỢP ==================== -->
+        <div id="tabContent-timesheet" class="tab-pane-content d-none">
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="fa-solid fa-calendar-check text-primary me-2"></i>Bảng Chấm Công Tổng Hợp Toàn Doanh Nghiệp (Tháng 10/2026)</h5>
+                        <p class="text-muted small mb-0">Quản trị viên & Kế toán đối soát số ngày công, phân loại ca, lượt đi muộn và giờ làm việc trước khi chốt lương</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm" onclick="exportAdminTimesheetExcel()">
+                            <i class="fa-solid fa-file-excel me-1"></i>Xuất Excel Bảng Công
+                        </button>
+                        <a href="my-timesheet?view=summary" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-sm">
+                            <i class="fa-solid fa-up-right-from-square me-1"></i>Xem Chi Tiết 31 Ngày
+                        </a>
+                        <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" onclick="switchTab('payroll')">
+                            <i class="fa-solid fa-arrow-right me-1"></i>Chuyển Hạch Toán Lương
+                        </button>
+                    </div>
+                </div>
+
+                <!-- FILTER ROW -->
+                <div class="row g-2 mb-3 align-items-center">
+                    <div class="col-md-4">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <input type="text" class="form-control" id="searchAdminTsInput" placeholder="Tìm theo mã NV, họ tên..." onkeyup="filterAdminTimesheetTable()">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select form-select-sm" id="filterAdminTsDept" onchange="filterAdminTimesheetTable()">
+                            <option value="">Tất cả phòng ban</option>
+                            <option value="Ban Giám Đốc">Ban Giám Đốc</option>
+                            <option value="Phòng Công Nghệ Thông Tin">Phòng Công Nghệ Thông Tin</option>
+                            <option value="Phòng Kinh Doanh & Tiếp Thị">Phòng Kinh Doanh & Tiếp Thị</option>
+                            <option value="Phòng Hành Chính Nhân Sự & Kế Toán">Phòng Hành Chính Nhân Sự & Kế Toán</option>
+                            <option value="Phòng Kế Toán Quản Trị & Thuế">Phòng Kế Toán Quản Trị & Thuế</option>
+                            <option value="Phòng Kỹ Thuật & Hạ Tầng Thiết Bị">Phòng Kỹ Thuật & Hạ Tầng Thiết Bị</option>
+                            <option value="Phòng Vận Hành & Dịch Vụ Khách Hàng">Phòng Vận Hành & Dịch Vụ Khách Hàng</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <span class="badge bg-primary-subtle text-primary px-3 py-2 fw-semibold">
+                            <i class="fa-solid fa-users me-1"></i>Tổng số: 20 nhân sự
+                        </span>
+                    </div>
+                </div>
+
+                <!-- TABLE -->
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle small mb-0" id="adminTsTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="text-center" style="width: 50px;">STT</th>
+                                <th style="width: 95px;">Mã NV</th>
+                                <th>Họ và Tên</th>
+                                <th>Phòng Ban</th>
+                                <th class="text-center" style="width: 85px;">Ca Chuẩn</th>
+                                <th class="text-center" style="width: 80px;">Ca Gãy</th>
+                                <th class="text-center" style="width: 80px;">Nửa Ca</th>
+                                <th class="text-center" style="width: 80px;">Ca Đêm</th>
+                                <th class="text-center" style="width: 95px;">Muộn/Sớm</th>
+                                <th class="text-center" style="width: 90px;">Nghỉ Phép</th>
+                                <th class="text-end" style="width: 100px;">Tổng Giờ</th>
+                                <th class="text-center fw-bold text-warning" style="width: 110px;">Tổng Công</th>
+                                <th class="text-center" style="width: 100px;">Trạng Thái</th>
+                                <th class="text-center" style="width: 85px;">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTsTbody">
+                            <!-- Nạp từ JS -->
+                        </tbody>
+                        <tfoot class="table-light fw-bold" id="adminTsTfoot">
+                            <!-- Nạp từ JS -->
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- ==================== TAB 5: BẢNG LƯƠNG HÀNG LOẠT ==================== -->
         <div id="tabContent-payroll" class="tab-pane-content d-none">
             <div class="card border-0 shadow-sm rounded-4 p-4">
@@ -496,6 +589,7 @@
     </footer>
 
     <script src="data/hrm_data.js"></script>
+    <script src="data/database_sync.js"></script>
     <script>
         // Khởi tạo trang
         document.addEventListener('DOMContentLoaded', function() {
@@ -504,6 +598,7 @@
             renderShifts();
             renderShiftAssignments();
             renderApprovals();
+            renderAdminTimesheetTable();
             renderPayrollTable();
 
             // Kiểm tra hash tab trên URL
@@ -525,7 +620,7 @@
         }
 
         function switchTab(tabId) {
-            ['dashboard', 'employees', 'shifts', 'approvals', 'payroll'].forEach(function(t) {
+            ['dashboard', 'employees', 'shifts', 'approvals', 'timesheet', 'payroll'].forEach(function(t) {
                 var btn = document.getElementById('tabBtn-' + t);
                 var pane = document.getElementById('tabContent-' + t);
                 if (btn && pane) {
@@ -539,6 +634,91 @@
                 }
             });
             window.location.hash = tabId;
+        }
+
+        function renderAdminTimesheetTable() {
+            if (typeof getAllEmployeesTimesheetSummary !== 'function') return;
+            var list = getAllEmployeesTimesheetSummary(10, 2026);
+            var tbody = document.getElementById('adminTsTbody');
+            var tfoot = document.getElementById('adminTsTfoot');
+            if (!tbody || !tfoot) return;
+            var html = '';
+
+            var totalStd = 0, totalSplit = 0, totalHalf = 0, totalNight = 0, totalLate = 0, totalLeave = 0, totalHours = 0, totalUnits = 0;
+
+            list.forEach(function(item) {
+                totalStd += item.standard8h;
+                totalSplit += item.splitShift;
+                totalHalf += item.halfShift;
+                totalNight += item.nightShift;
+                totalLate += item.lateEarly;
+                totalLeave += item.paidLeave;
+                totalHours += item.totalHours;
+                totalUnits += item.totalUnits;
+
+                html += `
+                    <tr class="admin-ts-row" data-dept="${item.department}">
+                        <td class="text-center text-muted font-monospace">${item.order}</td>
+                        <td><span class="badge bg-light text-dark border font-monospace">${item.code}</span></td>
+                        <td class="fw-bold">${item.name}</td>
+                        <td><small class="text-muted">${item.department}</small></td>
+                        <td class="text-center font-monospace">${item.standard8h}</td>
+                        <td class="text-center font-monospace text-primary">${item.splitShift}</td>
+                        <td class="text-center font-monospace">${item.halfShift}</td>
+                        <td class="text-center font-monospace text-dark">${item.nightShift}</td>
+                        <td class="text-center font-monospace ${item.lateEarly > 0 ? 'text-warning fw-bold' : 'text-muted'}">${item.lateEarly}</td>
+                        <td class="text-center font-monospace ${item.paidLeave > 0 ? 'text-info fw-bold' : 'text-muted'}">${item.paidLeave}</td>
+                        <td class="text-end font-monospace">${item.totalHours.toFixed(1)} h</td>
+                        <td class="text-center font-monospace fw-bold text-primary">${item.totalUnits.toFixed(2)}</td>
+                        <td class="text-center"><span class="badge bg-warning-subtle text-dark border border-warning-subtle">${item.statusLabel}</span></td>
+                        <td class="text-center">
+                            <a href="my-timesheet?empId=${item.id}" class="btn btn-outline-primary btn-sm py-0 px-2" title="Xem chi tiết ngày">
+                                <i class="fa-solid fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            tfoot.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-end text-uppercase">TỔNG TOÀN DOANH NGHIỆP:</td>
+                    <td class="text-center">${totalStd}</td>
+                    <td class="text-center text-primary">${totalSplit}</td>
+                    <td class="text-center">${totalHalf}</td>
+                    <td class="text-center">${totalNight}</td>
+                    <td class="text-center text-warning">${totalLate}</td>
+                    <td class="text-center text-info">${totalLeave}</td>
+                    <td class="text-end">${totalHours.toFixed(1)} h</td>
+                    <td class="text-center text-primary fs-6">${totalUnits.toFixed(2)} công</td>
+                    <td class="text-center"><span class="badge bg-success">Đạt 98.2%</span></td>
+                    <td></td>
+                </tr>
+            `;
+        }
+
+        function filterAdminTimesheetTable() {
+            var q = (document.getElementById('searchAdminTsInput').value || '').toLowerCase();
+            var dept = document.getElementById('filterAdminTsDept').value;
+            var rows = document.querySelectorAll('#adminTsTbody tr.admin-ts-row');
+
+            rows.forEach(function(row) {
+                var rowDept = row.getAttribute('data-dept');
+                var text = row.textContent.toLowerCase();
+                var matchesDept = (!dept || rowDept === dept);
+                var matchesQuery = (!q || text.indexOf(q) !== -1);
+                row.style.display = (matchesDept && matchesQuery) ? '' : 'none';
+            });
+        }
+
+        function exportAdminTimesheetExcel() {
+            var list = getAllEmployeesTimesheetSummary(10, 2026);
+            var csv = "\uFEFFSTT,Mã NV,Họ Tên,Phòng Ban,Ca Chuẩn 8h,Ca Gãy,Nửa Ca,Ca Đêm,Lượt Muộn Sớm,Nghỉ Phép,Tổng Giờ,Tổng Ngày Công,Trạng Thái\n";
+            list.forEach(function(item) {
+                csv += `"${item.order}","${item.code}","${item.name}","${item.department}","${item.standard8h}","${item.splitShift}","${item.halfShift}","${item.nightShift}","${item.lateEarly}","${item.paidLeave}","${item.totalHours.toFixed(1)}","${item.totalUnits.toFixed(2)}","${item.statusLabel}"\n`;
+            });
+            downloadCSV(csv, 'BangChamCong_Admin_Thang10_2026.csv');
         }
 
         function renderEmployeeTable() {
@@ -727,7 +907,8 @@
         }
 
         function updatePendingCount() {
-            var pLeaves = HRM_DATA.leaveRequests.filter(function(x) { return x.status === 'PENDING'; }).length;
+            var curLeaves = (window.HRM_DB && HRM_DB.getLeaveRequests().length > 0) ? HRM_DB.getLeaveRequests() : HRM_DATA.leaveRequests;
+            var pLeaves = curLeaves.filter(function(x) { return x.status === 'PENDING'; }).length;
             var pAtts = HRM_DATA.attendanceRequests.filter(function(x) { return x.status === 'PENDING'; }).length;
             var total = pLeaves + pAtts;
             document.getElementById('badgePendingCount').textContent = total;
@@ -780,23 +961,39 @@
         }
 
         function runBatchCalculation() {
-            alert('Đang chạy Stored Procedure [sp_CalculatePayrollBatch] hạch toán cho 20 nhân viên...\nThành công! Đã cập nhật bảng công và tính thuế/bảo hiểm tự động.');
-            renderPayrollTable();
-            switchTab('payroll');
+            if (window.HRM_DB) {
+                HRM_DB.runBatchPayroll(10, function() {
+                    renderPayrollTable();
+                    switchTab('payroll');
+                });
+            } else {
+                renderPayrollTable();
+                switchTab('payroll');
+            }
         }
 
         var isLocked = false;
         function toggleLockPayroll() {
             isLocked = !isLocked;
             var btn = document.getElementById('lockPeriodBtn');
-            if (isLocked) {
-                btn.className = 'btn btn-secondary btn-sm rounded-pill px-3 shadow-sm';
-                btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Đã Khóa Kỳ Lương (Mở Khóa)';
-                alert('ĐÃ KHÓA KỲ LƯƠNG THÁNG 10/2026!\nDữ liệu bảng công và lương hiện đã được chốt sổ, ngăn chặn việc sửa đổi.');
+            if (window.HRM_DB) {
+                HRM_DB.toggleLockPeriod(10, !isLocked, function() {
+                    if (isLocked) {
+                        btn.className = 'btn btn-secondary btn-sm rounded-pill px-3 shadow-sm';
+                        btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Đã Khóa Kỳ Lương (Mở Khóa)';
+                    } else {
+                        btn.className = 'btn btn-danger btn-sm rounded-pill px-3 shadow-sm';
+                        btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Khóa Kỳ Lương (Lock)';
+                    }
+                });
             } else {
-                btn.className = 'btn btn-danger btn-sm rounded-pill px-3 shadow-sm';
-                btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Khóa Kỳ Lương (Lock)';
-                alert('Đã mở khóa kỳ lương tháng 10/2026.');
+                if (isLocked) {
+                    btn.className = 'btn btn-secondary btn-sm rounded-pill px-3 shadow-sm';
+                    btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Đã Khóa Kỳ Lương (Mở Khóa)';
+                } else {
+                    btn.className = 'btn btn-danger btn-sm rounded-pill px-3 shadow-sm';
+                    btn.innerHTML = '<i class="fa-solid fa-lock me-1"></i>Khóa Kỳ Lương (Lock)';
+                }
             }
         }
 

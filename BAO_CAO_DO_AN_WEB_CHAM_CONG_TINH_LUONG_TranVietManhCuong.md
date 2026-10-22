@@ -288,6 +288,25 @@ Hệ thống sử dụng cơ sở dữ liệu `BangChamCongDB` trên Microsoft S
 - **Toàn vẹn giao dịch Cặp Header-Line (`payslips` – `payslip_lines`):**
   Khi chạy tính lương hàng loạt, toàn bộ phiếu lương và các dòng chi tiết được lưu trong một Transaction với `using var tx = conn.BeginTransaction()`. Nếu xảy ra bất kỳ lỗi dữ liệu nào, hệ thống lập tức thực hiện `tx.Rollback()`, bảo đảm dữ liệu kế toán luôn toàn vẹn và nhất quán.
 
+## 2.6. Cơ chế giao tiếp cơ sở dữ liệu hai chiều (Bidirectional Database Communication)
+Nhằm khắc phục triệt để nhược điểm của các hệ thống web tĩnh chỉ hiển thị dữ liệu mẫu một chiều (Display-Only), hệ thống đã thiết kế và hiện thực hóa cơ chế **Giao tiếp cơ sở dữ liệu hai chiều (Bidirectional Read & Write Communication)** toàn diện:
+
+1. **Chiều Ghi (Write / Command Flow - Web $\longrightarrow$ CSDL):**
+   - Mọi thao tác nghiệp vụ phát sinh từ phía người dùng trên giao diện web đều được kiểm chứng hợp lệ (Validation) và gửi lệnh trực tiếp xuống CSDL Microsoft SQL Server (`BangChamCongDB`):
+     - *Nhân viên điểm danh khuôn mặt:* Gửi `POST /api/bang-cham-cong/diem-danh` $\rightarrow$ ghi nhận thời gian thực vào bảng `timesheets`.
+     - *Nhân viên nộp đơn nghỉ phép:* Gửi `POST /api/don-phep/tao-don` $\rightarrow$ ghi bản ghi mới vào bảng `leave_requests` (trạng thái `PENDING`).
+     - *Quản lý / Nhân sự xét duyệt đơn:* Gửi `PUT /api/don-phep/{id}/phe-duyet` $\rightarrow$ cập nhật trạng thái `APPROVED` / `REJECTED` vào bảng `leave_requests`, đồng thời tự động cập nhật ngày công tương ứng trong bảng `timesheets`.
+     - *Kế toán chạy tính lương:* Gửi `POST /api/tinh-luong/chay-tu-dong` $\rightarrow$ thực thi giao dịch ACID lưu 20 phiếu lương và toàn bộ dòng chi tiết vào các bảng `payslips` và `payslip_lines`.
+     - *Chốt khóa sổ kỳ lương:* Gửi `POST /api/tinh-luong/chot-ky-khoa-so/{id}` $\rightarrow$ chuyển trạng thái kỳ lương sang `LOCKED` (Read-Only) và khóa bảng chấm công.
+
+2. **Chiều Đọc & Phản Hồi Thời Gian Thực (Read & Reflection Flow - CSDL $\longrightarrow$ Web):**
+   - Khi dữ liệu trong CSDL được ghi hoặc cập nhật, hệ thống lập tức phản hồi và cập nhật số liệu hiển thị trên các màn hình liên quan mà không cần tải lại trang (Zero Reload):
+     - Kế toán vừa duyệt đơn nghỉ phép của nhân viên $\rightarrow$ màn hình của nhân viên lập tức chuyển màu xanh "Đã duyệt" và số ngày công trong lịch công tự động cộng thêm ngày phép có lương.
+     - Kế toán chạy tính lương $\rightarrow$ các thẻ KPI quỹ lương toàn công ty nhảy số tức thì, và cổng tra cứu của nhân viên mở khóa phiếu lương chi tiết của tháng đó.
+   - Cơ chế này được hỗ trợ đồng thời qua 2 kênh:
+     - Kênh truyền thời gian thực **SignalR WebSocket** trên nền tảng Blazor Interactive Server.
+     - Kênh truyền **Bidirectional Reactive Engine (`database_sync.js`)** tích hợp `BroadcastChannel` và `StorageEvent` liên tab, đảm bảo trải nghiệm tương tác 2 chiều mượt mà kể cả khi trình diễn từ xa.
+
 ---
 
 \newpage

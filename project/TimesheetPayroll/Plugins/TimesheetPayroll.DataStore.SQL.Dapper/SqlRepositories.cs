@@ -146,25 +146,6 @@ public class TimesheetRepository : ITimesheetRepository
     public async Task AddOrUpdateTimesheetAsync(Timesheet t)
     {
         using var conn = _db.CreateConnection();
-        const string sql = @"
-            MERGE timesheets AS target
-            USING (SELECT @EmployeeId AS emp_id, @WorkDate AS wdate) AS source
-            ON (target.employee_id = source.emp_id AND target.work_date = source.wdate)
-            WHEN MATCHED THEN
-                UPDATE SET 
-                    shift_id = @ShiftId,
-                    shift_code = @ShiftCode,
-                    shift_name = @ShiftName,
-                    check_in_time = @CheckInTime,
-                    check_out_time = @CheckOutTime,
-                    actual_hours_worked = @ActualHoursWorked,
-                    work_shift_status = @WorkShiftStatus,
-                    work_units = @WorkUnits,
-                    note = @Note,
-                    updated_at = GETDATE()
-            WHEN NOT MATCHED THEN
-                INSERT (employee_id, period_id, shift_id, shift_code, shift_name, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked, note)
-                VALUES (@EmployeeId, @PeriodId, @ShiftId, @ShiftCode, @ShiftName, @WorkDate, @CheckInTime, @CheckOutTime, @ActualHoursWorked, @WorkShiftStatus, @WorkUnits, @IsLocked, @Note);";
         string safeStatus = t.WorkShiftStatus switch
         {
             WorkShiftStatus.PRESENT => "PRESENT",
@@ -180,22 +161,69 @@ public class TimesheetRepository : ITimesheetRepository
         decimal safeActualHours = Math.Max(0m, Math.Min(24.0m, Math.Round(t.ActualHoursWorked, 2)));
         decimal safeWorkUnits = Math.Max(0m, Math.Min(2.0m, Math.Round(t.WorkUnits, 2)));
 
-        await conn.ExecuteAsync(sql, new
+        // 1. Tìm bản ghi chấm công hiện có của nhân viên trong ngày
+        const string findSql = @"
+            SELECT TOP 1 id FROM timesheets 
+            WHERE employee_id = @EmployeeId 
+              AND work_date = CAST(@WorkDate AS DATE)
+              AND (@ShiftId IS NULL OR shift_id = @ShiftId OR shift_id IS NULL)
+            ORDER BY CASE WHEN shift_id = @ShiftId THEN 0 ELSE 1 END;";
+
+        var existingId = await conn.ExecuteScalarAsync<long?>(findSql, new { t.EmployeeId, t.WorkDate, t.ShiftId });
+
+        if (existingId.HasValue && existingId.Value > 0)
         {
-            t.EmployeeId,
-            t.PeriodId,
-            t.ShiftId,
-            t.ShiftCode,
-            t.ShiftName,
-            t.WorkDate,
-            t.CheckInTime,
-            t.CheckOutTime,
-            ActualHoursWorked = safeActualHours,
-            WorkShiftStatus = safeStatus,
-            WorkUnits = safeWorkUnits,
-            IsLocked = t.IsLocked ? 1 : 0,
-            t.Note
-        });
+            const string updSql = @"
+                UPDATE timesheets SET
+                    shift_id = COALESCE(@ShiftId, shift_id),
+                    shift_code = COALESCE(@ShiftCode, shift_code),
+                    shift_name = COALESCE(@ShiftName, shift_name),
+                    check_in_time = COALESCE(@CheckInTime, check_in_time),
+                    check_out_time = COALESCE(@CheckOutTime, check_out_time),
+                    actual_hours_worked = @ActualHoursWorked,
+                    work_shift_status = @WorkShiftStatus,
+                    work_units = @WorkUnits,
+                    note = COALESCE(@Note, note),
+                    updated_at = GETDATE()
+                WHERE id = @Id;";
+
+            await conn.ExecuteAsync(updSql, new
+            {
+                Id = existingId.Value,
+                t.ShiftId,
+                t.ShiftCode,
+                t.ShiftName,
+                t.CheckInTime,
+                t.CheckOutTime,
+                ActualHoursWorked = safeActualHours,
+                WorkShiftStatus = safeStatus,
+                WorkUnits = safeWorkUnits,
+                t.Note
+            });
+        }
+        else
+        {
+            const string insSql = @"
+                INSERT INTO timesheets (employee_id, period_id, shift_id, shift_code, shift_name, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked, note)
+                VALUES (@EmployeeId, @PeriodId, @ShiftId, @ShiftCode, @ShiftName, CAST(@WorkDate AS DATE), @CheckInTime, @CheckOutTime, @ActualHoursWorked, @WorkShiftStatus, @WorkUnits, @IsLocked, @Note);";
+
+            await conn.ExecuteAsync(insSql, new
+            {
+                t.EmployeeId,
+                t.PeriodId,
+                t.ShiftId,
+                t.ShiftCode,
+                t.ShiftName,
+                t.WorkDate,
+                t.CheckInTime,
+                t.CheckOutTime,
+                ActualHoursWorked = safeActualHours,
+                WorkShiftStatus = safeStatus,
+                WorkUnits = safeWorkUnits,
+                IsLocked = t.IsLocked ? 1 : 0,
+                t.Note
+            });
+        }
     }
 
     public async Task LockTimesheetsByPeriodAsync(long periodId)
@@ -673,7 +701,11 @@ public class LeaveRequestRepository : ILeaveRequestRepository
 
         if (status == ApprovalStatus.APPROVED)
         {
-            const string getReqSql = "SELECT * FROM leave_requests WHERE id = @RequestId;";
+            const string getReqSql = @"
+                SELECT id AS Id, employee_id AS EmployeeId, leave_type AS LeaveType,
+                       start_date AS StartDate, end_date AS EndDate, total_days AS TotalDays,
+                       reason AS Reason, approval_status AS ApprovalStatus, approved_by AS ApprovedBy
+                FROM leave_requests WHERE id = @RequestId;";
             var req = await conn.QueryFirstOrDefaultAsync<LeaveRequest>(getReqSql, new { RequestId = requestId });
             if (req != null)
             {
@@ -1297,6 +1329,16 @@ public class FaceProfileRepository : IFaceProfileRepository
             SET is_active = @IsActive, updated_at = GETDATE()
             WHERE employee_id = @EmployeeId;";
         await conn.ExecuteAsync(sql, new { EmployeeId = employeeId, IsActive = isActive });
+    }
+
+    public async Task UpdateProfileMetadataAsync(long employeeId, string? notes, decimal livenessThreshold)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            UPDATE employee_face_profiles
+            SET notes = @Notes, liveness_threshold = @LivenessThreshold, updated_at = GETDATE()
+            WHERE employee_id = @EmployeeId;";
+        await conn.ExecuteAsync(sql, new { EmployeeId = employeeId, Notes = notes, LivenessThreshold = livenessThreshold });
     }
 }
 

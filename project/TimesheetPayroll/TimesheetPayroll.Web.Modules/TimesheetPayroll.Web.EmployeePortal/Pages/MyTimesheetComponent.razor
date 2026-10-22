@@ -994,7 +994,7 @@
                 DepartmentName = emp.Department ?? "Khối Vận Hành",
                 PositionName = emp.Position ?? "Nhân viên",
                 Standard8hCount = empTs.Count(t => t.WorkUnits == 1.0m && t.WorkShiftStatus == WorkShiftStatus.PRESENT),
-                SplitShiftCount = empTs.Count(t => (t.ShiftCode != null && t.ShiftCode.Contains("GAY")) || t.WorkUnits == 1.0m),
+                SplitShiftCount = empTs.Count(t => t.ShiftCode != null && t.ShiftCode.Contains("GAY")),
                 HalfShiftCount = empTs.Count(t => t.WorkUnits == 0.5m || t.WorkShiftStatus == WorkShiftStatus.HALF_DAY),
                 FullShiftCount = empTs.Count(t => t.WorkUnits >= 1.0m),
                 LateOrEarlyCount = empTs.Count(t => t.IsLate || t.IsEarlyLeave),
@@ -1179,7 +1179,8 @@
 
             if (selectedTimesheet.CheckInTime.HasValue && selectedTimesheet.CheckOutTime.HasValue)
             {
-                selectedTimesheet.ActualHoursWorked = Math.Max(0m, Math.Round((decimal)(selectedTimesheet.CheckOutTime.Value - selectedTimesheet.CheckInTime.Value).TotalHours - 1.5m, 1));
+                decimal lunchBreak = (selectedTimesheet.ShiftCode == "CA_SANG" || selectedTimesheet.ShiftCode == "CA_CHIEU" || selectedTimesheet.ShiftCode == "CA_TOI") ? 0.0m : 1.5m;
+                selectedTimesheet.CalculateHoursWorked(lunchBreak);
             }
 
             var user = UserSession.CurrentUser;

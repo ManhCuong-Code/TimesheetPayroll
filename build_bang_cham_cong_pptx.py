@@ -1159,10 +1159,10 @@ def build_presentation():
     r.font.color.rgb = COLOR_EMERALD
     
     pros = [
-        ("Tự động hóa toàn diện quy trình:", " Loại bỏ hoàn toàn việc ghi chép sổ sách và nhập dữ liệu thủ công, giúp tiết kiệm thời gian cho bộ phận nhân sự."),
-        ("Giao diện thân thiện, dễ sử dụng:", " Thao tác điểm danh Check-in/out 1 chạm nhanh chóng, phù hợp cho mọi đối tượng nhân viên."),
-        ("Độ chính xác và khách quan cao:", " Mốc thời gian được ghi nhận tự động từ máy chủ, tránh gian lận sửa giờ."),
-        ("Phân quyền chặt chẽ & Bảo mật:", " Bảo vệ thông tin tài khoản bằng giải thuật băm BCrypt, ngăn chặn việc xem lén thông tin của người khác.")
+        ("Điểm danh khuôn mặt AI & Chống giả mạo:", " Kiosk Face Check-In tự động nhận diện danh tính và xác định ca trực mà không cần thao tác thủ công."),
+        ("Quản lý 6 ca làm việc chuẩn hóa linh hoạt:", " Hỗ trợ đầy đủ ca hành chính, ca sáng, ca chiều, ca tối, ca đêm (+30%) và ca gãy dịch vụ."),
+        ("Bảng chấm công tổng hợp & Xuất Excel:", " Tự động đối soát công 20 nhân sự, xuất file Excel chuẩn và in ấn báo cáo nhanh chóng."),
+        ("Phân quyền chặt chẽ & Giao dịch an toàn:", " Kiểm soát quyền đa cấp (Admin/HR/Manager/Employee) và khóa transaction SQL Server chống trùng lặp.")
     ]
     for pr_title, pr_desc in pros:
         pp = tf11_l.add_paragraph()
@@ -1193,11 +1193,11 @@ def build_presentation():
     r.font.color.rgb = COLOR_AMBER
     
     cons_and_future = [
-        ("Hạn chế hiện tại 1:", " Việc điểm danh vẫn đang thực hiện trên trình duyệt web, chưa có ứng dụng di động định vị GPS (Geofencing)."),
-        ("Hạn chế hiện tại 2:", " Chưa kết nối trực tiếp với thiết bị phần cứng máy chấm công vân tay hoặc nhận diện khuôn mặt tại văn phòng."),
-        ("Hướng cải tiến 1 - Quản lý ca làm việc:", " Bổ sung module phân ca kíp linh hoạt, tự động nhận diện ca đêm và tính hệ số làm thêm giờ (OT)."),
-        ("Hướng cải tiến 2 - Báo cáo chuyên sâu:", " Bổ sung xuất file Excel bảng tổng hợp ngày công chuẩn mực gửi bộ phận kế toán tính lương."),
-        ("Hướng cải tiến 3 - Kết nối thiết bị phần cứng:", " Tích hợp SDK kết nối máy chấm công vân tay, khuôn mặt (FaceID) tại văn phòng.")
+        ("Hạn chế 1 - Ứng dụng di động định vị GPS:", " Hiện tại vận hành trên Web Responsive, chưa có App Native cho nhân viên chấm công lưu động ngoài văn phòng."),
+        ("Hạn chế 2 - Kết nối phần cứng máy vân tay:", " Chưa viết module bridge kết nối socket trực tiếp tới máy quét vân tay ZKTeco/Ronald Jack qua mạng LAN."),
+        ("Hướng cải tiến 1 - Mobile App Geofencing:", " Xây dựng ứng dụng di động Flutter/React Native tích hợp định vị GPS vòng tròn bán kính cơ quan."),
+        ("Hướng cải tiến 2 - Tích hợp phần cứng văn phòng:", " Phát triển SDK Windows Service đồng bộ dữ liệu hai chiều với máy chấm công vân tay."),
+        ("Hướng cải tiến 3 - Nâng cấp Trợ lý AI:", " Mở rộng AI phân tích xu hướng nghỉ phép, dự báo nhu cầu nhân sự và cảnh báo nguy cơ kiệt sức.")
     ]
     for cf_title, cf_desc in cons_and_future:
         pc = tf11_r.add_paragraph()
@@ -1214,9 +1214,9 @@ def build_presentation():
 
     add_speaker_note(s11,
         "Về đánh giá và hướng phát triển:\n"
-        "- Về ưu điểm: Hệ thống giải quyết tốt bài toán tự động hóa chấm công, giao diện thân thiện, dữ liệu khách quan và phân quyền an toàn.\n"
-        "- Về hạn chế: Hiện tại hệ thống thao tác qua trình duyệt web và chưa tích hợp phần cứng máy chấm công vân tay hay định vị GPS.\n"
-        "- Về hướng phát triển: Em dự kiến bổ sung tính năng quản lý ca làm việc linh hoạt, nâng cấp báo cáo xuất Excel và nghiên cứu tích hợp SDK máy chấm công vân tay/FaceID."
+        "- Về ưu điểm: Hệ thống đã hoàn thiện xuất sắc các phân hệ cốt lõi: Điểm danh khuôn mặt AI Kiosk, hỗ trợ 6 ca làm việc chuẩn hóa, Bảng chấm công tổng hợp xuất Excel/in ấn tự động, và bảo mật phân quyền đa cấp.\n"
+        "- Về hạn chế: Hiện tại hệ thống vận hành trên nền tảng Web, chưa có ứng dụng di động định vị GPS cho nhân viên đi thị trường và chưa kết nối trực tiếp máy vân tay vật lý.\n"
+        "- Về định hướng nâng cấp: Em sẽ phát triển Mobile App có Geofencing, tích hợp SDK máy chấm công vân tay tại văn phòng và mở rộng Trợ lý AI phân tích dự báo nhân sự."
     )
 
     # =============================================================
