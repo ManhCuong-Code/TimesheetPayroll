@@ -1,5 +1,6 @@
 using TimesheetPayroll.CoreBusiness.Models;
 using TimesheetPayroll.UseCases.PluginInterfaces.DataStore;
+using TimesheetPayroll.UseCases.PluginInterfaces.Services;
 
 namespace TimesheetPayroll.UseCases.EmployeePortal;
 
@@ -117,8 +118,8 @@ public class CreateLeaveRequestUseCase : ICreateLeaveRequestUseCase
 /// </summary>
 public interface ICheckInCheckOutUseCase
 {
-    Task<Timesheet> ExecuteCheckInAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null);
-    Task<Timesheet> ExecuteCheckOutAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null);
+    Task<Timesheet> ExecuteCheckInAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null, string? photoBase64 = null);
+    Task<Timesheet> ExecuteCheckOutAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null, string? photoBase64 = null);
     Task<Timesheet> ExecuteManualPunchAsync(long employeeId, long? shiftId, DateTime workDate, TimeSpan? checkInTime, TimeSpan? checkOutTime, string? customNote = null);
     Task<Timesheet> ChangeShiftAsync(long employeeId, long newShiftId, DateTime workDate);
 }
@@ -127,16 +128,19 @@ public class CheckInCheckOutUseCase : ICheckInCheckOutUseCase
 {
     private readonly ITimesheetRepository _timesheetRepo;
     private readonly IWorkShiftRepository _shiftRepo;
+    private readonly IAttendancePhotoService _photoService;
 
     public CheckInCheckOutUseCase(
         ITimesheetRepository timesheetRepo,
-        IWorkShiftRepository shiftRepo)
+        IWorkShiftRepository shiftRepo,
+        IAttendancePhotoService photoService)
     {
         _timesheetRepo = timesheetRepo;
         _shiftRepo = shiftRepo;
+        _photoService = photoService;
     }
 
-    public async Task<Timesheet> ExecuteCheckInAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null)
+    public async Task<Timesheet> ExecuteCheckInAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null, string? photoBase64 = null)
     {
         if (employeeId <= 0)
             throw new ArgumentException("Mã nhân viên không hợp lệ.", nameof(employeeId));
@@ -145,8 +149,17 @@ public class CheckInCheckOutUseCase : ICheckInCheckOutUseCase
         var existing = (await _timesheetRepo.GetTimesheetsByEmployeeAndMonthAsync(employeeId, targetDate.Month, targetDate.Year))
             .FirstOrDefault(t => t.WorkDate.Date == targetDate);
 
-        if (existing != null && existing.IsLocked)
-            throw new InvalidOperationException("Bản ghi chấm công của ngày này đã bị khóa sổ và không thể điểm danh.");
+        if (existing != null)
+        {
+            if (existing.IsLocked)
+                throw new InvalidOperationException("Bản ghi chấm công của ngày này đã bị khóa sổ và không thể điểm danh.");
+
+            if (existing.CheckInTime != null && existing.CheckOutTime != null)
+                throw new InvalidOperationException("Bạn đã hoàn thành lượt vào và ra cho tất cả các ca được phân công trong ngày.");
+
+            if (existing.CheckInTime != null)
+                throw new InvalidOperationException($"Bạn đã thực hiện chấm công vào cho ca này lúc {existing.CheckInTime:hh\\:mm\\:ss}. Không thể chấm vào trùng lặp.");
+        }
 
         // Xác định ca làm việc
         WorkShift? shift = null;
@@ -172,11 +185,18 @@ public class CheckInCheckOutUseCase : ICheckInCheckOutUseCase
         timesheet.CheckInTime = customTime ?? DateTime.Now.TimeOfDay;
         timesheet.EvaluateCheckIn(shift);
 
+        // Lưu ảnh xác minh nếu có
+        if (!string.IsNullOrWhiteSpace(photoBase64))
+        {
+            var savedPhoto = await _photoService.SaveAttendancePhotoAsync(employeeId, "CHECK_IN", photoBase64, DateTime.Now);
+            timesheet.PhotoInUrl = savedPhoto;
+        }
+
         await _timesheetRepo.AddOrUpdateTimesheetAsync(timesheet);
         return timesheet;
     }
 
-    public async Task<Timesheet> ExecuteCheckOutAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null)
+    public async Task<Timesheet> ExecuteCheckOutAsync(long employeeId, long? shiftId = null, TimeSpan? customTime = null, DateTime? workDate = null, string? photoBase64 = null)
     {
         if (employeeId <= 0)
             throw new ArgumentException("Mã nhân viên không hợp lệ.", nameof(employeeId));
@@ -185,8 +205,17 @@ public class CheckInCheckOutUseCase : ICheckInCheckOutUseCase
         var existing = (await _timesheetRepo.GetTimesheetsByEmployeeAndMonthAsync(employeeId, targetDate.Month, targetDate.Year))
             .FirstOrDefault(t => t.WorkDate.Date == targetDate);
 
-        if (existing != null && existing.IsLocked)
-            throw new InvalidOperationException("Bản ghi chấm công của ngày này đã bị khóa sổ và không thể điểm danh.");
+        if (existing != null)
+        {
+            if (existing.IsLocked)
+                throw new InvalidOperationException("Bản ghi chấm công của ngày này đã bị khóa sổ và không thể điểm danh.");
+
+            if (existing.CheckInTime != null && existing.CheckOutTime != null)
+                throw new InvalidOperationException("Bạn đã hoàn thành lượt vào và ra cho tất cả các ca được phân công trong ngày.");
+
+            if (existing.CheckOutTime != null)
+                throw new InvalidOperationException($"Bạn đã thực hiện chấm công ra cho ca này lúc {existing.CheckOutTime:hh\\:mm\\:ss}. Không thể chấm ra trùng lặp.");
+        }
 
         // Xác định ca
         WorkShift? shift = null;
@@ -216,6 +245,13 @@ public class CheckInCheckOutUseCase : ICheckInCheckOutUseCase
 
         timesheet.CheckOutTime = customTime ?? DateTime.Now.TimeOfDay;
         timesheet.EvaluateShift(shift);
+
+        // Lưu ảnh xác minh nếu có
+        if (!string.IsNullOrWhiteSpace(photoBase64))
+        {
+            var savedPhoto = await _photoService.SaveAttendancePhotoAsync(employeeId, "CHECK_OUT", photoBase64, DateTime.Now);
+            timesheet.PhotoOutUrl = savedPhoto;
+        }
 
         await _timesheetRepo.AddOrUpdateTimesheetAsync(timesheet);
         return timesheet;

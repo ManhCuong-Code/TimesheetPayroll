@@ -160,11 +160,11 @@ public static class ApiEndpoints
                 Timesheet result;
                 if (string.Equals(dto.PunchType, "CHECK_OUT", StringComparison.OrdinalIgnoreCase))
                 {
-                    result = await useCase.ExecuteCheckOutAsync(dto.EmployeeId, dto.ShiftId, customTime, dto.WorkDate ?? DateTime.Today);
+                    result = await useCase.ExecuteCheckOutAsync(dto.EmployeeId, dto.ShiftId, customTime, dto.WorkDate ?? DateTime.Today, dto.PhotoBase64);
                 }
                 else
                 {
-                    result = await useCase.ExecuteCheckInAsync(dto.EmployeeId, dto.ShiftId, customTime, dto.WorkDate ?? DateTime.Today);
+                    result = await useCase.ExecuteCheckInAsync(dto.EmployeeId, dto.ShiftId, customTime, dto.WorkDate ?? DateTime.Today, dto.PhotoBase64);
                 }
 
                 return Results.Ok(new
@@ -178,6 +178,23 @@ public static class ApiEndpoints
             {
                 return Results.BadRequest(new { success = false, message = ex.Message });
             }
+        });
+
+        // 6b. Lấy danh sách ảnh xác minh chấm công của nhân viên
+        api.MapGet("/bang-cham-cong/nhan-vien/{empId:long}/anh-xac-minh", async (
+            long empId,
+            [FromServices] IDataAccess db) =>
+        {
+            using var conn = db.CreateConnection();
+            var photos = await conn.QueryAsync(
+                @"SELECT ap.id, ap.timesheet_id, ap.employee_id, ap.punch_type, ap.photo_url, ap.captured_at, ap.notes,
+                         e.full_name, e.employee_code
+                  FROM dbo.attendance_photos ap
+                  INNER JOIN dbo.employees e ON ap.employee_id = e.id
+                  WHERE ap.employee_id = @empId
+                  ORDER BY ap.captured_at DESC",
+                new { empId });
+            return Results.Ok(photos);
         });
 
         api.MapGet("/bang-cham-cong/thang/{thang:int}/{nam:int}", async (
@@ -287,7 +304,7 @@ public static class ApiEndpoints
 
 public record CreateLeaveDto(long EmployeeId, LeaveType LeaveType, DateTime StartDate, DateTime EndDate, decimal TotalDays, string? Reason);
 public record ApproveLeaveDto(string Status, string? Reviewer, string? Reason);
-public record PunchDto(long EmployeeId, string PunchType, long? ShiftId, string? CustomTime, DateTime? WorkDate);
+public record PunchDto(long EmployeeId, string PunchType, long? ShiftId, string? CustomTime, DateTime? WorkDate, string? PhotoBase64 = null);
 public record CalculateBatchDto(long PeriodId);
 public record LockPeriodDto(string? LockedBy);
 public record AiInquiryDto(long EmployeeId, string Question, long CurrentPeriodId, long? ComparePeriodId);

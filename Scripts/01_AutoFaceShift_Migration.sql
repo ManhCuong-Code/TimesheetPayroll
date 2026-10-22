@@ -413,7 +413,7 @@ BEGIN
     BEGIN
         SELECT 
             'SHIFT_COMPLETED' AS ResolutionStatus,
-            N'Bạn đã hoàn thành đủ lượt vào và ra cho tất cả các ca được phân công trong ngày.' AS Message,
+            N'Bạn đã hoàn thành lượt vào và ra cho tất cả các ca được phân công trong ngày.' AS Message,
             NULL AS ShiftId, NULL AS ShiftCode, NULL AS ShiftName, NULL AS WorkDate, NULL AS PunchAction,
             NULL AS StartTime, NULL AS EndTime, NULL AS IsOvernight, 0 AS CandidateCount;
         RETURN;
@@ -553,7 +553,7 @@ BEGIN
             SELECT 
                 CAST(0 AS BIT) AS Success,
                 'ALREADY_COMPLETED' AS ResultCode,
-                N'Bạn đã hoàn thành đủ cả lượt vào và lượt ra cho ca làm việc này.' AS Message,
+                N'Bạn đã hoàn thành lượt vào và ra cho tất cả các ca được phân công trong ngày.' AS Message,
                 NULL AS PunchType, @CurCheckOut AS PunchTime, @CurStatus AS WorkShiftStatus, 0.0 AS WorkUnits, 0.0 AS ActualHours, @ShiftName AS ShiftName;
             RETURN;
         END

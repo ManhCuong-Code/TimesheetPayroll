@@ -482,20 +482,52 @@ window.FaceRecognitionHelper = (function () {
             normalized.push(Number((descriptor[i] / norm).toFixed(6)));
         }
 
+        // Tạo ảnh chụp khuôn mặt định dạng JPEG Base64
+        let photoBase64 = null;
+        try {
+            const photoCanvas = document.createElement('canvas');
+            photoCanvas.width = Math.min(w, 640);
+            photoCanvas.height = Math.min(h, 480);
+            const pCtx = photoCanvas.getContext('2d');
+            pCtx.drawImage(video, 0, 0, photoCanvas.width, photoCanvas.height);
+            photoBase64 = photoCanvas.toDataURL('image/jpeg', 0.82);
+        } catch (e) {
+            console.warn("Lỗi trích xuất ảnh chụp từ video:", e);
+        }
+
         playChime('scan');
 
         return {
             success: true,
             descriptor: normalized,
             livenessScore: 0.92,
-            qualityOk: true
+            qualityOk: true,
+            photoBase64: photoBase64
         };
+    }
+
+    // Chụp ảnh tức thì từ camera (trả về Base64 Data URL)
+    function capturePhotoBase64(videoId, quality = 0.82) {
+        const video = document.getElementById(videoId);
+        if (!video || !video.videoWidth) return null;
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.min(video.videoWidth, 640);
+            canvas.height = Math.min(video.videoHeight, 480);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', quality);
+        } catch (err) {
+            console.error("Lỗi chụp ảnh từ video:", err);
+            return null;
+        }
     }
 
     return {
         startCamera: startCamera,
         stopCamera: stopCamera,
         captureFaceDescriptor: captureFaceDescriptor,
+        capturePhotoBase64: capturePhotoBase64,
         playChime: playChime
     };
 })();

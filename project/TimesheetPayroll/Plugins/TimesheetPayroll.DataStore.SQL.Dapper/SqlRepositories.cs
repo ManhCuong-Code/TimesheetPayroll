@@ -87,7 +87,8 @@ public class TimesheetRepository : ITimesheetRepository
                 t.work_date AS WorkDate,
                 t.check_in_time AS CheckInTime, t.check_out_time AS CheckOutTime,
                 t.actual_hours_worked AS ActualHoursWorked, t.work_shift_status AS WorkShiftStatus,
-                t.work_units AS WorkUnits, t.is_locked AS IsLocked, t.note AS Note
+                t.work_units AS WorkUnits, t.is_locked AS IsLocked, t.note AS Note,
+                t.photo_in_url AS PhotoInUrl, t.photo_out_url AS PhotoOutUrl
             FROM timesheets t
             JOIN employees e ON t.employee_id = e.id
             WHERE t.period_id = @PeriodId
@@ -106,7 +107,8 @@ public class TimesheetRepository : ITimesheetRepository
                 t.work_date AS WorkDate,
                 t.check_in_time AS CheckInTime, t.check_out_time AS CheckOutTime,
                 t.actual_hours_worked AS ActualHoursWorked, t.work_shift_status AS WorkShiftStatus,
-                t.work_units AS WorkUnits, t.is_locked AS IsLocked, t.note AS Note
+                t.work_units AS WorkUnits, t.is_locked AS IsLocked, t.note AS Note,
+                t.photo_in_url AS PhotoInUrl, t.photo_out_url AS PhotoOutUrl
             FROM timesheets t
             JOIN employees e ON t.employee_id = e.id
             WHERE t.employee_id = @EmployeeId AND MONTH(t.work_date) = @Month AND YEAR(t.work_date) = @Year
@@ -125,7 +127,8 @@ public class TimesheetRepository : ITimesheetRepository
                 t.work_date AS WorkDate,
                 t.check_in_time AS CheckInTime, t.check_out_time AS CheckOutTime,
                 t.actual_hours_worked AS ActualHoursWorked, t.work_shift_status AS WorkShiftStatus,
-                t.work_units AS WorkUnits, t.is_locked AS IsLocked, t.note AS Note
+                t.work_units AS WorkUnits, t.is_locked AS IsLocked, t.note AS Note,
+                t.photo_in_url AS PhotoInUrl, t.photo_out_url AS PhotoOutUrl
             FROM timesheets t
             JOIN employees e ON t.employee_id = e.id
             WHERE MONTH(t.work_date) = @Month AND YEAR(t.work_date) = @Year
@@ -183,6 +186,8 @@ public class TimesheetRepository : ITimesheetRepository
                     actual_hours_worked = @ActualHoursWorked,
                     work_shift_status = @WorkShiftStatus,
                     work_units = @WorkUnits,
+                    photo_in_url = COALESCE(@PhotoInUrl, photo_in_url),
+                    photo_out_url = COALESCE(@PhotoOutUrl, photo_out_url),
                     note = COALESCE(@Note, note),
                     updated_at = GETDATE()
                 WHERE id = @Id;";
@@ -198,14 +203,16 @@ public class TimesheetRepository : ITimesheetRepository
                 ActualHoursWorked = safeActualHours,
                 WorkShiftStatus = safeStatus,
                 WorkUnits = safeWorkUnits,
+                t.PhotoInUrl,
+                t.PhotoOutUrl,
                 t.Note
             });
         }
         else
         {
             const string insSql = @"
-                INSERT INTO timesheets (employee_id, period_id, shift_id, shift_code, shift_name, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked, note)
-                VALUES (@EmployeeId, @PeriodId, @ShiftId, @ShiftCode, @ShiftName, CAST(@WorkDate AS DATE), @CheckInTime, @CheckOutTime, @ActualHoursWorked, @WorkShiftStatus, @WorkUnits, @IsLocked, @Note);";
+                INSERT INTO timesheets (employee_id, period_id, shift_id, shift_code, shift_name, work_date, check_in_time, check_out_time, actual_hours_worked, work_shift_status, work_units, is_locked, photo_in_url, photo_out_url, note)
+                VALUES (@EmployeeId, @PeriodId, @ShiftId, @ShiftCode, @ShiftName, CAST(@WorkDate AS DATE), @CheckInTime, @CheckOutTime, @ActualHoursWorked, @WorkShiftStatus, @WorkUnits, @IsLocked, @PhotoInUrl, @PhotoOutUrl, @Note);";
 
             await conn.ExecuteAsync(insSql, new
             {
@@ -221,6 +228,8 @@ public class TimesheetRepository : ITimesheetRepository
                 WorkShiftStatus = safeStatus,
                 WorkUnits = safeWorkUnits,
                 IsLocked = t.IsLocked ? 1 : 0,
+                t.PhotoInUrl,
+                t.PhotoOutUrl,
                 t.Note
             });
         }
@@ -1560,7 +1569,7 @@ public class ShiftAssignmentRepository : IShiftAssignmentRepository
 
     public async Task<FacePunchDbResult> ProcessFaceAttendanceViaSpAsync(
         long employeeId, long shiftId, DateTime workDate, DateTime punchDateTime,
-        string punchAction, string? deviceInfo, string performedBy, decimal confidence, double distance)
+        string punchAction, string? deviceInfo, string performedBy, decimal confidence, double distance, string? photoUrl = null)
     {
         using var conn = _db.CreateConnection();
         var result = await conn.QueryFirstOrDefaultAsync<FacePunchDbResult>(
@@ -1574,7 +1583,8 @@ public class ShiftAssignmentRepository : IShiftAssignmentRepository
                 DeviceInfo = deviceInfo ?? "Trạm Camera Điểm Danh Văn Phòng",
                 PerformedBy = performedBy,
                 Confidence = confidence,
-                Distance = (decimal)distance
+                Distance = (decimal)distance,
+                PhotoUrl = photoUrl
             },
             commandType: CommandType.StoredProcedure);
 

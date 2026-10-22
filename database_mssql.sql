@@ -190,6 +190,8 @@ CREATE TABLE timesheets (
     is_locked BIT NOT NULL DEFAULT 0,
     attendance_source NVARCHAR(50) NOT NULL DEFAULT 'FACE_RECOGNITION',
     is_confirmed BIT NOT NULL DEFAULT 1,
+    photo_in_url NVARCHAR(500) NULL,
+    photo_out_url NVARCHAR(500) NULL,
     note NVARCHAR(255) NULL,
     created_at DATETIME2 NOT NULL DEFAULT GETDATE(),
     updated_at DATETIME2 NOT NULL DEFAULT GETDATE()
@@ -201,6 +203,21 @@ SET QUOTED_IDENTIFIER ON;
 GO
 
 CREATE UNIQUE INDEX uq_emp_work_date_shift ON timesheets(employee_id, work_date, shift_id) WHERE shift_id IS NOT NULL;
+GO
+
+CREATE TABLE attendance_photos (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    timesheet_id BIGINT NOT NULL CONSTRAINT fk_attendance_photos_ts REFERENCES timesheets(id) ON DELETE NO ACTION,
+    employee_id BIGINT NOT NULL CONSTRAINT fk_attendance_photos_emp REFERENCES employees(id) ON DELETE NO ACTION,
+    punch_type NVARCHAR(20) NOT NULL CHECK (punch_type IN ('CHECK_IN', 'CHECK_OUT')),
+    photo_url NVARCHAR(500) NOT NULL,
+    captured_at DATETIME2 NOT NULL DEFAULT GETDATE(),
+    notes NVARCHAR(500) NULL
+);
+GO
+
+CREATE INDEX idx_attendance_photos_emp ON attendance_photos(employee_id, captured_at DESC);
+CREATE INDEX idx_attendance_photos_ts ON attendance_photos(timesheet_id);
 GO
 
 CREATE TABLE leave_requests (
@@ -1111,7 +1128,7 @@ BEGIN
     BEGIN
         SELECT 
             'SHIFT_COMPLETED' AS ResolutionStatus,
-            N'Bạn đã hoàn thành đủ lượt vào và ra cho tất cả các ca được phân công trong ngày.' AS Message,
+            N'Bạn đã hoàn thành lượt vào và ra cho tất cả các ca được phân công trong ngày.' AS Message,
             NULL AS ShiftId, NULL AS ShiftCode, NULL AS ShiftName, NULL AS WorkDate, NULL AS PunchAction,
             NULL AS StartTime, NULL AS EndTime, NULL AS IsOvernight, 0 AS CandidateCount;
         RETURN;
@@ -1143,7 +1160,8 @@ CREATE OR ALTER PROCEDURE dbo.sp_ProcessFaceAttendance
     @DeviceInfo NVARCHAR(255) = N'Trạm Camera Điểm Danh Sinh Trắc',
     @PerformedBy NVARCHAR(100) = 'SYSTEM_KIOSK',
     @Confidence DECIMAL(5,2) = 95.0,
-    @Distance DECIMAL(6,4) = 0.25
+    @Distance DECIMAL(6,4) = 0.25,
+    @PhotoUrl NVARCHAR(500) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1251,7 +1269,7 @@ BEGIN
             SELECT 
                 CAST(0 AS BIT) AS Success,
                 'ALREADY_COMPLETED' AS ResultCode,
-                N'Bạn đã hoàn thành đủ cả lượt vào và lượt ra cho ca làm việc này.' AS Message,
+                N'Bạn đã hoàn thành lượt vào và ra cho tất cả các ca được phân công trong ngày.' AS Message,
                 NULL AS PunchType, @CurCheckOut AS PunchTime, @CurStatus AS WorkShiftStatus, 0.0 AS WorkUnits, 0.0 AS ActualHours, @ShiftName AS ShiftName;
             RETURN;
         END
@@ -1284,6 +1302,7 @@ BEGIN
                     work_shift_status = @FinalStatus,
                     work_units = @FinalWorkUnits,
                     attendance_source = 'FACE_RECOGNITION',
+                    photo_in_url = COALESCE(@PhotoUrl, photo_in_url),
                     note = @AuditReason,
                     updated_at = GETDATE()
                 WHERE id = @TimesheetId;
@@ -1293,12 +1312,12 @@ BEGIN
                 INSERT INTO dbo.timesheets (
                     employee_id, shift_id, shift_code, shift_name, work_date,
                     check_in_time, check_out_time, actual_hours_worked, work_shift_status,
-                    work_units, is_locked, attendance_source, is_confirmed, note, created_at, updated_at
+                    work_units, is_locked, attendance_source, is_confirmed, photo_in_url, note, created_at, updated_at
                 )
                 VALUES (
                     @EmployeeId, @ShiftId, @ShiftCode, @ShiftName, @WorkDate,
                     @PunchTime, NULL, 0.0, @FinalStatus,
-                    @FinalWorkUnits, 0, 'FACE_RECOGNITION', 1, @AuditReason, GETDATE(), GETDATE()
+                    @FinalWorkUnits, 0, 'FACE_RECOGNITION', 1, @PhotoUrl, @AuditReason, GETDATE(), GETDATE()
                 );
                 SET @TimesheetId = SCOPE_IDENTITY();
             END
@@ -1355,9 +1374,21 @@ BEGIN
                 actual_hours_worked = @ActualHours,
                 work_shift_status = @FinalStatus,
                 work_units = @FinalWorkUnits,
+                photo_out_url = COALESCE(@PhotoUrl, photo_out_url),
                 note = @AuditReason,
                 updated_at = GETDATE()
             WHERE id = @TimesheetId;
+        END
+
+        -- Lưu vào bảng lịch sử ảnh attendance_photos nếu có ảnh
+        IF @PhotoUrl IS NOT NULL
+        BEGIN
+            INSERT INTO dbo.attendance_photos (
+                timesheet_id, employee_id, punch_type, photo_url, notes, captured_at
+            )
+            VALUES (
+                @TimesheetId, @EmployeeId, @ActualAction, @PhotoUrl, @DeviceInfo, @PunchDateTime
+            );
         END
 
         -- 8. Ghi nhật ký kiểm toán khuôn mặt (face_audit_logs)

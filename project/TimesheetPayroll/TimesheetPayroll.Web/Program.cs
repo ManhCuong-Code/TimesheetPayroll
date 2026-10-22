@@ -1,17 +1,27 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
 using TimesheetPayroll.CoreBusiness.Services;
 using TimesheetPayroll.CoreBusiness.Services.Interfaces;
 using TimesheetPayroll.UseCases.AdminPortal;
 using TimesheetPayroll.UseCases.Authentication;
 using TimesheetPayroll.UseCases.EmployeePortal;
 using TimesheetPayroll.UseCases.PluginInterfaces.DataStore;
+using TimesheetPayroll.UseCases.PluginInterfaces.Services;
 using TimesheetPayroll.UseCases.PluginInterfaces.StateStore;
 using TimesheetPayroll.DataStore.SQL.Dapper;
 using TimesheetPayroll.StateStore.DI;
 using TimesheetPayroll.Web;
 using TimesheetPayroll.Web.Components;
+using TimesheetPayroll.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Cấu hình UTF-8 toàn vẹn cho JSON Serialization (tránh escaping các ký tự tiếng Việt có dấu)
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Encoder = JavaScriptEncoder.Create(UnicodeRanges.All);
+});
 
 // 1. ADD BLAZOR INTERACTIVE SERVER & AUTHENTICATION
 builder.Services.AddRazorComponents()
@@ -38,6 +48,9 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
 builder.Services.AddScoped<IUserSessionService>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
+
+// Dịch vụ lưu trữ và xác thực ảnh chấm công
+builder.Services.AddScoped<IAttendancePhotoService, AttendancePhotoService>();
 
 // 2. PLUGINS (SQL DAPPER & STATE STORE)
 builder.Services.AddSingleton<IDataAccess, DataAccess>();
@@ -160,6 +173,22 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStatusCodePagesWithReExecute("/404");
 app.UseCors("AllowAll");
+
+// Đảm bảo mọi phản hồi JSON đều mang charset=utf-8 rõ ràng
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        if (context.Response.ContentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) == true &&
+            !context.Response.ContentType.Contains("charset", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Response.ContentType += "; charset=utf-8";
+        }
+        return Task.CompletedTask;
+    });
+    await next();
+});
+
 app.UseAntiforgery();
 app.UseStaticFiles();
 

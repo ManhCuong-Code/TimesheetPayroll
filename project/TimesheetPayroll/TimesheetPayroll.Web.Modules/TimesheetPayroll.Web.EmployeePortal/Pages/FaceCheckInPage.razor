@@ -164,12 +164,15 @@
             <!-- 1. BẢNG TRẠNG THÁI HIỂN THỊ KẾT QUẢ GẦN NHẤT -->
             @if (lastResult != null)
             {
-                <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden border-start border-4 @(lastResult.IsSuccess ? "border-success" : "border-danger")">
-                    <div class="card-header @(lastResult.IsSuccess ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger") py-3 px-4 d-flex justify-content-between align-items-center">
+                var isShiftCompleted = lastResult.IsCompleted 
+                                    || lastResult.ResolutionStatus == "SHIFT_COMPLETED" 
+                                    || lastResult.Message?.Contains("hoàn thành") == true;
+                <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden border-start border-4 @(lastResult.IsSuccess ? "border-success" : (isShiftCompleted ? "border-info" : "border-danger"))">
+                    <div class="card-header @(lastResult.IsSuccess ? "bg-success-subtle text-success" : (isShiftCompleted ? "bg-info-subtle text-info-emphasis" : "bg-danger-subtle text-danger")) py-3 px-4 d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
-                            <i class="fa-solid @(lastResult.IsSuccess ? "fa-circle-check" : "fa-triangle-exclamation") fs-4"></i>
+                            <i class="fa-solid @(lastResult.IsSuccess ? "fa-circle-check" : (isShiftCompleted ? "fa-calendar-check text-info" : "fa-triangle-exclamation")) fs-4"></i>
                             <div>
-                                <h6 class="mb-0 fw-bold">@(lastResult.IsSuccess ? "ĐIỂM DANH THÀNH CÔNG" : "CHƯA THỂ GHI NHẬN")</h6>
+                                <h6 class="mb-0 fw-bold">@(lastResult.IsSuccess ? "ĐIỂM DANH THÀNH CÔNG" : (isShiftCompleted ? "ĐÃ HOÀN THÀNH CA LÀM VIỆC" : "CHƯA THỂ GHI NHẬN"))</h6>
                                 <small class="text-muted">@DateTime.Now.ToString("HH:mm:ss dd/MM/yyyy")</small>
                             </div>
                         </div>
@@ -180,12 +183,26 @@
                                 @(lastResult.PunchType == "CHECK_IN" ? "VÀO CA" : "HẾT CA")
                             </span>
                         }
+                        else if (isShiftCompleted)
+                        {
+                            <span class="badge bg-info text-white fs-6 px-3 py-2 shadow-sm">
+                                <i class="fa-solid fa-check-double me-1"></i>HOÀN TẤT
+                            </span>
+                        }
                     </div>
 
                     <div class="card-body p-4">
-                        <p class="fw-semibold @(lastResult.IsSuccess ? "text-dark" : "text-danger") mb-3">
+                        <p class="fw-semibold @(lastResult.IsSuccess ? "text-dark" : (isShiftCompleted ? "text-primary" : "text-danger")) mb-3">
                             @lastResult.Message
                         </p>
+
+                        @if (!string.IsNullOrEmpty(lastResult.PhotoUrl))
+                        {
+                            <div class="mb-3">
+                                <div class="small text-muted fw-bold mb-1"><i class="fa-solid fa-camera text-primary me-1"></i>Ảnh chụp xác minh hệ thống:</div>
+                                <img src="@lastResult.PhotoUrl" alt="Ảnh xác minh" class="img-thumbnail rounded-3 shadow-sm" style="max-height: 120px; object-fit: cover;" />
+                            </div>
+                        }
 
                         @if (lastResult.Employee != null)
                         {
@@ -415,13 +432,14 @@
             {
                 Descriptor = captureRes.Descriptor,
                 LivenessScore = (decimal)captureRes.LivenessScore,
+                PhotoBase64 = captureRes.PhotoBase64,
                 DeviceInfo = "Trạm Camera Điểm Danh Văn Phòng",
                 PerformedBy = UserSession.CurrentUser?.Username ?? "KIOSK"
             };
 
             lastResult = await FaceCheckInUseCase.ExecuteAsync(request);
 
-            if (lastResult.IsSuccess)
+            if (lastResult.IsSuccess || lastResult.IsCompleted || lastResult.ResolutionStatus == "SHIFT_COMPLETED")
             {
                 await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "success");
             }
@@ -513,5 +531,6 @@
         public float[]? Descriptor { get; set; }
         public double LivenessScore { get; set; } = 0.9;
         public bool QualityOk { get; set; }
+        public string? PhotoBase64 { get; set; }
     }
 }

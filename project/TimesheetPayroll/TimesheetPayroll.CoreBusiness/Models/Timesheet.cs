@@ -30,6 +30,8 @@ public class Timesheet
     public string AttendanceSource { get; set; } = "FACE_RECOGNITION";
     public bool IsConfirmed { get; set; } = true;
     public string? Note { get; set; }
+    public string? PhotoInUrl { get; set; }
+    public string? PhotoOutUrl { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

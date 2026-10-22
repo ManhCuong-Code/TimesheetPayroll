@@ -5,6 +5,8 @@ using TimesheetPayroll.CoreBusiness.Services;
 using TimesheetPayroll.CoreBusiness.Services.Interfaces;
 using TimesheetPayroll.UseCases.PluginInterfaces.DataStore;
 
+using TimesheetPayroll.UseCases.PluginInterfaces.Services;
+
 namespace TimesheetPayroll.UseCases.EmployeePortal;
 
 /// <summary>
@@ -20,6 +22,8 @@ public class FacePunchRequest
     public string PerformedBy { get; set; } = "SYSTEM_KIOSK";
     // Tùy chọn giả lập thử nghiệm danh tính khi môi trường không có webcam
     public long? SimulatedEmployeeId { get; set; }
+    // Ảnh chụp xác minh tại thời điểm chấm công
+    public string? PhotoBase64 { get; set; }
 }
 
 /// <summary>
@@ -43,6 +47,8 @@ public class FacePunchResult
     public bool IsOvernight { get; set; }
     public DateTime WorkDate { get; set; } = DateTime.Today;
     public string? ResolutionStatus { get; set; }
+    public string? PhotoUrl { get; set; }
+    public bool IsCompleted { get; set; }
 }
 
 public interface IFaceCheckInUseCase
@@ -61,6 +67,7 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
     private readonly ITimesheetAuditLogRepository _timesheetAuditRepo;
     private readonly IFaceBiometricService _biometricService;
     private readonly IAttendanceShiftResolver _shiftResolver;
+    private readonly IAttendancePhotoService _photoService;
 
     public FaceCheckInUseCase(
         IFaceProfileRepository faceProfileRepo,
@@ -71,7 +78,8 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
         IWorkShiftRepository shiftRepo,
         ITimesheetAuditLogRepository timesheetAuditRepo,
         IFaceBiometricService biometricService,
-        IAttendanceShiftResolver shiftResolver)
+        IAttendanceShiftResolver shiftResolver,
+        IAttendancePhotoService photoService)
     {
         _faceProfileRepo = faceProfileRepo;
         _faceAuditRepo = faceAuditRepo;
@@ -82,6 +90,7 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
         _timesheetAuditRepo = timesheetAuditRepo;
         _biometricService = biometricService;
         _shiftResolver = shiftResolver;
+        _photoService = photoService;
     }
 
     public async Task<FacePunchResult> ExecuteAsync(FacePunchRequest request)
@@ -214,11 +223,23 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
                 Confidence = confidence,
                 Distance = distance,
                 ResolutionStatus = resolution.ResolutionStatus,
+                IsCompleted = resolution.ResolutionStatus == "SHIFT_COMPLETED",
                 Message = resolution.Message
             };
         }
 
-        // 6. Thực hiện ghi nhận chấm công thông qua Stored Procedure giao dịch SQL Server an toàn
+        // 6. Lưu ảnh xác minh nếu có dữ liệu ảnh chụp
+        string? savedPhotoUrl = null;
+        if (!string.IsNullOrWhiteSpace(request.PhotoBase64))
+        {
+            savedPhotoUrl = await _photoService.SaveAttendancePhotoAsync(
+                employee.Id, 
+                resolution.PunchAction ?? "AUTO", 
+                request.PhotoBase64, 
+                now);
+        }
+
+        // 7. Thực hiện ghi nhận chấm công thông qua Stored Procedure giao dịch SQL Server an toàn
         var dbResult = await _shiftAssignmentRepo.ProcessFaceAttendanceViaSpAsync(
             employee.Id,
             resolution.ShiftId.Value,
@@ -228,7 +249,8 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             request.DeviceInfo,
             request.PerformedBy,
             (decimal)confidence,
-            distance
+            distance,
+            savedPhotoUrl
         );
 
         if (!dbResult.Success)
@@ -241,11 +263,12 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
                 Distance = distance,
                 ShiftName = dbResult.ShiftName ?? resolution.ShiftName,
                 WorkDate = resolution.WorkDate,
+                IsCompleted = dbResult.ResultCode == "ALREADY_COMPLETED",
                 Message = dbResult.Message
             };
         }
 
-        // 7. Chuyển đổi trạng thái sang enum hiển thị
+        // 8. Chuyển đổi trạng thái sang enum hiển thị
         WorkShiftStatus status = WorkShiftStatus.PRESENT;
         if (!string.IsNullOrWhiteSpace(dbResult.WorkShiftStatus))
         {
@@ -269,6 +292,8 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             Distance = distance,
             WorkDate = resolution.WorkDate,
             ResolutionStatus = resolution.ResolutionStatus,
+            PhotoUrl = savedPhotoUrl,
+            IsCompleted = false,
             Message = dbResult.Message
         };
     }
