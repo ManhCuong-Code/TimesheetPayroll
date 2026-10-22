@@ -410,6 +410,7 @@
                 time: timeStr,
                 date: new Date().toISOString().substring(0, 10),
                 confidence: params.confidence || '98.5%',
+                photoBase64: params.photoBase64 || null,
                 device: 'Camera AI Trực Tuyến',
                 timestamp: Date.now()
             };
@@ -425,7 +426,8 @@
                     punchType: punchType,
                     shiftId: params.shiftId || 1,
                     customTime: timeStr + ':00',
-                    workDate: new Date().toISOString().substring(0, 10) + 'T00:00:00'
+                    workDate: new Date().toISOString().substring(0, 10) + 'T00:00:00',
+                    photoBase64: params.photoBase64 || null
                 };
 
                 fetch(this.activeApiBase + '/api/bang-cham-cong/diem-danh', {

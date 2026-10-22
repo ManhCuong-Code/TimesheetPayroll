@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8">
@@ -292,14 +292,39 @@
 
         playSuccessTone();
 
+        var photoBase64 = null;
+        try {
+            var video = document.getElementById('webcamVideo');
+            if (video && video.videoWidth) {
+                var c = document.createElement('canvas');
+                c.width = 640;
+                c.height = 480;
+                var ctx = c.getContext('2d');
+                ctx.drawImage(video, 0, 0, 640, 480);
+                photoBase64 = c.toDataURL('image/jpeg', 0.85);
+            }
+        } catch(e) {
+            console.warn("Không thể chụp ảnh từ video:", e);
+        }
+
+        if (window.HRM_DB && window.HRM_DB.punchAttendance) {
+            HRM_DB.punchAttendance({
+                empCode: emp.code,
+                action: action,
+                time: timeStr,
+                photoBase64: photoBase64
+            });
+        }
+
         document.getElementById('scanStatusBadge').textContent = 'ĐÃ NHẬN DIỆN THÀNH CÔNG';
         document.getElementById('scanStatusBadge').className = 'badge bg-success rounded-pill px-3 py-1';
 
         document.getElementById('resultContentBox').innerHTML = `
             <div class="d-flex align-items-center gap-3 mb-3">
+                ${photoBase64 ? `<img src="${photoBase64}" alt="Ảnh xác minh" class="rounded-circle shadow object-fit-cover" style="width: 60px; height: 60px; border: 2px solid #22c55e;">` : `
                 <div class="bg-primary text-white rounded-circle p-3 d-flex align-items-center justify-content-center shadow" style="width: 60px; height: 60px;">
                     <i class="fa-solid fa-user-check fs-3"></i>
-                </div>
+                </div>`}
                 <div>
                     <h5 class="fw-bold text-white mb-0">${emp.name}</h5>
                     <div class="small text-info">Mã NV: <strong>${emp.code}</strong> • ${emp.department}</div>
@@ -315,8 +340,8 @@
                     <span class="badge bg-primary px-2">${action} lúc ${timeStr}</span>
                 </div>
                 <div class="d-flex justify-content-between mb-1">
-                    <span class="text-white-50">Độ tin cậy khuôn mặt:</span>
-                    <strong class="text-success">98.5% (Face Verified)</strong>
+                    <span class="text-white-50">Ảnh xác minh:</span>
+                    <strong class="text-success"><i class="fa-solid fa-camera me-1"></i>Đã ghi nhận ảnh tự động</strong>
                 </div>
                 <div class="d-flex justify-content-between">
                     <span class="text-white-50">Đánh giá hệ thống:</span>
@@ -324,7 +349,7 @@
                 </div>
             </div>
             <div class="alert alert-success bg-opacity-25 text-white border-0 mt-3 mb-0 small text-center">
-                <i class="fa-solid fa-circle-check text-success me-1"></i>Giao dịch SQL Stored Procedure đã ghi nhận thành công!
+                <i class="fa-solid fa-circle-check text-success me-1"></i>Bản ghi và ảnh xác minh đã được ghi nhận 2 chiều vào CSDL!
             </div>
         `;
     }
