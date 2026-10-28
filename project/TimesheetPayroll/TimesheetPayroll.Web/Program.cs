@@ -25,7 +25,17 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 // 1. ADD BLAZOR INTERACTIVE SERVER & AUTHENTICATION
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        options.JSInteropDefaultCallTimeout = TimeSpan.FromSeconds(20);
+    })
+    .AddHubOptions(options =>
+    {
+        // Tăng ngưỡng khung tin nhắn SignalR (mặc định 32KB) lên 512KB để tránh lỗi TaskCanceledException khi truyền vector 128-D + ảnh thumbnail
+        options.MaximumReceiveMessageSize = 512 * 1024;
+        options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+        options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+    });
 
 builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -72,6 +82,7 @@ builder.Services.AddScoped<IShiftAssignmentRepository, ShiftAssignmentRepository
 // 3. CORE SERVICES & AI ASSISTANT
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IFaceBiometricService, FaceBiometricService>();
+builder.Services.AddHostedService<BiometricStartupWarmupService>();
 builder.Services.AddTransient<IAttendanceShiftResolver, AttendanceShiftResolver>();
 builder.Services.AddSingleton<IAiKnowledgeBaseService>(sp =>
 {

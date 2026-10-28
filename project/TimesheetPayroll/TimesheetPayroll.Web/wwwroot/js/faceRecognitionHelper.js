@@ -834,14 +834,12 @@ window.FaceRecognitionHelper = (function () {
             const embeddingInferenceMs = Math.round((performance.now() - tInferStart) * 100) / 100;
 
             // BƯỚC 5: TẠO ẢNH XÁC MINH NÉN GỌN (Tối ưu băng thông SignalR)
-            // Chế độ 'enroll' chỉ cần thumbnail 120x120 (~3KB) để hiển thị xác nhận trên UI, không lưu ảnh thô vào DB
+            // Chế độ 'enroll' tái sử dụng trực tiếp _descriptorCanvas 160x160 đã vẽ ở Bước 3 (~2KB, 0 lần drawImage phụ)
             // Chế độ 'checkin' dùng 320x240 (~12KB) thay vì 640x480 (~80KB) để truyền qua SignalR nhanh gấp 6 lần
             let photoBase64 = null;
             try {
                 if (mode === 'enroll') {
-                    const pCtx = ensurePhotoCanvas(120, 120);
-                    pCtx.drawImage(video, alignedBoxX, alignedBoxY, baseBoxW, baseBoxH, 0, 0, 120, 120);
-                    photoBase64 = _photoCanvas.toDataURL('image/jpeg', 0.72);
+                    photoBase64 = _descriptorCanvas.toDataURL('image/jpeg', 0.65);
                 } else {
                     const snapW = Math.min(w, 320);
                     const snapH = Math.min(h, 240);

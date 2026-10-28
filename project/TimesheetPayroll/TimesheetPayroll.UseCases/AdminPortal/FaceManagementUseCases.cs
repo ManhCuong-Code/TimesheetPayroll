@@ -10,6 +10,7 @@ namespace TimesheetPayroll.UseCases.AdminPortal;
 public interface IFaceManagementUseCases
 {
     Task<IEnumerable<EmployeeFaceProfile>> GetAllProfilesAsync(string? callerRole);
+    Task<EmployeeFaceProfile?> GetProfileByEmployeeIdAsync(long employeeId, string? callerRole);
     Task RegisterFaceProfileAsync(long employeeId, float[] descriptor, string? notes, string callerUsername, string? callerRole);
     Task<FaceEnrollmentTelemetryDto> RegisterFaceProfileWithMetricsAsync(
         long employeeId,
@@ -17,7 +18,8 @@ public interface IFaceManagementUseCases
         string? notes,
         string callerUsername,
         string? callerRole,
-        FaceEnrollmentTelemetryDto? clientTelemetry = null);
+        FaceEnrollmentTelemetryDto? clientTelemetry = null,
+        CancellationToken cancellationToken = default);
     Task ToggleFaceProfileLockAsync(long employeeId, bool isActive, string callerUsername, string? callerRole);
     Task RevokeFaceProfileAsync(long employeeId, string callerUsername, string? callerRole);
     Task UpdateProfileMetadataAsync(long employeeId, string? notes, decimal livenessThreshold, string callerUsername, string? callerRole);
@@ -59,9 +61,15 @@ public class FaceManagementUseCases : IFaceManagementUseCases
         return await _faceProfileRepo.GetAllProfilesWithEmployeeDetailsAsync();
     }
 
+    public async Task<EmployeeFaceProfile?> GetProfileByEmployeeIdAsync(long employeeId, string? callerRole)
+    {
+        EnsureAdmin(callerRole);
+        return await _faceProfileRepo.GetByEmployeeIdAsync(employeeId);
+    }
+
     public async Task RegisterFaceProfileAsync(long employeeId, float[] descriptor, string? notes, string callerUsername, string? callerRole)
     {
-        await RegisterFaceProfileWithMetricsAsync(employeeId, descriptor, notes, callerUsername, callerRole, null);
+        await RegisterFaceProfileWithMetricsAsync(employeeId, descriptor, notes, callerUsername, callerRole, null, CancellationToken.None);
     }
 
     public async Task<FaceEnrollmentTelemetryDto> RegisterFaceProfileWithMetricsAsync(
@@ -70,17 +78,34 @@ public class FaceManagementUseCases : IFaceManagementUseCases
         string? notes,
         string callerUsername,
         string? callerRole,
-        FaceEnrollmentTelemetryDto? clientTelemetry = null)
+        FaceEnrollmentTelemetryDto? clientTelemetry = null,
+        CancellationToken cancellationToken = default)
     {
         EnsureAdmin(callerRole);
 
+        if (cancellationToken.IsCancellationRequested)
+        {
+            throw new OperationCanceledException("Thao tác đăng ký khuôn mặt đã bị hủy bởi người dùng trước khi xử lý.", cancellationToken);
+        }
+
         var totalSw = Stopwatch.StartNew();
         var telemetry = clientTelemetry ?? new FaceEnrollmentTelemetryDto();
+        telemetry.EmployeeId = employeeId;
 
         var empLock = _enrollmentLocks.GetOrAdd(employeeId, _ => new SemaphoreSlim(1, 1));
-        if (!await empLock.WaitAsync(TimeSpan.FromSeconds(10)))
+        bool lockAcquired = false;
+        try
         {
-            throw new InvalidOperationException($"Hệ thống đang xử lý yêu cầu đăng ký khuôn mặt cho nhân viên ID #{employeeId}. Vui lòng không gửi trùng lặp.");
+            lockAcquired = await empLock.WaitAsync(TimeSpan.FromSeconds(8), cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new OperationCanceledException("Yêu cầu đăng ký khuôn mặt đã bị hủy trong khi chờ khóa đồng bộ.", cancellationToken);
+        }
+
+        if (!lockAcquired)
+        {
+            throw new InvalidOperationException($"Hệ thống đang xử lý một yêu cầu đăng ký khuôn mặt khác cho nhân viên ID #{employeeId}. Vui lòng không nhấn gửi trùng lặp.");
         }
 
         try
@@ -102,7 +127,12 @@ public class FaceManagementUseCases : IFaceManagementUseCases
             valSw.Stop();
             telemetry.EmbeddingValidationMs = Math.Round(valSw.Elapsed.TotalMilliseconds, 2);
 
-            // 2. Lưu hồ sơ khuôn mặt + ghi nhật ký kiểm toán trong 1 kết nối & 1 giao dịch SQL duy nhất
+            if (cancellationToken.IsCancellationRequested)
+            {
+                throw new OperationCanceledException("Thao tác đăng ký khuôn mặt đã bị hủy trước khi ghi vào cơ sở dữ liệu.", cancellationToken);
+            }
+
+            // 2. Lưu hồ sơ khuôn mặt + ghi nhật ký kiểm toán trong 1 kết nối & 1 giao dịch SQL nguyên tử
             var profile = new EmployeeFaceProfile
             {
                 EmployeeId = employeeId,
@@ -129,11 +159,13 @@ public class FaceManagementUseCases : IFaceManagementUseCases
             var dbRes = await _faceProfileRepo.SaveProfileWithAuditAsync(profile, auditLog);
             if (!dbRes.EmployeeExists)
             {
-                throw new KeyNotFoundException($"Không tìm thấy nhân viên có mã ID = {employeeId}.");
+                throw new KeyNotFoundException($"Không tìm thấy nhân viên có mã ID = {employeeId} trong cơ sở dữ liệu.");
             }
 
             telemetry.SqlQueryMs = dbRes.SqlQueryMs;
             telemetry.DbWriteMs = dbRes.DbWriteMs;
+            telemetry.WasAlreadyEnrolled = dbRes.WasAlreadyEnrolled;
+            telemetry.SkippedIdenticalWrite = dbRes.SkippedIdenticalWrite;
             telemetry.ReusedExistingEmbedding = dbRes.SkippedIdenticalWrite;
 
             // Xóa cache vector cũ của nhân viên này để lần nhận diện kế tiếp nạp ngay vector mới

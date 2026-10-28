@@ -1426,8 +1426,17 @@ public class FaceProfileRepository : IFaceProfileRepository
             if (skippedIdenticalWrite)
             {
                 const string auditOnlySql = @"
-                    INSERT INTO dbo.face_audit_logs (employee_id, action_type, similarity_score, performed_by, device_info, is_success, failure_reason, created_at)
-                    VALUES (@EmployeeId, @ActionType, @SimilarityScore, @PerformedBy, @DeviceInfo, @IsSuccess, @FailureReason, GETDATE());";
+                    IF NOT EXISTS (
+                        SELECT 1 FROM dbo.face_audit_logs
+                        WHERE employee_id = @EmployeeId
+                          AND action_type IN ('REGISTER', 'RE_ENROLL')
+                          AND is_success = 1
+                          AND created_at >= DATEADD(SECOND, -30, GETDATE())
+                    )
+                    BEGIN
+                        INSERT INTO dbo.face_audit_logs (employee_id, action_type, similarity_score, performed_by, device_info, is_success, failure_reason, created_at)
+                        VALUES (@EmployeeId, @ActionType, @SimilarityScore, @PerformedBy, @DeviceInfo, @IsSuccess, @FailureReason, GETDATE());
+                    END";
 
                 await conn.ExecuteAsync(new CommandDefinition(auditOnlySql, new
                 {

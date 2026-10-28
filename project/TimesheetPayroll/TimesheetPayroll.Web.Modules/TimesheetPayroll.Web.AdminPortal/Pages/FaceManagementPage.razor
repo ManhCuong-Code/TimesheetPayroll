@@ -596,7 +596,7 @@
                                     Chuẩn hóa đặc trưng toán học 128 chiều • Bảo mật cơ sở dữ liệu SQL Server
                                 </div>
                             </div>
-                            <button type="button" class="btn-close btn-close-white" @onclick="CloseEnrollModal" disabled="@isBusyModal"></button>
+                            <button type="button" class="btn-close btn-close-white" @onclick="CloseEnrollModal"></button>
                         </div>
 
                         <!-- BODY -->
@@ -821,7 +821,7 @@
                         <div class="enroll-modal-footer d-flex justify-content-between align-items-center">
                             @if (wizardStep < 5)
                             {
-                                <button type="button" class="btn btn-outline-secondary" @onclick="CloseEnrollModal" disabled="@isBusyModal">
+                                <button type="button" class="btn btn-outline-secondary" @onclick="CloseEnrollModal">
                                     <i class="fa-solid fa-xmark me-1"></i>Hủy Bỏ
                                 </button>
                                 <div>
@@ -1148,6 +1148,9 @@
     private bool showEnrollModal = false;
     private bool isModalCameraActive = false;
     private bool isBusyModal = false;
+    private bool _isUserClosingModal = false;
+    private bool _isDisposed = false;
+    private System.Threading.CancellationTokenSource? _enrollCts;
     private int wizardStep = 1; // 1: Chọn NV, 2: Căn chỉnh, 3: Trích xuất, 4: Ghi CSDL, 5: Hoàn tất
     private long modalSelectedEmployeeId = 1;
     private string modalEnrollNote = string.Empty;
@@ -1243,6 +1246,7 @@
 
     private async Task OpenEnrollModal(EmployeeFaceProfile? profile)
     {
+        _isUserClosingModal = false;
         modalError = string.Empty;
         wizardStep = 1;
         lastTelemetry = null;
@@ -1269,18 +1273,26 @@
 
     private async Task CloseEnrollModal()
     {
+        _isUserClosingModal = true;
+        try { _enrollCts?.Cancel(); } catch { }
+
         try
         {
-            await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.stopCamera", "adminEnrollVideo");
+            using var stopCts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(2));
+            await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.stopCamera", stopCts.Token, "adminEnrollVideo");
         }
         catch { }
+
         isModalCameraActive = false;
+        isBusyModal = false;
         showEnrollModal = false;
         wizardStep = 1;
+        modalError = string.Empty;
     }
 
     private async Task ResetWizardForNextEmployee()
     {
+        _isUserClosingModal = false;
         wizardStep = 2;
         lastTelemetry = null;
         enrolledPhotoBase64 = null;
@@ -1299,11 +1311,22 @@
 
     private async Task StartAdminCameraAsync()
     {
+        if (_isUserClosingModal || _isDisposed) return;
+
         isBusyModal = true;
         modalError = string.Empty;
         try
         {
-            var res = await JSRuntime.InvokeAsync<FaceCameraInitResult>("FaceRecognitionHelper.startCamera", "adminEnrollVideo", "adminEnrollCanvas", null);
+            using var camCts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var res = await JSRuntime.InvokeAsync<FaceCameraInitResult>(
+                "FaceRecognitionHelper.startCamera",
+                camCts.Token,
+                "adminEnrollVideo",
+                "adminEnrollCanvas",
+                null);
+
+            if (_isUserClosingModal || _isDisposed) return;
+
             if (res.Success)
             {
                 isModalCameraActive = true;
@@ -1317,10 +1340,25 @@
                 modalError = res.Error ?? "Không thể kết nối camera.";
             }
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            if (!_isUserClosingModal && !_isDisposed)
+            {
+                isModalCameraActive = false;
+                modalError = "Quá thời gian khởi tạo camera. Vui lòng kiểm tra thiết bị webcam và thử lại.";
+            }
+        }
+        catch (Microsoft.JSInterop.JSDisconnectedException)
         {
             isModalCameraActive = false;
-            modalError = $"Lỗi camera: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            if (!_isUserClosingModal && !_isDisposed)
+            {
+                isModalCameraActive = false;
+                modalError = $"Lỗi khởi tạo camera: {ex.Message}";
+            }
         }
         finally
         {
@@ -1328,34 +1366,60 @@
         }
     }
 
-    // QUY TRÌNH 5 GIAI ĐOẠN ĐĂNG KÝ KHUÔN MẶT CHỐNG DOUBLE-SUBMIT & ĐO THỜI GIAN TỪNG BƯỚC
+    // QUY TRÌNH 5 GIAI ĐOẠN ĐĂNG KÝ KHUÔN MẶT CHỐNG DOUBLE-SUBMIT, CHỐNG LỖI TASK CANCELED & ĐỒNG BỘ TRẠNG THÁI SAU COMMIT
     private async Task CaptureAndEnrollAsync()
     {
-        if (isBusyModal || !isModalCameraActive) return;
+        if (isBusyModal || !isModalCameraActive || _isUserClosingModal || _isDisposed) return;
 
         isBusyModal = true;
+        _isUserClosingModal = false;
         modalError = string.Empty;
         wizardStep = 3; // Giai đoạn 3: Trích xuất đặc trưng 128-D
         await InvokeAsync(StateHasChanged);
 
+        _enrollCts?.Cancel();
+        _enrollCts?.Dispose();
+        _enrollCts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var token = _enrollCts.Token;
+
+        bool dbCommitted = false;
+        var enrollStartTime = DateTime.Now;
+        var user = UserSession.CurrentUser;
+
         try
         {
-            var captureRes = await JSRuntime.InvokeAsync<FaceCaptureResult>(
-                "FaceRecognitionHelper.captureFaceDescriptor",
-                "adminEnrollVideo",
-                new { mode = "enroll" });
+            // BƯỚC 3: Chụp & Trích xuất vector 128-D từ Webcam qua JSInterop
+            FaceCaptureResult captureRes;
+            try
+            {
+                captureRes = await JSRuntime.InvokeAsync<FaceCaptureResult>(
+                    "FaceRecognitionHelper.captureFaceDescriptor",
+                    token,
+                    "adminEnrollVideo",
+                    new { mode = "enroll" });
+            }
+            catch (OperationCanceledException)
+            {
+                if (_isUserClosingModal || _isDisposed) return;
+                modalError = "Quá trình trích xuất khuôn mặt từ camera đã bị gián đoạn hoặc quá thời gian chờ. Vui lòng giữ khuôn mặt ổn định và nhấn chụp lại.";
+                wizardStep = 2;
+                return;
+            }
+
+            if (_isUserClosingModal || _isDisposed) return;
 
             if (!captureRes.Success || captureRes.Descriptor == null || captureRes.Descriptor.Length == 0)
             {
                 modalError = captureRes.Error ?? "Chưa phát hiện được khuôn mặt hợp lệ trong khung quét. Vui lòng căn chỉnh lại.";
                 wizardStep = 2; // Quay lại bước căn chỉnh
-                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+                try { await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error"); } catch { }
                 return;
             }
 
             enrolledPhotoBase64 = captureRes.PhotoBase64;
 
-            wizardStep = 4; // Giai đoạn 4: Ghi CSDL SQL Server trong 1 giao dịch nguyên tử
+            // BƯỚC 4: Ghi CSDL SQL Server trong 1 giao dịch nguyên tử (UPSERT + Audit Log)
+            wizardStep = 4;
             await InvokeAsync(StateHasChanged);
 
             var clientTelemetry = new FaceEnrollmentTelemetryDto
@@ -1368,69 +1432,159 @@
                 EmbeddingInferenceMs = captureRes.EmbeddingInferenceMs
             };
 
-            var user = UserSession.CurrentUser;
             lastTelemetry = await FaceManagementUseCases.RegisterFaceProfileWithMetricsAsync(
-                modalSelectedEmployeeId, 
-                captureRes.Descriptor, 
-                modalEnrollNote, 
-                user?.Username ?? "admin", 
+                modalSelectedEmployeeId,
+                captureRes.Descriptor,
+                modalEnrollNote,
+                user?.Username ?? "admin",
                 user?.Role,
-                clientTelemetry);
+                clientTelemetry,
+                token);
 
-            // Tạm dừng vòng lặp vẽ HUD nhưng giữ nguyên luồng phần cứng camera để nếu nhấn "Đăng Ký Nhân Viên Khác" sẽ mở lại tức thì (< 2ms)
-            try
+            // Đánh dấu CSDL đã commit thành công để bất kỳ lỗi JSInterop nào sau đó cũng không bao giờ đẩy lùi UI về bước 2
+            dbCommitted = true;
+
+            ApplyCommittedEnrollmentToUiState(user?.Username ?? "admin");
+
+            // Các tác vụ giao diện phụ (pauseHud, playChime) được bọc cô lập hoàn toàn sau khi DB đã commit
+            if (!_isUserClosingModal && !_isDisposed)
             {
-                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.pauseHud", "adminEnrollVideo");
+                try
+                {
+                    using var postCommitCts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(2));
+                    await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.pauseHud", postCommitCts.Token, "adminEnrollVideo");
+                    await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", postCommitCts.Token, "success");
+                }
+                catch
+                {
+                    // Bỏ qua lỗi JSInterop sau khi dữ liệu đã lưu thành công vào SQL Server
+                }
             }
-            catch { }
-
-            // Cập nhật thông tin in-place trong danh sách bộ nhớ
-            var targetEmp = faceProfiles.FirstOrDefault(p => p.EmployeeId == modalSelectedEmployeeId);
-            if (targetEmp != null)
+        }
+        catch (OperationCanceledException)
+        {
+            if (dbCommitted)
             {
-                targetEmp.FaceDescriptorJson = "[ENROLLED]";
-                targetEmp.IsActive = true;
-                targetEmp.Notes = string.IsNullOrWhiteSpace(modalEnrollNote) 
-                    ? $"Đăng ký bởi Quản trị viên {user?.Username ?? "admin"} ngày {DateTime.Now:dd/MM/yyyy HH:mm}" 
-                    : modalEnrollNote;
-                targetEmp.RegisteredAt = DateTime.Now;
-                targetEmp.RegisteredBy = user?.Username ?? "admin";
-                targetEmp.UpdatedAt = DateTime.Now;
-
-                enrolledEmployeeName = targetEmp.FullName;
-                enrolledEmployeeCode = targetEmp.EmployeeCode;
-                enrolledDepartmentName = targetEmp.DepartmentName;
+                // Dữ liệu đã được lưu vào SQL Server trước khi hủy — giữ nguyên trạng thái hoàn tất bước 5
+                return;
             }
 
-            // Thêm log kiểm toán in-place
+            if (_isUserClosingModal || _isDisposed)
+            {
+                // Người dùng chủ động đóng modal hoặc chuyển trang — kết thúc êm, không báo lỗi giả
+                return;
+            }
+
+            // Kiểm tra xem giao dịch SQL Server đã kịp commit ngay trước thời điểm tín hiệu hủy đến hay chưa
+            bool recoveredFromDb = await TryRecoverCommittedEnrollmentAsync(enrollStartTime, user?.Username ?? "admin", user?.Role);
+            if (!recoveredFromDb)
+            {
+                modalError = "Tác vụ xử lý bị ngắt kết nối hoặc quá thời gian phản hồi. Vui lòng nhấn 'Chụp & Đăng Ký Mẫu 128-D' để thử lại.";
+                wizardStep = 2;
+            }
+        }
+        catch (Microsoft.JSInterop.JSDisconnectedException)
+        {
+            // Kết nối SignalR đã đóng do chuyển trang — không xử lý tiếp
+        }
+        catch (ArgumentException argEx)
+        {
+            if (!dbCommitted && !_isUserClosingModal && !_isDisposed)
+            {
+                modalError = argEx.Message;
+                wizardStep = 2;
+                try { await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error"); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            if (dbCommitted || _isUserClosingModal || _isDisposed)
+            {
+                return;
+            }
+
+            bool recoveredFromDb = await TryRecoverCommittedEnrollmentAsync(enrollStartTime, user?.Username ?? "admin", user?.Role);
+            if (!recoveredFromDb)
+            {
+                modalError = ex.Message.Contains("A task was canceled", StringComparison.OrdinalIgnoreCase)
+                    ? "Kết nối xử lý tạm thời bị gián đoạn. Vui lòng nhấn 'Chụp & Đăng Ký Mẫu 128-D' để thử lại."
+                    : $"Lỗi khi lưu dữ liệu đăng ký: {ex.Message}";
+                wizardStep = 2;
+                try { await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error"); } catch { }
+            }
+        }
+        finally
+        {
+            isBusyModal = false;
+            if (!_isDisposed)
+            {
+                try { await InvokeAsync(StateHasChanged); } catch { }
+            }
+        }
+    }
+
+    private void ApplyCommittedEnrollmentToUiState(string performedBy)
+    {
+        var targetEmp = faceProfiles.FirstOrDefault(p => p.EmployeeId == modalSelectedEmployeeId);
+        if (targetEmp != null)
+        {
+            targetEmp.FaceDescriptorJson = "[ENROLLED]";
+            targetEmp.IsActive = true;
+            targetEmp.Notes = string.IsNullOrWhiteSpace(modalEnrollNote)
+                ? $"Đăng ký bởi Quản trị viên {performedBy} ngày {DateTime.Now:dd/MM/yyyy HH:mm}"
+                : modalEnrollNote;
+            targetEmp.RegisteredAt = DateTime.Now;
+            targetEmp.RegisteredBy = performedBy;
+            targetEmp.UpdatedAt = DateTime.Now;
+
+            enrolledEmployeeName = targetEmp.FullName;
+            enrolledEmployeeCode = targetEmp.EmployeeCode;
+            enrolledDepartmentName = targetEmp.DepartmentName;
+        }
+
+        if (!(lastTelemetry?.SkippedIdenticalWrite ?? false))
+        {
             auditLogs.Insert(0, new FaceAuditLog
             {
                 EmployeeId = modalSelectedEmployeeId,
                 EmployeeCode = enrolledEmployeeCode,
                 FullName = enrolledEmployeeName,
                 ActionType = "REGISTER",
-                PerformedBy = user?.Username ?? "admin",
+                PerformedBy = performedBy,
                 DeviceInfo = "Admin Portal Biometric Enrollment",
                 IsSuccess = true,
                 CreatedAt = DateTime.Now
             });
+        }
 
-            await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "success");
-            wizardStep = 5; // Giai đoạn 5: Hoàn tất & xác nhận kết quả
-            statusMessage = $"Đăng ký khuôn mặt thành công cho nhân viên [{enrolledEmployeeCode}] {enrolledEmployeeName} (Tổng thời gian xử lý: {lastTelemetry.TotalEnrollmentMs:0.##} ms).";
-            statusType = "success";
-        }
-        catch (Exception ex)
+        wizardStep = 5; // Giai đoạn 5: Hoàn tất & xác nhận kết quả
+        double totalMs = lastTelemetry?.TotalEnrollmentMs ?? 0;
+        statusMessage = totalMs > 0
+            ? $"Đăng ký khuôn mặt thành công cho nhân viên [{enrolledEmployeeCode}] {enrolledEmployeeName} (Tổng thời gian xử lý: {totalMs:0.##} ms)."
+            : $"Đăng ký khuôn mặt thành công cho nhân viên [{enrolledEmployeeCode}] {enrolledEmployeeName}.";
+        statusType = "success";
+    }
+
+    private async Task<bool> TryRecoverCommittedEnrollmentAsync(DateTime enrollStartTime, string performedBy, string? callerRole)
+    {
+        try
         {
-            modalError = $"Lỗi khi lưu dữ liệu đăng ký: {ex.Message}";
-            wizardStep = 2; // Quay lại bước căn chỉnh để thử lại
-            await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+            var latestProfile = await FaceManagementUseCases.GetProfileByEmployeeIdAsync(modalSelectedEmployeeId, callerRole);
+            if (latestProfile != null &&
+                latestProfile.IsActive &&
+                !string.IsNullOrWhiteSpace(latestProfile.FaceDescriptorJson) &&
+                latestProfile.FaceDescriptorJson != "[]" &&
+                latestProfile.UpdatedAt >= enrollStartTime.AddSeconds(-3))
+            {
+                ApplyCommittedEnrollmentToUiState(performedBy);
+                return true;
+            }
         }
-        finally
+        catch
         {
-            isBusyModal = false;
-            await InvokeAsync(StateHasChanged);
+            // Nếu truy vấn kiểm tra trạng thái cũng lỗi thì trả về false để hiển thị thông báo thử lại
         }
+        return false;
     }
 
     private string GetActionBadgeClass(string action) => action switch
@@ -1449,14 +1603,18 @@
 
     public async ValueTask DisposeAsync()
     {
-        _searchCts?.Cancel();
-        _searchCts?.Dispose();
+        _isDisposed = true;
+        _isUserClosingModal = true;
+
+        try { _searchCts?.Cancel(); _searchCts?.Dispose(); } catch { }
+        try { _enrollCts?.Cancel(); _enrollCts?.Dispose(); } catch { }
 
         if (isModalCameraActive || showEnrollModal)
         {
             try
             {
-                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.stopCamera", "adminEnrollVideo");
+                using var disposeCts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(1));
+                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.stopCamera", disposeCts.Token, "adminEnrollVideo");
             }
             catch { }
         }

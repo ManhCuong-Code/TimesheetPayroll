@@ -37,6 +37,11 @@ public interface IFaceBiometricService
         double maxDistanceThreshold = 0.58);
 
     /// <summary>
+    /// Nạp trước danh sách hồ sơ khuôn mặt từ cơ sở dữ liệu bền vững vào bộ nhớ đệm L2-Normalized khi khởi động server.
+    /// </summary>
+    int PreloadProfiles(IEnumerable<EmployeeFaceProfile>? profiles);
+
+    /// <summary>
     /// Làm mới bộ nhớ đệm vector đã chuẩn hóa khi có thay đổi hồ sơ khuôn mặt.
     /// </summary>
     void InvalidateCache(long? employeeId = null);
@@ -217,18 +222,37 @@ public class FaceBiometricService : IFaceBiometricService
         }
 
         var parsed = ParseDescriptorJson(profile.FaceDescriptorJson);
-        if (parsed == null || parsed.Length == 0)
+        if (parsed == null || parsed.Length != ExpectedDimension)
         {
             return null;
         }
 
-        var normalized = NormalizeVector(parsed);
+        if (!ValidateAndNormalizeDescriptor(parsed, out var normalized, out _))
+        {
+            return null;
+        }
+
         if (profile.EmployeeId > 0)
         {
             _normalizedVectorCache[profile.EmployeeId] = new CachedEmbeddingEntry(jsonHash, profile.UpdatedAt, normalized);
         }
 
         return normalized;
+    }
+
+    public int PreloadProfiles(IEnumerable<EmployeeFaceProfile>? profiles)
+    {
+        if (profiles == null) return 0;
+        int loadedCount = 0;
+        foreach (var profile in profiles)
+        {
+            var vec = GetOrParseNormalizedProfileVector(profile);
+            if (vec != null && vec.Length == ExpectedDimension)
+            {
+                loadedCount++;
+            }
+        }
+        return loadedCount;
     }
 
     public (EmployeeFaceProfile? MatchedProfile, double Distance, double Confidence) FindBestMatch(
@@ -241,7 +265,6 @@ public class FaceBiometricService : IFaceBiometricService
             return (null, 1.0, 0.0);
         }
 
-        // Chỉ chuẩn hóa vector đầu vào 1 lần duy nhất thay vì lặp lại N lần theo số nhân viên
         var normInput = NormalizeVector(inputDescriptor);
         if (normInput.Length == 0)
         {
