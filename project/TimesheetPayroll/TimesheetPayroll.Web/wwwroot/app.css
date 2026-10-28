@@ -674,29 +674,28 @@ code, kbd, pre, samp, .font-mono {
 }
 
 /* ==========================================================================
-   ENTERPRISE TOPBAR NAVIGATION - ROYAL SAPPHIRE GRADIENT (HIGH CONTRAST & LUXURY)
-   Deep Midnight to Royal Sapphire Gradient: #0F172A -> #1E3A8A -> #1D4ED8
-   Clear Visual Separation, Ice Blue Accents, Glassmorphic Profile & Crisp Typography
+   ENTERPRISE TOPBAR NAVIGATION - SOLID DEEP NAVY (TÁCH BIỆT RÕ RÀNG VỚI NỘI DUNG)
+   Màu nền sẫm đậm đà #172554, không pha màu mè, các mục trên thanh Topbar được tinh gọn
    ========================================================================== */
 :root {
-    --topbar-bg: linear-gradient(135deg, #0F172A 0%, #1E3A8A 50%, #1D4ED8 100%);
-    --topbar-bg-hover: rgba(255, 255, 255, 0.14);
-    --topbar-active: rgba(255, 255, 255, 0.22);
-    --topbar-accent: #38BDF8;           /* Xanh sáng Sky Blue làm vạch active và điểm nhấn */
-    --topbar-text: #FFFFFF;             /* Chữ trắng tinh khiết, tương phản hoàn hảo */
-    --topbar-text-muted: #93C5FD;       /* Icon và chữ phụ màu xanh băng Ice Blue */
-    --topbar-border: #3B82F6;           /* Đường viền đáy xanh sapphire tách biệt rõ ràng */
-    --topbar-height: 60px;              /* Chiều cao chuẩn mực 60px */
+    --topbar-bg: #172554;               /* Xanh navy đậm, tách biệt hoàn toàn với nội dung */
+    --topbar-bg-hover: #263B73;         /* Xanh navy sáng khi hover */
+    --topbar-active: #263B73;           /* Nền mục đang chọn */
+    --topbar-accent: #60A5FA;           /* Xanh dương điểm nhấn và vạch active */
+    --topbar-text: #FFFFFF;             /* Chữ chính trắng tinh khôi */
+    --topbar-text-muted: #CBD5E1;       /* Chữ phụ, icon phụ xám xanh nhạt */
+    --topbar-border: rgba(255, 255, 255, 0.1); /* Viền mỏng phân tách */
+    --topbar-height: 56px;              /* Chiều cao chuẩn 56px */
     
     --dropdown-bg: #FFFFFF;             /* Nền dropdown trắng thanh lịch */
-    --dropdown-text: #1E293B;           /* Chữ dropdown xám đậm */
+    --dropdown-text: #1E293B;           /* Chữ dropdown xám than */
     --dropdown-border: #E2E8F0;         /* Viền dropdown nhẹ nhàng */
     --dropdown-hover-bg: #F1F5F9;       /* Hover dropdown xám sáng */
-    --dropdown-hover-text: #1D4ED8;
+    --dropdown-hover-text: #2563EB;
     --dropdown-active-bg: #EFF6FF;      /* Active dropdown xanh nhạt */
     --dropdown-active-text: #2563EB;
     
-    --content-bg: #F8FAFC;              /* Nền nội dung Slate sáng */
+    --content-bg: #F8FAFC;              /* Nền nội dung phía dưới */
     --card-bg: #FFFFFF;                 /* Nền thẻ nội dung */
 }
 
@@ -715,15 +714,15 @@ body, .page, main {
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
-/* THANH TOPBAR ROYAL SAPPHIRE TÁCH BIỆT RÕ RÀNG VỚI NỘI DUNG */
+/* THANH TOPBAR MÀU SẪM ĐẬM ĐÀ, TÁCH BIỆT NỘI DUNG PHÍA DƯỚI */
 .topbar-nav {
-    background: var(--topbar-bg) !important;
-    border-bottom: 2px solid var(--topbar-border) !important;
-    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.25), 0 2px 6px -1px rgba(30, 58, 138, 0.2) !important;
-    min-height: 60px;
+    background-color: var(--topbar-bg) !important;
+    border-bottom: 1px solid var(--topbar-border) !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
+    min-height: 56px;
     height: auto;
-    padding-top: 0.35rem;
-    padding-bottom: 0.35rem;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
     z-index: 1040;
 }
 
@@ -738,88 +737,56 @@ body, .page, main {
 }
 
 .topbar-brand .brand-icon-box {
-    background: rgba(255, 255, 255, 0.16) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-    border-radius: 10px;
+    background-color: #2563EB !important;
     color: #FFFFFF !important;
-    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+    border-radius: 8px;
 }
 
 .topbar-brand .brand-title {
     font-weight: 700;
     color: #FFFFFF;
     font-size: 0.95rem;
-    line-height: 1.15;
-    letter-spacing: 0.01em;
-}
-
-.topbar-brand .brand-subtitle {
-    font-size: 0.65rem;
-    font-weight: 600;
-    color: var(--topbar-text-muted);
-    letter-spacing: 0.06em;
-    line-height: 1.15;
-    margin-top: 0.18rem;
+    letter-spacing: 0.02em;
 }
 
 /* NÚT TOGGLER TRÊN MOBILE */
 .topbar-toggler {
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
     border-radius: 0.375rem;
     color: #FFFFFF !important;
-    padding: 0.35rem 0.55rem;
+    padding: 0.3rem 0.5rem;
 }
 
 .topbar-toggler:focus {
-    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.4);
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.4);
 }
 
-/* LIÊN KẾT ĐIỀU HƯỚNG TRÊN TOPBAR */
+/* LIÊN KẾT ĐIỀU HƯỚNG TINH GỌN TRÊN TOPBAR */
 .topbar-nav .nav-link {
-    color: #FFFFFF !important;
+    color: var(--topbar-text) !important;
     font-size: 0.88rem;
     font-weight: 500;
-    padding: 0.45rem 0.8rem !important;
-    border-radius: 0.5rem;
-    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    padding: 0.42rem 0.75rem !important;
+    border-radius: 0.375rem;
+    transition: all 0.16s ease;
     display: inline-flex;
     align-items: center;
     white-space: nowrap;
-    position: relative;
-    border: 1px solid transparent;
-}
-
-.topbar-nav .nav-link i {
-    color: var(--topbar-text-muted);
-    font-size: 0.92rem;
-    width: 1.15rem;
-    text-align: center;
-    margin-right: 0.45rem;
-    transition: all 0.18s ease;
 }
 
 .topbar-nav .nav-link:hover,
 .topbar-nav .nav-link:focus {
-    color: #FFFFFF !important;
+    color: var(--topbar-text) !important;
     background-color: var(--topbar-bg-hover) !important;
-}
-
-.topbar-nav .nav-link:hover i,
-.topbar-nav .nav-link:focus i {
-    color: #FFFFFF !important;
 }
 
 /* MỤC ĐANG ĐƯỢC CHỌN (ACTIVE) */
 .topbar-nav .nav-link.active {
-    color: #FFFFFF !important;
+    color: var(--topbar-text) !important;
     background-color: var(--topbar-active) !important;
     font-weight: 600;
-    box-shadow: inset 0 -3px 0 var(--topbar-accent) !important;
-}
-
-.topbar-nav .nav-link.active i {
-    color: var(--topbar-accent) !important;
+    box-shadow: inset 0 -2px 0 var(--topbar-accent) !important;
 }
 
 .topbar-nav .dropdown-toggle::after {
@@ -828,26 +795,26 @@ body, .page, main {
     border-top-color: rgba(255, 255, 255, 0.7);
 }
 
-/* MENU DROPDOWN: TRẮNG TINH TẾ, BÓNG ĐỔ MỀM, BO GÓC 0.75rem */
+/* MENU DROPDOWN: NỀN TRẮNG, CHỮ TỐI, BÓNG ĐỔ NHẸ, BO GÓC 0.5rem */
 .topbar-nav .dropdown-menu {
     background-color: var(--dropdown-bg) !important;
     color: var(--dropdown-text) !important;
     border: 1px solid var(--dropdown-border) !important;
-    border-radius: 0.75rem;
-    box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.18), 0 4px 10px -2px rgba(15, 23, 42, 0.08) !important;
-    padding: 0.4rem;
-    margin-top: 0.45rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.05) !important;
+    padding: 0.35rem;
+    margin-top: 0.35rem;
     z-index: 1070;
-    min-width: 225px;
+    min-width: 215px;
 }
 
 .topbar-nav .dropdown-item {
     color: var(--dropdown-text) !important;
     font-size: 0.86rem;
     font-weight: 500;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
-    transition: all 0.18s ease;
+    padding: 0.48rem 0.75rem;
+    border-radius: 0.375rem;
+    transition: all 0.15s ease;
     display: flex;
     align-items: center;
 }
@@ -858,7 +825,7 @@ body, .page, main {
     text-align: center;
     margin-right: 0.5rem;
     color: #2563EB !important;
-    transition: color 0.18s ease;
+    transition: color 0.15s ease;
 }
 
 .topbar-nav .dropdown-item:hover,
@@ -890,65 +857,41 @@ body, .page, main {
 .dropdown-user-header {
     background-color: #F8FAFC !important;
     border-color: var(--dropdown-border) !important;
-    border-radius: 0.5rem 0.5rem 0 0;
+    border-radius: 0.375rem 0.375rem 0 0;
 }
 
-.dropdown-user-header .user-display-name {
-    color: #0F172A !important;
-    font-weight: 600;
-    font-size: 0.88rem;
-}
-
-.dropdown-user-header .user-sub-info {
-    color: #64748B !important;
-    font-size: 0.74rem;
-}
-
-/* NÚT TÀI KHOẢN NGƯỜI DÙNG TRÊN THANH TOPBAR */
+/* NÚT TÀI KHOẢN NGƯỜI DÙNG TINH GỌN TRÊN THANH TOPBAR */
 .topbar-user-btn {
-    background-color: rgba(255, 255, 255, 0.12) !important;
-    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
     border-radius: 9999px;
-    padding: 0.28rem 0.8rem 0.28rem 0.35rem;
+    padding: 0.25rem 0.65rem 0.25rem 0.3rem;
     color: #FFFFFF !important;
     display: inline-flex;
     align-items: center;
-    transition: all 0.18s ease;
+    transition: all 0.16s ease;
     cursor: pointer;
-    backdrop-filter: blur(8px);
 }
 
 .topbar-user-btn:hover {
-    background-color: rgba(255, 255, 255, 0.22) !important;
-    border-color: rgba(255, 255, 255, 0.45) !important;
-    color: #FFFFFF !important;
-}
-
-.topbar-user-btn .user-name-label {
-    color: #FFFFFF;
-    font-weight: 600;
-}
-
-.topbar-user-btn:hover .user-name-label {
-    color: #FFFFFF;
+    background-color: var(--topbar-bg-hover) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
 .topbar-user-btn .avatar-circle {
-    background-color: #FFFFFF !important;
-    color: #1D4ED8 !important;
-    font-weight: 800;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background-color: #2563EB !important;
+    color: #FFFFFF !important;
 }
 
 /* NÚT ĐĂNG XUẤT: Màu đỏ trầm #DC2626 khi hover, không dùng nền đỏ quá nổi bật khi chưa tương tác */
 .topbar-logout-item {
     color: #475569 !important;
-    transition: all 0.18s ease;
+    transition: all 0.16s ease;
 }
 
 .topbar-logout-item i {
     color: #64748B !important;
-    transition: color 0.18s ease;
+    transition: color 0.16s ease;
 }
 
 .topbar-logout-item:hover,
@@ -965,12 +908,12 @@ body, .page, main {
 /* RESPONSIVE TRÊN MÀN HÌNH NHỎ */
 @media (max-width: 991.98px) {
     .topbar-nav .navbar-collapse {
-        background: #0F172A;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 0.75rem;
+        background-color: var(--topbar-bg);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 0.5rem;
         padding: 0.75rem;
         margin-top: 0.5rem;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
     }
 }
 
