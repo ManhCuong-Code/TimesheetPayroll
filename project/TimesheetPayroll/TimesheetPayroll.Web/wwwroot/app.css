@@ -674,12 +674,42 @@ code, kbd, pre, samp, .font-mono {
 }
 
 /* ==========================================================================
-   ENTERPRISE TOPBAR NAVIGATION - CORPORATE NAVY & ROYAL BLUE GRADIENT
+   ENTERPRISE TOPBAR NAVIGATION - NAVY (#16324F) & CONTENT (#F3F6FA)
    ========================================================================== */
+:root {
+    --topbar-bg: #16324F;               /* Xanh navy đậm */
+    --topbar-bg-hover: #294B70;         /* Xanh navy sáng hơn khi hover */
+    --topbar-primary: #2563EB;          /* Xanh dương điểm nhấn & active */
+    --topbar-text: #FFFFFF;             /* Chữ trắng tương phản cao */
+    --topbar-text-muted: #D8E3F0;       /* Chữ phụ, icon phụ xanh xám sáng */
+    --topbar-divider: #36516D;          /* Đường phân cách trên Topbar */
+    --topbar-border: #234568;           /* Viền dưới thanh Topbar */
+    --topbar-badge-warning: #F59E0B;    /* Thông báo chờ duyệt màu cam */
+    
+    --content-bg: #F3F6FA;              /* Nền nội dung trắng xám nhạt */
+    --card-bg: #FFFFFF;                 /* Nền thẻ nội dung màu trắng */
+}
+
+/* NỀN NỘI DUNG CHÍNH */
+body, .page, main {
+    background-color: var(--content-bg) !important;
+}
+
+.content {
+    background-color: var(--content-bg);
+}
+
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* THANH TOPBAR */
 .topbar-nav {
-    background: linear-gradient(105deg, #091e42 0%, #0d2858 35%, #153e7e 70%, #1e4bb8 100%) !important;
-    border-bottom: 1px solid rgba(147, 197, 253, 0.22) !important;
-    box-shadow: 0 4px 20px -2px rgba(9, 30, 66, 0.35), 0 2px 6px -1px rgba(13, 40, 88, 0.2) !important;
+    background-color: var(--topbar-bg) !important;
+    border-bottom: 1px solid var(--topbar-border) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
     min-height: 52px;
     padding-top: 0.35rem;
     padding-bottom: 0.35rem;
@@ -693,38 +723,51 @@ code, kbd, pre, samp, .font-mono {
 
 .topbar-brand:hover {
     text-decoration: none;
-    opacity: 0.96;
+    opacity: 0.95;
 }
 
 .topbar-brand .brand-icon-box {
-    background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%) !important;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.45);
+    background-color: var(--topbar-primary) !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
 .topbar-nav .nav-link {
-    color: rgba(241, 245, 249, 0.9) !important;
+    color: var(--topbar-text) !important;
     font-size: 0.84rem;
     font-weight: 500;
     padding: 0.4rem 0.65rem !important;
     border-radius: 0.375rem;
-    transition: all 0.16s ease;
+    transition: all 0.15s ease;
     display: inline-flex;
     align-items: center;
     white-space: nowrap;
 }
 
+.topbar-nav .nav-link i {
+    color: var(--topbar-text-muted);
+    transition: color 0.15s ease;
+}
+
 .topbar-nav .nav-link:hover,
 .topbar-nav .nav-link:focus {
-    color: #ffffff !important;
-    background-color: rgba(255, 255, 255, 0.14) !important;
-    transform: translateY(-1px);
+    color: var(--topbar-text) !important;
+    background-color: var(--topbar-bg-hover) !important;
+}
+
+.topbar-nav .nav-link:hover i,
+.topbar-nav .nav-link:focus i {
+    color: var(--topbar-text) !important;
 }
 
 .topbar-nav .nav-link.active {
-    color: #ffffff !important;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.1) 100%) !important;
+    color: var(--topbar-text) !important;
+    background-color: var(--topbar-primary) !important;
     font-weight: 600;
-    box-shadow: inset 0 -2px 0 #60a5fa, 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.topbar-nav .nav-link.active i {
+    color: var(--topbar-text) !important;
 }
 
 .topbar-nav .dropdown-toggle::after {
@@ -733,20 +776,21 @@ code, kbd, pre, samp, .font-mono {
     border-top-color: currentColor;
 }
 
+/* MENU THẢ XUỐNG: NỀN TRẮNG, CHỮ XANH NAVY, VIỀN TINH TẾ, BÓNG ĐỔ NHẸ */
 .topbar-nav .dropdown-menu {
-    border-radius: 0.625rem;
-    box-shadow: 0 16px 36px rgba(4, 15, 33, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-    border: 1px solid rgba(147, 197, 253, 0.25) !important;
-    background: linear-gradient(180deg, #0e2246 0%, #091730 100%) !important;
-    padding: 0.35rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px -5px rgba(22, 50, 79, 0.15), 0 4px 10px -2px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid #E2E8F0 !important;
+    background-color: #FFFFFF !important;
+    padding: 0.4rem;
     margin-top: 0.35rem;
     z-index: 1070;
     min-width: 215px;
 }
 
 .topbar-nav .dropdown-item {
-    color: #e2e8f0 !important;
-    font-size: 0.83rem;
+    color: var(--topbar-bg) !important;
+    font-size: 0.84rem;
     font-weight: 500;
     padding: 0.45rem 0.75rem;
     border-radius: 0.375rem;
@@ -755,58 +799,93 @@ code, kbd, pre, samp, .font-mono {
     align-items: center;
 }
 
+.topbar-nav .dropdown-item i {
+    font-size: 0.9rem;
+}
+
 .topbar-nav .dropdown-item:hover,
 .topbar-nav .dropdown-item:focus {
-    background-color: rgba(59, 130, 246, 0.25) !important;
-    color: #ffffff !important;
-    transform: translateX(2px);
+    background-color: var(--content-bg) !important;
+    color: var(--topbar-primary) !important;
 }
 
 .topbar-nav .dropdown-item.active {
-    background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%) !important;
-    color: #ffffff !important;
+    background-color: var(--topbar-primary) !important;
+    color: #FFFFFF !important;
     font-weight: 600;
 }
 
-.topbar-nav .dropdown-divider {
-    border-color: rgba(147, 197, 253, 0.15) !important;
-    margin: 0.25rem 0;
+.topbar-nav .dropdown-item.active i {
+    color: #FFFFFF !important;
 }
 
+.topbar-nav .dropdown-divider {
+    border-color: #E2E8F0 !important;
+    margin: 0.35rem 0;
+}
+
+/* NÚT TÀI KHOẢN NGƯỜI DÙNG */
 .topbar-user-btn {
-    background: rgba(255, 255, 255, 0.12) !important;
-    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid var(--topbar-divider) !important;
     border-radius: 9999px;
     padding: 0.25rem 0.75rem 0.25rem 0.35rem;
-    color: #ffffff !important;
+    color: var(--topbar-text) !important;
     display: inline-flex;
     align-items: center;
-    transition: all 0.16s ease;
+    transition: all 0.15s ease;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .topbar-user-btn:hover {
-    background: rgba(255, 255, 255, 0.2) !important;
-    border-color: rgba(147, 197, 253, 0.5) !important;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-    color: #ffffff !important;
+    background-color: var(--topbar-bg-hover) !important;
+    border-color: #4A6E94 !important;
+    color: var(--topbar-text) !important;
 }
 
 .topbar-user-btn .avatar-circle {
-    background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%) !important;
-    color: #ffffff;
-    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+    background-color: var(--topbar-primary) !important;
+    color: #FFFFFF;
 }
 
+/* NÚT ĐĂNG XUẤT TRONG MENU DROPDOWN */
+.topbar-logout-item {
+    color: #475569 !important;
+    transition: all 0.15s ease;
+}
+
+.topbar-logout-item i {
+    color: #DC2626;
+    transition: color 0.15s ease;
+}
+
+.topbar-logout-item:hover,
+.topbar-logout-item:focus {
+    background-color: #FEF2F2 !important;
+    color: #DC2626 !important;
+}
+
+.topbar-logout-item:hover i {
+    color: #DC2626;
+}
+
+/* THÔNG BÁO HOẶC BADGE CHỜ DUYỆT */
+.topbar-badge-pending {
+    background-color: var(--topbar-badge-warning) !important;
+    color: #FFFFFF !important;
+    font-weight: 700;
+    font-size: 0.65rem;
+}
+
+/* RESPONSIVE TRÊN MÀN HÌNH NHỎ */
 @media (max-width: 991.98px) {
     .topbar-nav .navbar-collapse {
-        background: rgba(9, 30, 66, 0.98);
-        border: 1px solid rgba(147, 197, 253, 0.2);
-        border-radius: 0.625rem;
-        padding: 0.85rem;
+        background-color: var(--topbar-bg);
+        border: 1px solid var(--topbar-divider);
+        border-radius: 0.5rem;
+        padding: 0.75rem;
         margin-top: 0.5rem;
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 }
 
