@@ -4,7 +4,7 @@
 @inject IUserSessionService UserSession
 @inject NavigationManager NavManager
 
-<nav class="navbar navbar-expand-lg navbar-dark topbar-nav px-3 shadow-sm sticky-top">
+<nav class="navbar navbar-expand-lg topbar-nav px-3 sticky-top">
     <div class="container-fluid px-1">
         <!-- 1. KHU VỰC BÊN TRÁI: LOGO & TÊN RÚT GỌN -->
         <a class="navbar-brand topbar-brand d-flex align-items-center me-3 py-0" href="/">
@@ -18,7 +18,7 @@
         </a>
 
         <!-- NÚT HAMBURGER TRÊN THIẾT BỊ DI ĐỘNG -->
-        <button class="navbar-toggler py-1 px-2 border-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler py-1 px-2 topbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon" style="font-size: 0.85rem;"></span>
         </button>
 
@@ -167,7 +167,7 @@
                             <div class="avatar-circle rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px; font-size: 0.75rem; font-weight: 700;">
                                 @GetAvatarInitial(context.User)
                             </div>
-                            <span class="fw-semibold text-truncate me-1 text-white" style="max-width: 120px; font-size: 0.82rem;">
+                            <span class="fw-semibold text-truncate me-1 user-name-label" style="max-width: 120px; font-size: 0.82rem;">
                                 @GetShortDisplayName(context.User)
                             </span>
                             <span class="badge @GetRoleBadgeClass(context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value) py-1 px-1.5" style="font-size: 0.65rem;">
