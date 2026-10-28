@@ -189,3 +189,263 @@ function calculateSalaryRecord(emp) {
 function formatVND(amount) {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 }
+
+// =========================================================================
+// HÀM TẠO DỮ LIỆU CHẤM CÔNG CHI TIẾT THEO THÁNG CHO TỪNG NHÂN VIÊN
+// =========================================================================
+function getEmployeeTimesheetRecords(empId, month = 10, year = 2026) {
+    var emp = HRM_DATA.employees.find(x => x.id === empId) || HRM_DATA.employees[0];
+    var daysInMonth = new Date(year, month, 0).getDate();
+    var records = [];
+    var weekdaysVi = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+
+    var totalHours = 0;
+    var totalUnits = 0;
+    var lateCount = 0;
+    var lateMinutesTotal = 0;
+    var paidLeaveCount = 0;
+
+    // Kiểm tra bản ghi điểm danh hôm nay từ Kiosk Face Check-In (nếu có)
+    var localPunch = null;
+    try {
+        var punchStr = localStorage.getItem('hrm_last_punch');
+        if (punchStr) {
+            var parsed = JSON.parse(punchStr);
+            if (parsed.empId === emp.id) localPunch = parsed;
+        }
+    } catch(e) {}
+
+    for (var d = 1; d <= daysInMonth; d++) {
+        var dateObj = new Date(year, month - 1, d);
+        var dayOfWeek = dateObj.getDay();
+        var dayOfWeekStr = weekdaysVi[dayOfWeek];
+        var dateFormatted = `${d.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
+
+        var rec = {
+            day: d,
+            dateStr: `${dateFormatted} (${dayOfWeekStr})`,
+            rawDate: dateObj,
+            dayOfWeek: dayOfWeek,
+            shiftName: "Ca Hành Chính (08:00 - 17:30)",
+            shiftCode: "CA_HANH_CHINH",
+            checkIn: "--",
+            checkOut: "--",
+            hours: 0,
+            workUnits: 0,
+            status: "PRESENT",
+            statusLabel: "Hợp lệ",
+            badgeClass: "bg-success"
+        };
+
+        // 1. Ngày Chủ Nhật: Nghỉ tuần
+        if (dayOfWeek === 0) {
+            rec.shiftName = "Nghỉ Hàng Tuần (Chủ Nhật)";
+            rec.shiftCode = "OFF";
+            rec.status = "WEEKEND";
+            rec.statusLabel = "Nghỉ tuần";
+            rec.badgeClass = "bg-secondary-subtle text-secondary";
+            records.push(rec);
+            continue;
+        }
+
+        // 2. Ngày Thứ 7
+        if (dayOfWeek === 6) {
+            if ([4, 9, 13, 19].includes(emp.id)) {
+                // Ca Gãy dịch vụ
+                rec.shiftName = "Ca Gãy (10:00 - 14:00 & 17:00 - 21:00)";
+                rec.shiftCode = "CA_GAY";
+                if (d < 22) {
+                    rec.checkIn = "09:56";
+                    rec.checkOut = "21:04";
+                    rec.hours = 8.0;
+                    rec.workUnits = 1.0;
+                    rec.status = "PRESENT";
+                    rec.statusLabel = "Hợp lệ (Ca gãy)";
+                    rec.badgeClass = "bg-primary";
+                }
+            } else {
+                // Ca Sáng
+                rec.shiftName = "Ca Sáng (08:00 - 12:00)";
+                rec.shiftCode = "CA_SANG";
+                if (d < 22) {
+                    rec.checkIn = "07:56";
+                    rec.checkOut = "12:05";
+                    rec.hours = 4.0;
+                    rec.workUnits = 0.5;
+                    rec.status = "PRESENT";
+                    rec.statusLabel = "Hợp lệ (Nửa ca)";
+                    rec.badgeClass = "bg-info text-dark";
+                }
+            }
+        } 
+        // 3. Thứ 6 đối với nhân viên kỹ thuật trực ca đêm (EMP011, EMP017)
+        else if (dayOfWeek === 5 && [11, 17].includes(emp.id)) {
+            rec.shiftName = "Ca Đêm (22:00 - 06:00)";
+            rec.shiftCode = "CA_DEM";
+            if (d < 22) {
+                rec.checkIn = "21:52";
+                rec.checkOut = "06:08";
+                rec.hours = 8.0;
+                rec.workUnits = 1.0;
+                rec.status = "PRESENT";
+                rec.statusLabel = "Ca đêm (+30%)";
+                rec.badgeClass = "bg-dark text-white";
+            }
+        }
+        // 4. Các ngày trong tuần bình thường (Thứ 2 - Thứ 6)
+        else {
+            rec.shiftName = "Ca Hành Chính (08:00 - 17:30)";
+            rec.shiftCode = "CA_HANH_CHINH";
+
+            // Trường hợp đặc biệt 1: EMP002 nghỉ phép nửa buổi sáng ngày 15
+            if (emp.id === 2 && d === 15) {
+                rec.shiftName = "Ca Chiều (Nghỉ phép sáng)";
+                rec.checkIn = "13:28";
+                rec.checkOut = "17:32";
+                rec.hours = 4.0;
+                rec.workUnits = 1.0; // 0.5 công làm + 0.5 phép
+                rec.status = "HALF_LEAVE";
+                rec.statusLabel = "Nghỉ phép 0.5d";
+                rec.badgeClass = "bg-info text-dark";
+            }
+            // Trường hợp đặc biệt 2: EMP005 (hoặc nhân viên đang chọn) đi muộn ngày 19
+            else if ((emp.id === 5 || emp.id === 4) && d === 19) {
+                rec.checkIn = "08:25";
+                rec.checkOut = "17:30";
+                rec.hours = 7.6;
+                rec.workUnits = 0.95;
+                rec.status = "LATE";
+                rec.statusLabel = "Đi muộn 25p";
+                rec.badgeClass = "bg-warning text-dark";
+                lateCount++;
+                lateMinutesTotal += 25;
+            }
+            // Ngày hiện tại (22/10)
+            else if (d === 22) {
+                if (localPunch) {
+                    rec.checkIn = localPunch.time || "08:02";
+                    rec.checkOut = localPunch.action === "CHECK-OUT" ? localPunch.time : "--:-- (Đang làm việc)";
+                    rec.status = localPunch.action === "CHECK-OUT" ? "PRESENT" : "IN_PROGRESS";
+                    rec.statusLabel = localPunch.action === "CHECK-OUT" ? "Đã check-out" : "Đang trong ca";
+                    rec.badgeClass = localPunch.action === "CHECK-OUT" ? "bg-success" : "bg-primary";
+                    rec.hours = localPunch.action === "CHECK-OUT" ? 8.0 : "--";
+                    rec.workUnits = localPunch.action === "CHECK-OUT" ? 1.0 : "--";
+                } else {
+                    rec.checkIn = "08:02";
+                    rec.checkOut = "--:-- (Đang làm việc)";
+                    rec.hours = "--";
+                    rec.workUnits = "--";
+                    rec.status = "IN_PROGRESS";
+                    rec.statusLabel = "Đang trong ca";
+                    rec.badgeClass = "bg-primary";
+                }
+            }
+            // Các ngày tương lai (> 22)
+            else if (d > 22) {
+                // Kiểm tra xem có đơn xin nghỉ phép đã duyệt không
+                var hasLeave = HRM_DATA.leaveRequests.some(l => l.empCode === emp.code && l.status === "APPROVED" && d >= parseInt(l.fromDate.split('-')[2]) && d <= parseInt(l.toDate.split('-')[2]));
+                if (hasLeave) {
+                    rec.shiftName = "Nghỉ Phép Đã Duyệt";
+                    rec.checkIn = "--";
+                    rec.checkOut = "--";
+                    rec.hours = 0;
+                    rec.workUnits = 1.0;
+                    rec.status = "PAID_LEAVE";
+                    rec.statusLabel = "Nghỉ phép năm";
+                    rec.badgeClass = "bg-info text-dark";
+                } else {
+                    rec.checkIn = "--";
+                    rec.checkOut = "--";
+                    rec.hours = "--";
+                    rec.workUnits = "--";
+                    rec.status = "FUTURE";
+                    rec.statusLabel = "Kế hoạch ca";
+                    rec.badgeClass = "bg-light text-muted border";
+                }
+            }
+            // Các ngày đã qua (< 22)
+            else {
+                rec.checkIn = (d % 4 === 0) ? "08:03" : "07:55";
+                rec.checkOut = (d % 5 === 0) ? "17:35" : "17:30";
+                rec.hours = 8.0;
+                rec.workUnits = 1.0;
+                rec.status = "PRESENT";
+                rec.statusLabel = "Hợp lệ";
+                rec.badgeClass = "bg-success";
+            }
+        }
+
+        // Cộng dồn thống kê cho các ngày có tính công thực tế
+        if (typeof rec.workUnits === "number" && rec.workUnits > 0) {
+            totalUnits += rec.workUnits;
+        }
+        if (typeof rec.hours === "number" && rec.hours > 0) {
+            totalHours += rec.hours;
+        }
+        if (rec.status === "HALF_LEAVE" || rec.status === "PAID_LEAVE") {
+            paidLeaveCount += (rec.status === "HALF_LEAVE" ? 0.5 : 1.0);
+        }
+
+        records.push(rec);
+    }
+
+    return {
+        employee: emp,
+        month: month,
+        year: year,
+        daysInMonth: daysInMonth,
+        records: records,
+        metrics: {
+            accumulatedUnits: Math.min(22, Number(totalUnits.toFixed(2))),
+            standardUnits: HRM_DATA.company.standardWorkDays,
+            totalHours: Number(totalHours.toFixed(1)),
+            lateCount: lateCount || (emp.lateHours > 0 ? 1 : 0),
+            lateMinutes: lateMinutesTotal || Math.round(emp.lateHours * 60),
+            paidLeaveDays: paidLeaveCount || 0.5,
+            completionRate: Number(((Math.min(22, totalUnits) / HRM_DATA.company.standardWorkDays) * 100).toFixed(1))
+        }
+    };
+}
+
+// =========================================================================
+// HÀM TỔNG HỢP BẢNG CHẤM CÔNG CẢ CÔNG TY (20 NHÂN SỰ)
+// =========================================================================
+function getAllEmployeesTimesheetSummary(month = 10, year = 2026) {
+    var list = [];
+    var order = 1;
+
+    HRM_DATA.employees.forEach(function(emp) {
+        var tsData = getEmployeeTimesheetRecords(emp.id, month, year);
+        var recs = tsData.records.filter(r => typeof r.workUnits === "number" && r.workUnits > 0);
+
+        var standard8h = recs.filter(r => r.shiftCode === "CA_HANH_CHINH" && r.workUnits === 1.0).length;
+        var splitShift = recs.filter(r => r.shiftCode === "CA_GAY").length;
+        var halfShift = recs.filter(r => r.workUnits === 0.5).length;
+        var nightShift = recs.filter(r => r.shiftCode === "CA_DEM").length;
+        var lateEarly = recs.filter(r => r.status === "LATE").length;
+        var paidLeave = tsData.metrics.paidLeaveDays;
+
+        list.push({
+            order: order++,
+            id: emp.id,
+            code: emp.code,
+            name: emp.name,
+            department: emp.department,
+            role: emp.role,
+            standard8h: standard8h,
+            splitShift: splitShift,
+            halfShift: halfShift,
+            nightShift: nightShift,
+            lateEarly: lateEarly,
+            paidLeave: paidLeave,
+            totalHours: tsData.metrics.totalHours,
+            totalUnits: tsData.metrics.accumulatedUnits,
+            completionRate: tsData.metrics.completionRate,
+            isLocked: false,
+            statusLabel: "Chờ Duyệt"
+        });
+    });
+
+    return list;
+}
+
