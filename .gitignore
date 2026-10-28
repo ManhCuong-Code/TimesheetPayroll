@@ -45,3 +45,12 @@ __pycache__/
 scratch/
 extracted_from_doc/
 extracted_images/
+
+# Environment variables & Local Secrets (Never commit API keys or secrets)
+.env
+.env.*
+*.env
+appsettings.Local.json
+appsettings.*.local.json
+secrets.json
+*secrets.json

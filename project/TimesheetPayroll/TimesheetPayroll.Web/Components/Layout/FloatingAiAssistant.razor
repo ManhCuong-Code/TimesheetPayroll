@@ -253,13 +253,14 @@
                                         }
                                     </div>
                                     <div class="input-group input-group-sm">
-                                        <input type="@(showApiKeyText ? "text" : "password")" 
+                                        <input type="password" 
                                                class="form-control config-input" 
-                                               placeholder="Nhập khóa API (vd: AIzaSy... hoặc sk-...)"
+                                               autocomplete="off"
+                                               placeholder="@(LlmClient.IsConfigured ? "Đã nạp khóa bảo mật từ Backend (EXTERNAL_API_KEY)" : "Đặt biến môi trường EXTERNAL_API_KEY hoặc nhập tại đây...")"
                                                @bind="aiConfig.ApiKey" />
-                                        <button class="btn btn-outline-secondary" type="button" @onclick="() => showApiKeyText = !showApiKeyText" title="Ẩn/Hiện khóa">
-                                            <i class="fa-solid @(showApiKeyText ? "fa-eye-slash" : "fa-eye")"></i>
-                                        </button>
+                                    </div>
+                                    <div class="text-muted mt-1" style="font-size: 0.68rem;">
+                                        <i class="fa-solid fa-shield-halved text-success me-1"></i>@LlmClient.GetKeyDiagnosticStatus()
                                     </div>
                                 </div>
 
@@ -381,7 +382,6 @@
     // Config Tab State
     private AiConfiguration aiConfig = new();
     private string customNotesInput = string.Empty;
-    private bool showApiKeyText = false;
     private string configSuccessMsg = string.Empty;
     private string testResultMsg = string.Empty;
     private bool isTestSuccess = false;
@@ -602,10 +602,10 @@
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(aiConfig.ApiKey))
+                if (!LlmClient.IsConfigured)
                 {
                     isTestSuccess = false;
-                    testResultMsg = "Vui lòng nhập API Key trước khi kiểm tra kết nối.";
+                    testResultMsg = LlmClient.GetKeyDiagnosticStatus();
                 }
                 else
                 {
@@ -619,12 +619,12 @@
                     if (!string.IsNullOrWhiteSpace(reply))
                     {
                         isTestSuccess = true;
-                        testResultMsg = $"Kết nối {LlmClient.ProviderName} ({aiConfig.Model}) thành công trong {sw.ElapsedMilliseconds}ms! Phản hồi từ AI: \"{reply.Trim()}\"";
+                        testResultMsg = $"Kết nối {LlmClient.ProviderName} ({LlmClient.ActiveModel}) thành công trong {sw.ElapsedMilliseconds}ms! Phản hồi từ AI: \"{reply.Trim()}\"";
                     }
                     else
                     {
                         isTestSuccess = false;
-                        testResultMsg = "Không nhận được phản hồi từ mô hình. Vui lòng kiểm tra lại API Key hoặc tên model.";
+                        testResultMsg = LlmClient.GetKeyDiagnosticStatus();
                     }
                 }
             }

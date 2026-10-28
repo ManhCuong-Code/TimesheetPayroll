@@ -102,24 +102,34 @@ builder.Services.AddSingleton<ILlmClient>(sp =>
     var client = new LlmClient(httpClient);
 
     var providerStr = builder.Configuration["AiSettings:Provider"];
-    var apiKey = builder.Configuration["AiSettings:ApiKey"];
-    var model = builder.Configuration["AiSettings:Model"] ?? "gemini-3.8-flash";
+    // Ưu tiên đọc khóa từ EXTERNAL_API_KEY (User Secrets hoặc Biến môi trường), sau đó tới AiSettings:ApiKey
+    var configuredKey = builder.Configuration["EXTERNAL_API_KEY"];
+    if (LlmClient.IsPlaceholderKey(configuredKey))
+    {
+        configuredKey = builder.Configuration["AiSettings:ApiKey"];
+    }
+
+    var resolvedKey = LlmClient.ResolveBackendApiKey(configuredKey, out var detectedProvider, out _);
+    var model = builder.Configuration["AiSettings:Model"] ?? "gemini-2.5-flash";
     var isEnabled = builder.Configuration.GetValue<bool>("AiSettings:IsEnabled", true);
 
-    var provider = TimesheetPayroll.CoreBusiness.Models.AiProviderType.Gemini;
-    if (string.Equals(providerStr, "OpenAI", StringComparison.OrdinalIgnoreCase))
-        provider = TimesheetPayroll.CoreBusiness.Models.AiProviderType.OpenAi;
-    else if (string.Equals(providerStr, "Local", StringComparison.OrdinalIgnoreCase))
+    var provider = detectedProvider ?? TimesheetPayroll.CoreBusiness.Models.AiProviderType.Gemini;
+    if (string.Equals(providerStr, "Local", StringComparison.OrdinalIgnoreCase))
+    {
         provider = TimesheetPayroll.CoreBusiness.Models.AiProviderType.LocalEngine;
-
-    string envKey = provider == TimesheetPayroll.CoreBusiness.Models.AiProviderType.OpenAi
-        ? (Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? string.Empty)
-        : (Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? string.Empty);
+    }
+    else if (detectedProvider == null)
+    {
+        if (string.Equals(providerStr, "OpenAI", StringComparison.OrdinalIgnoreCase))
+            provider = TimesheetPayroll.CoreBusiness.Models.AiProviderType.OpenAi;
+        else
+            provider = TimesheetPayroll.CoreBusiness.Models.AiProviderType.Gemini;
+    }
 
     client.UpdateConfiguration(new TimesheetPayroll.CoreBusiness.Models.AiConfiguration
     {
         Provider = provider,
-        ApiKey = !string.IsNullOrWhiteSpace(apiKey) ? apiKey : envKey,
+        ApiKey = resolvedKey,
         Model = model,
         IsEnabled = isEnabled
     });
