@@ -600,6 +600,7 @@
     private DateTime currentTime = DateTime.Now;
     private System.Threading.Timer? clockTimer;
     private System.Threading.Timer? autoScanTimer;
+    private bool isDisposed = false;
 
     private BiometricCheckInState currentState = BiometricCheckInState.CameraUninitialized;
     private List<Employee> allEmployees = new();
@@ -612,8 +613,13 @@
     {
         clockTimer = new System.Threading.Timer(_ =>
         {
-            currentTime = DateTime.Now;
-            InvokeAsync(StateHasChanged);
+            if (isDisposed) return;
+            try
+            {
+                currentTime = DateTime.Now;
+                InvokeAsync(StateHasChanged);
+            }
+            catch { }
         }, null, 1000, 1000);
 
         try
@@ -705,10 +711,18 @@
             autoScanTimer?.Dispose();
             autoScanTimer = new System.Threading.Timer(async _ =>
             {
-                if (isCameraActive && !isBusy && lastResult?.IsSuccess != true)
+                if (isDisposed) return;
+                try
                 {
-                    await InvokeAsync(CaptureAndVerifyAsync);
+                    if (isCameraActive && !isBusy && lastResult?.IsSuccess != true && !isDisposed)
+                    {
+                        await InvokeAsync(CaptureAndVerifyAsync);
+                    }
                 }
+                catch (JSDisconnectedException) { }
+                catch (TaskCanceledException) { }
+                catch (ObjectDisposedException) { }
+                catch (Exception) { }
             }, null, 2000, 3500);
         }
         else
@@ -727,7 +741,7 @@
 
     private async Task CaptureAndVerifyAsync()
     {
-        if (isBusy || !isCameraActive) return;
+        if (isBusy || !isCameraActive || isDisposed) return;
 
         isBusy = true;
         currentState = BiometricCheckInState.SearchingFace;
@@ -738,6 +752,8 @@
         try
         {
             var captureRes = await JSRuntime.InvokeAsync<FaceCaptureResult>("FaceRecognitionHelper.captureFaceDescriptor", "faceCheckInVideo");
+            if (isDisposed) return;
+
             if (!captureRes.Success || captureRes.Descriptor == null || captureRes.Descriptor.Length == 0)
             {
                 currentState = BiometricCheckInState.SearchingFace;
@@ -748,7 +764,7 @@
                     Message = captureRes.Error ?? "Chưa phát hiện khuôn mặt trong khung quét. Vui lòng căn chỉnh thẳng khung oval."
                 };
                 currentHudStatus = lastResult.Message;
-                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+                try { await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error"); } catch { }
                 return;
             }
 
@@ -767,40 +783,51 @@
             };
 
             lastResult = await FaceCheckInUseCase.ExecuteAsync(request);
+            if (isDisposed) return;
 
             if (lastResult.IsSuccess && lastResult.StateCode == "SUCCESS")
             {
                 currentState = BiometricCheckInState.Success;
-                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "success");
+                try { await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "success"); } catch { }
                 currentHudStatus = $"✓ Nhận diện: {lastResult.Employee?.FullName} ({lastResult.PunchType})";
             }
             else if (lastResult.StateCode == "SHIFT_COMPLETED" || lastResult.IsCompleted)
             {
                 currentState = BiometricCheckInState.ShiftCompleted;
-                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "success");
+                try { await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "success"); } catch { }
                 currentHudStatus = "✓ Đã hoàn tất các ca làm việc trong ngày";
             }
             else if (lastResult.StateCode == "NO_SHIFT")
             {
                 currentState = BiometricCheckInState.NoShiftAssigned;
-                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+                try { await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error"); } catch { }
                 currentHudStatus = "Khuôn mặt đã xác minh, nhưng chưa có ca phân công";
             }
             else if (lastResult.StateCode == "NOT_RECOGNIZED")
             {
                 currentState = BiometricCheckInState.NotRecognized;
-                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+                try { await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error"); } catch { }
                 currentHudStatus = "Khuôn mặt không khớp với hồ sơ nào trong hệ thống";
             }
             else
             {
                 currentState = BiometricCheckInState.SaveError;
-                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+                try { await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error"); } catch { }
                 currentHudStatus = lastResult.Message;
             }
         }
+        catch (JSDisconnectedException)
+        {
+            // Ngắt kết nối circuit, thoát êm
+            return;
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
         catch (Exception ex)
         {
+            if (isDisposed) return;
             currentState = BiometricCheckInState.SaveError;
             lastResult = new FacePunchResult
             {
@@ -809,7 +836,7 @@
                 Message = $"Không thể ghi nhận chấm công: {ex.Message}"
             };
             currentHudStatus = lastResult.Message;
-            await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error");
+            try { await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "error"); } catch { }
         }
         finally
         {
@@ -899,8 +926,14 @@
 
     public async ValueTask DisposeAsync()
     {
-        clockTimer?.Dispose();
+        isDisposed = true;
+        isAutoScanEnabled = false;
+
         autoScanTimer?.Dispose();
+        autoScanTimer = null;
+
+        clockTimer?.Dispose();
+        clockTimer = null;
 
         if (isCameraActive)
         {
@@ -909,6 +942,7 @@
                 await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.stopCamera", "faceCheckInVideo");
             }
             catch { }
+            isCameraActive = false;
         }
     }
 
