@@ -674,20 +674,30 @@ code, kbd, pre, samp, .font-mono {
 }
 
 /* ==========================================================================
-   ENTERPRISE TOPBAR NAVIGATION - MÀU SẪM CHỮ TRẮNG (DARK SLATE & PURE WHITE)
+   ENTERPRISE TOPBAR NAVIGATION - MODERN ENTERPRISE DASHBOARD
+   Navy Palette: Deep Navy #172554, Hover #263B73, Accent #60A5FA, White #FFFFFF, Light Blue-Gray #CBD5E1
+   Dropdown: Crisp White #FFFFFF, Slate Text #1E293B, Soft Shadows, Radius 0.5rem
    ========================================================================== */
 :root {
-    --topbar-bg: #0f172a;               /* Màu sẫm: Slate 900 đen than */
-    --topbar-bg-hover: #1e293b;         /* Nền sẫm sáng hơn khi hover (Slate 800) */
-    --topbar-primary: #2563eb;          /* Điểm nhấn xanh dương & active */
-    --topbar-text: #ffffff;             /* Chữ trắng tinh khôi, tương phản cao */
-    --topbar-text-muted: rgba(255, 255, 255, 0.85); /* Chữ phụ, icon phụ trắng sáng */
-    --topbar-divider: rgba(255, 255, 255, 0.12); /* Đường phân cách mờ */
-    --topbar-border: rgba(255, 255, 255, 0.08);  /* Viền dưới thanh Topbar */
-    --topbar-badge-warning: #f59e0b;    /* Thông báo chờ duyệt màu cam */
+    --topbar-bg: #172554;               /* Xanh navy đậm */
+    --topbar-bg-hover: #263B73;         /* Xanh navy sáng khi hover menu */
+    --topbar-active: #263B73;           /* Nền mục đang chọn */
+    --topbar-accent: #60A5FA;           /* Xanh dương điểm nhấn và vạch nhấn active */
+    --topbar-text: #FFFFFF;             /* Chữ chính trắng */
+    --topbar-text-muted: #CBD5E1;       /* Chữ phụ, icon phụ xám xanh nhạt */
+    --topbar-border: rgba(255, 255, 255, 0.08); /* Viền dưới Topbar */
+    --topbar-height: 58px;              /* Chiều cao chuẩn 56-64px */
     
-    --content-bg: #f8fafc;              /* Nền nội dung sáng để tôn Topbar sẫm */
-    --card-bg: #ffffff;                 /* Nền thẻ nội dung màu trắng */
+    --dropdown-bg: #FFFFFF;             /* Nền dropdown trắng */
+    --dropdown-text: #1E293B;           /* Chữ dropdown xám đậm */
+    --dropdown-border: #E2E8F0;         /* Viền dropdown nhẹ nhàng */
+    --dropdown-hover-bg: #F1F5F9;       /* Hover dropdown xám sáng */
+    --dropdown-hover-text: #1E293B;
+    --dropdown-active-bg: #EFF6FF;      /* Active dropdown xanh nhạt */
+    --dropdown-active-text: #2563EB;
+    
+    --content-bg: #F8FAFC;              /* Nền nội dung sáng để tôn Topbar */
+    --card-bg: #FFFFFF;                 /* Nền thẻ nội dung */
 }
 
 /* NỀN NỘI DUNG CHÍNH */
@@ -701,16 +711,17 @@ body, .page, main {
 
 .card {
     background-color: var(--card-bg);
-    border: 1px solid #e2e8f0;
+    border: 1px solid #E2E8F0;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
-/* THANH TOPBAR MÀU SẪM */
+/* THANH TOPBAR MÀU XANH NAVY ĐẬM */
 .topbar-nav {
     background-color: var(--topbar-bg) !important;
     border-bottom: 1px solid var(--topbar-border) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-    min-height: 52px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25) !important;
+    min-height: 58px;
+    height: auto;
     padding-top: 0.35rem;
     padding-bottom: 0.35rem;
     z-index: 1040;
@@ -727,26 +738,49 @@ body, .page, main {
 }
 
 .topbar-brand .brand-icon-box {
-    background-color: var(--topbar-primary) !important;
-    color: #ffffff !important;
-    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+    background-color: #2563EB !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
 }
 
+.topbar-brand .brand-title {
+    font-weight: 700;
+    color: var(--topbar-text);
+    font-size: 0.92rem;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+}
+
+.topbar-brand .brand-subtitle {
+    font-size: 0.65rem;
+    color: var(--topbar-text-muted);
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+    margin-top: 0.2rem;
+}
+
+/* LIÊN KẾT ĐIỀU HƯỚNG TRÊN TOPBAR */
 .topbar-nav .nav-link {
     color: var(--topbar-text) !important;
-    font-size: 0.84rem;
+    font-size: 0.88rem;
     font-weight: 500;
-    padding: 0.42rem 0.7rem !important;
+    padding: 0.45rem 0.75rem !important;
     border-radius: 0.375rem;
-    transition: all 0.15s ease;
+    transition: all 0.18s ease;
     display: inline-flex;
     align-items: center;
     white-space: nowrap;
+    position: relative;
+    border: 1px solid transparent;
 }
 
 .topbar-nav .nav-link i {
     color: var(--topbar-text-muted);
-    transition: color 0.15s ease;
+    font-size: 0.92rem;
+    width: 1.1rem;
+    text-align: center;
+    margin-right: 0.45rem;
+    transition: color 0.18s ease;
 }
 
 .topbar-nav .nav-link:hover,
@@ -760,15 +794,16 @@ body, .page, main {
     color: var(--topbar-text) !important;
 }
 
+/* MỤC ĐANG ĐƯỢC CHỌN (ACTIVE) */
 .topbar-nav .nav-link.active {
     color: var(--topbar-text) !important;
-    background-color: var(--topbar-primary) !important;
+    background-color: var(--topbar-active) !important;
     font-weight: 600;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: inset 0 -2px 0 var(--topbar-accent) !important;
 }
 
 .topbar-nav .nav-link.active i {
-    color: var(--topbar-text) !important;
+    color: var(--topbar-accent) !important;
 }
 
 .topbar-nav .dropdown-toggle::after {
@@ -777,116 +812,126 @@ body, .page, main {
     border-top-color: currentColor;
 }
 
-/* MENU THẢ XUỐNG: MÀU SẪM ĐỒNG BỘ, CHỮ TRẮNG SẮC NÉT */
+/* MENU DROPDOWN: NỀN TRẮNG, CHỮ TỐI, BÓNG ĐỔ NHẸ, BO GÓC VỪA PHẢI */
 .topbar-nav .dropdown-menu {
+    background-color: var(--dropdown-bg) !important;
+    color: var(--dropdown-text) !important;
+    border: 1px solid var(--dropdown-border) !important;
     border-radius: 0.5rem;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35), 0 4px 10px rgba(0, 0, 0, 0.2) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    background-color: #1e293b !important;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 4px 10px -2px rgba(15, 23, 42, 0.05) !important;
     padding: 0.35rem;
     margin-top: 0.35rem;
     z-index: 1070;
-    min-width: 215px;
+    min-width: 220px;
 }
 
 .topbar-nav .dropdown-item {
-    color: #ffffff !important;
-    font-size: 0.84rem;
+    color: var(--dropdown-text) !important;
+    font-size: 0.86rem;
     font-weight: 500;
-    padding: 0.45rem 0.75rem;
+    padding: 0.48rem 0.75rem;
     border-radius: 0.375rem;
-    transition: all 0.15s ease;
+    transition: all 0.18s ease;
     display: flex;
     align-items: center;
 }
 
 .topbar-nav .dropdown-item i {
-    font-size: 0.9rem;
-    color: #93c5fd !important;
-}
-
-.topbar-nav .dropdown-item:hover i {
-    color: #ffffff !important;
+    font-size: 0.92rem;
+    width: 1.25rem;
+    text-align: center;
+    margin-right: 0.5rem;
+    color: #2563EB;
+    transition: color 0.18s ease;
 }
 
 .topbar-nav .dropdown-item:hover,
 .topbar-nav .dropdown-item:focus {
-    background-color: #334155 !important;
-    color: #ffffff !important;
+    background-color: var(--dropdown-hover-bg) !important;
+    color: var(--dropdown-hover-text) !important;
+}
+
+.topbar-nav .dropdown-item:hover i {
+    color: #1D4ED8 !important;
 }
 
 .topbar-nav .dropdown-item.active {
-    background-color: var(--topbar-primary) !important;
-    color: #ffffff !important;
+    background-color: var(--dropdown-active-bg) !important;
+    color: var(--dropdown-active-text) !important;
     font-weight: 600;
 }
 
 .topbar-nav .dropdown-item.active i {
-    color: #ffffff !important;
+    color: var(--dropdown-active-text) !important;
 }
 
 .topbar-nav .dropdown-divider {
-    border-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: var(--dropdown-border) !important;
     margin: 0.35rem 0;
 }
 
+/* HEADER THÔNG TIN NGƯỜI DÙNG TRONG DROPDOWN */
 .dropdown-user-header {
-    background-color: #0f172a !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
+    background-color: #F8FAFC !important;
+    border-color: var(--dropdown-border) !important;
     border-radius: 0.375rem 0.375rem 0 0;
 }
 
-/* NÚT TÀI KHOẢN NGƯỜI DÙNG */
+.dropdown-user-header .user-display-name {
+    color: #0F172A !important;
+    font-weight: 600;
+    font-size: 0.86rem;
+}
+
+.dropdown-user-header .user-sub-info {
+    color: #64748B !important;
+    font-size: 0.72rem;
+}
+
+/* NÚT TÀI KHOẢN NGƯỜI DÙNG TRÊN THANH TOPBAR */
 .topbar-user-btn {
     background-color: rgba(255, 255, 255, 0.08) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 9999px;
-    padding: 0.25rem 0.75rem 0.25rem 0.35rem;
-    color: #ffffff !important;
+    padding: 0.28rem 0.75rem 0.28rem 0.35rem;
+    color: var(--topbar-text) !important;
     display: inline-flex;
     align-items: center;
-    transition: all 0.15s ease;
+    transition: all 0.18s ease;
     cursor: pointer;
 }
 
 .topbar-user-btn:hover {
-    background-color: rgba(255, 255, 255, 0.15) !important;
+    background-color: var(--topbar-bg-hover) !important;
     border-color: rgba(255, 255, 255, 0.3) !important;
-    color: #ffffff !important;
+    color: var(--topbar-text) !important;
 }
 
 .topbar-user-btn .avatar-circle {
-    background-color: var(--topbar-primary) !important;
-    color: #ffffff;
+    background-color: #2563EB !important;
+    color: #FFFFFF;
 }
 
-/* NÚT ĐĂNG XUẤT TRONG MENU DROPDOWN */
+/* NÚT ĐĂNG XUẤT: Màu đỏ trầm #DC2626 khi hover, không dùng nền đỏ quá nổi bật khi chưa tương tác */
 .topbar-logout-item {
-    color: #ffffff !important;
-    transition: all 0.15s ease;
+    color: #475569 !important;
+    transition: all 0.18s ease;
 }
 
 .topbar-logout-item i {
-    color: #f87171 !important;
-    transition: color 0.15s ease;
+    color: #64748B !important;
+    transition: color 0.18s ease;
 }
 
 .topbar-logout-item:hover,
 .topbar-logout-item:focus {
-    background-color: rgba(239, 68, 68, 0.2) !important;
-    color: #fca5a5 !important;
+    background-color: #FEF2F2 !important;
+    color: #DC2626 !important;
 }
 
-.topbar-logout-item:hover i {
-    color: #fca5a5 !important;
-}
-
-/* THÔNG BÁO HOẶC BADGE CHỜ DUYỆT */
-.topbar-badge-pending {
-    background-color: var(--topbar-badge-warning) !important;
-    color: #ffffff !important;
-    font-weight: 700;
-    font-size: 0.65rem;
+.topbar-logout-item:hover i,
+.topbar-logout-item:focus i {
+    color: #DC2626 !important;
 }
 
 /* RESPONSIVE TRÊN MÀN HÌNH NHỎ */

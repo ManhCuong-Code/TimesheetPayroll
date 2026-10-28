@@ -12,8 +12,8 @@
                 <i class="fa-solid fa-users-gear" style="font-size: 0.95rem;"></i>
             </div>
             <div class="d-flex flex-column">
-                <span class="fw-semibold text-white fs-6 lh-1">QUẢN LÝ NHÂN SỰ</span>
-                <span class="lh-1 mt-1" style="font-size: 0.65rem; color: #D8E3F0; letter-spacing: 0.04em;">CHẤM CÔNG & TIỀN LƯƠNG</span>
+                <span class="brand-title">QUẢN LÝ NHÂN SỰ</span>
+                <span class="brand-subtitle">CHẤM CÔNG & TIỀN LƯƠNG</span>
             </div>
         </a>
 
@@ -176,10 +176,10 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
                             <li class="px-3 py-2 border-bottom mb-1 dropdown-user-header">
-                                <div class="fw-bold text-truncate text-white" style="font-size: 0.84rem;">
+                                <div class="user-display-name text-truncate">
                                     @(context.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? context.User.Identity?.Name)
                                 </div>
-                                <div class="text-white-50" style="font-size: 0.72rem;">
+                                <div class="user-sub-info">
                                     @(context.User.FindFirst("EmployeeCode")?.Value ?? "EMP") • @(context.User.FindFirst("DepartmentName")?.Value ?? "Phòng Ban")
                                 </div>
                             </li>
@@ -196,7 +196,7 @@
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <button type="button" class="dropdown-item topbar-logout-item fw-semibold" @onclick="HandleLogout">
-                                    <i class="fa-solid fa-right-from-bracket me-2 text-danger"></i>Đăng Xuất
+                                    <i class="fa-solid fa-right-from-bracket me-2"></i>Đăng Xuất
                                 </button>
                             </li>
                         </ul>
