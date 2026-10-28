@@ -54,10 +54,12 @@ public class FacePunchResult
 public interface IFaceCheckInUseCase
 {
     Task<FacePunchResult> ExecuteAsync(FacePunchRequest request);
+    Task<bool> ResetTodayPunchForTestAsync(long employeeId);
 }
 
 public class FaceCheckInUseCase : IFaceCheckInUseCase
 {
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<long, DateTime> _recentPunchCache = new();
     private readonly IFaceProfileRepository _faceProfileRepo;
     private readonly IFaceAuditLogRepository _faceAuditRepo;
     private readonly IEmployeeRepository _employeeRepo;
@@ -198,9 +200,49 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             };
         }
 
-        // 5. Tự động xác định ca làm việc từ lịch phân công bằng Stored Procedure SQL Server
+        // 4.1. Chống ghi nhận trùng lặp khi đứng trước camera nhiều giây (Debounce 10 giây)
         DateTime now = DateTime.Now;
+        if (_recentPunchCache.TryGetValue(employee.Id, out var lastPunch) && (now - lastPunch).TotalSeconds < 10)
+        {
+            var remainingSec = 10 - (int)(now - lastPunch).TotalSeconds;
+            return new FacePunchResult
+            {
+                IsSuccess = false,
+                Employee = employee,
+                Confidence = confidence,
+                Distance = distance,
+                Message = $"Nhân viên {employee.FullName} vừa thực hiện chấm công cách đây ít giây. Vui lòng chờ {remainingSec} giây để tránh thao tác trùng lặp."
+            };
+        }
+
+        // 5. Tự động xác định ca làm việc từ lịch phân công bằng Stored Procedure SQL Server
         var resolution = await _shiftAssignmentRepo.ResolveAttendanceShiftViaSpAsync(employee.Id, now);
+
+        // Trường hợp đặc biệt: Ca làm việc trong ngày đã hoàn thành đầy đủ cả lượt vào và ra
+        if (resolution.ResolutionStatus == "SHIFT_COMPLETED")
+        {
+            await _faceAuditRepo.LogActionAsync(new FaceAuditLog
+            {
+                EmployeeId = employee.Id,
+                ActionType = "VERIFY_SUCCESS",
+                SimilarityScore = (decimal)confidence,
+                PerformedBy = request.PerformedBy,
+                DeviceInfo = request.DeviceInfo,
+                IsSuccess = true,
+                FailureReason = null
+            });
+
+            return new FacePunchResult
+            {
+                IsSuccess = true,
+                Employee = employee,
+                Confidence = confidence,
+                Distance = distance,
+                ResolutionStatus = "SHIFT_COMPLETED",
+                IsCompleted = true,
+                Message = "Bạn đã hoàn thành lượt vào và ra cho tất cả các ca được phân công trong ngày."
+            };
+        }
 
         if (!resolution.IsSuccess || !resolution.ShiftId.HasValue)
         {
@@ -223,10 +265,12 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
                 Confidence = confidence,
                 Distance = distance,
                 ResolutionStatus = resolution.ResolutionStatus,
-                IsCompleted = resolution.ResolutionStatus == "SHIFT_COMPLETED",
+                IsCompleted = false,
                 Message = resolution.Message
             };
         }
+
+        _recentPunchCache[employee.Id] = now;
 
         // 6. Lưu ảnh xác minh nếu có dữ liệu ảnh chụp
         string? savedPhotoUrl = null;
@@ -296,5 +340,11 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             IsCompleted = false,
             Message = dbResult.Message
         };
+    }
+
+    public async Task<bool> ResetTodayPunchForTestAsync(long employeeId)
+    {
+        _recentPunchCache.TryRemove(employeeId, out _);
+        return await _shiftAssignmentRepo.ResetTodayPunchForTestAsync(employeeId, DateTime.Today);
     }
 }

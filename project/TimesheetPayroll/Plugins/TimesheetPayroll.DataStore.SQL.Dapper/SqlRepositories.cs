@@ -1608,6 +1608,18 @@ public class ShiftAssignmentRepository : IShiftAssignmentRepository
             new { Month = month, Year = year, EmployeeId = employeeId },
             commandType: CommandType.StoredProcedure);
     }
+
+    public async Task<bool> ResetTodayPunchForTestAsync(long employeeId, DateTime workDate)
+    {
+        using var conn = _db.CreateConnection();
+        const string sql = @"
+            SET QUOTED_IDENTIFIER ON;
+            DELETE FROM attendance_photos WHERE employee_id = @EmployeeId AND CAST(captured_at AS DATE) = @WorkDate;
+            DELETE FROM timesheet_audit_logs WHERE employee_id = @EmployeeId AND CAST(modified_at AS DATE) = @WorkDate;
+            DELETE FROM timesheets WHERE employee_id = @EmployeeId AND work_date = @WorkDate;";
+        await conn.ExecuteAsync(sql, new { EmployeeId = employeeId, WorkDate = workDate.Date });
+        return true;
+    }
 }
 
 

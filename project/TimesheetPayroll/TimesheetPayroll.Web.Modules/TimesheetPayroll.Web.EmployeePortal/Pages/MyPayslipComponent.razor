@@ -22,7 +22,7 @@
                     <select class="form-select form-select-sm" style="width: auto;" @bind="selectedPeriodId" @bind:after="OnPeriodChangedAsync">
                         @foreach (var p in allPayslips)
                         {
-                            <option value="@p.PeriodId">@FormatPeriod(p)</option>
+                            <option @key="p.PeriodId" value="@p.PeriodId">@FormatPeriod(p)</option>
                         }
                     </select>
                 </div>

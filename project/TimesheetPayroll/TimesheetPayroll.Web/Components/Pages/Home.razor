@@ -339,7 +339,7 @@
                     <div class="list-group list-group-flush">
                         @foreach (var alert in importantAlerts)
                         {
-                            <div class="list-group-item p-3 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3 @GetAlertRowClass(alert.Severity)">
+                            <div @key="alert.Title + '_' + alert.TimeStamp.Ticks" class="list-group-item p-3 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3 @GetAlertRowClass(alert.Severity)">
                                 <div class="d-flex align-items-start gap-3" style="max-width: 85%;">
                                     <div class="rounded-circle p-2 d-flex align-items-center justify-content-center mt-1 @GetAlertIconBg(alert.Severity)" style="width: 38px; height: 38px; flex-shrink: 0;">
                                         <i class="@alert.Icon fs-6"></i>
@@ -484,7 +484,7 @@
                                 <tbody>
                                     @foreach (var ts in recentTimesheets)
                                     {
-                                        <tr>
+                                        <tr @key="ts.Id">
                                             <td>
                                                 <div class="fw-semibold text-dark" style="font-size: 0.85rem;">@ts.EmployeeName</div>
                                                 <div class="text-muted" style="font-size: 0.75rem;">@ts.EmployeeCode</div>
@@ -591,7 +591,7 @@
                                     }
                                     @foreach (var item in FilteredLateRecords)
                                     {
-                                        <tr>
+                                        <tr @key="item.EmployeeCode + '_' + item.WorkDate.Ticks">
                                             <td class="text-center text-muted small">@(stt++)</td>
                                             <td class="fw-bold text-primary">@item.EmployeeCode</td>
                                             <td class="fw-semibold">@item.FullName</td>

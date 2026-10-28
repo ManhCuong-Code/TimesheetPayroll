@@ -114,7 +114,7 @@
                         <!-- Danh sách các tin nhắn trao đổi -->
                         @foreach (var msg in chatMessages)
                         {
-                            <div class="chat-bubble-wrap @(msg.IsUser ? "user" : "ai")">
+                            <div @key="msg.Id" class="chat-bubble-wrap @(msg.IsUser ? "user" : "ai")">
                                 <div class="chat-avatar-mini">
                                     @if (msg.IsUser)
                                     {
@@ -156,7 +156,7 @@
                     <div class="suggestion-chips-grid">
                         @foreach (var sug in quickSuggestions)
                         {
-                            <button type="button" class="suggestion-chip" @onclick="() => SendQuickQuestion(sug)" disabled="@isThinking">
+                            <button @key="sug" type="button" class="suggestion-chip" @onclick="() => SendQuickQuestion(sug)" disabled="@isThinking">
                                 <i class="fa-regular fa-lightbulb text-warning"></i>
                                 <span>@sug</span>
                             </button>

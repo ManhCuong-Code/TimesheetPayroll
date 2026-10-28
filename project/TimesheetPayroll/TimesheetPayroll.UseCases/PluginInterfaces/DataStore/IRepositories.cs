@@ -323,6 +323,7 @@ public interface IShiftAssignmentRepository
     Task<FacePunchDbResult> ProcessFaceAttendanceViaSpAsync(long employeeId, long shiftId, DateTime workDate, DateTime punchDateTime, string punchAction, string? deviceInfo, string performedBy, decimal confidence, double distance, string? photoUrl = null);
     Task<IEnumerable<AttendanceStatusDto>> GetAttendanceStatusViaSpAsync(long employeeId, DateTime targetDate);
     Task<IEnumerable<dynamic>> GetMonthlyAttendanceSummaryViaSpAsync(int month, int year, long? employeeId = null);
+    Task<bool> ResetTodayPunchForTestAsync(long employeeId, DateTime workDate);
 }
 
 

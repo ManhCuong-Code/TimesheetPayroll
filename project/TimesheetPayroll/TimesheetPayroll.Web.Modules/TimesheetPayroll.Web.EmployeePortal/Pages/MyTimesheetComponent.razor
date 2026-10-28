@@ -468,7 +468,7 @@
                             int stt = 1;
                             @foreach (var item in summaryList)
                             {
-                                <tr>
+                                <tr @key="item.EmployeeId">
                                     <td class="text-center text-muted">@(stt++)</td>
                                     <td class="fw-bold text-primary font-monospace">@item.EmployeeCode</td>
                                     <td>
@@ -559,7 +559,7 @@
                         {
                             @foreach (var log in auditLogs)
                             {
-                                <tr>
+                                <tr @key="log.Id">
                                     <td class="font-monospace text-muted">@log.ModifiedAt.ToString("dd/MM/yyyy HH:mm:ss")</td>
                                     <td class="fw-bold">[@log.EmployeeCode] @log.EmployeeName</td>
                                     <td><span class="badge bg-info-subtle text-info border">@log.Action</span></td>
@@ -977,7 +977,7 @@
                             @{ int printStt = 1; }
                             @foreach (var item in summaryList)
                             {
-                                <tr>
+                                <tr @key="@($"print_{item.EmployeeId}")">
                                     <td>@(printStt++)</td>
                                     <td class="font-monospace fw-bold">@item.EmployeeCode</td>
                                     <td class="text-start fw-semibold">@item.FullName</td>
