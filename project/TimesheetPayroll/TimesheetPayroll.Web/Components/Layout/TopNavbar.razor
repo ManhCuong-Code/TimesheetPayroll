@@ -175,28 +175,28 @@
                             </span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow">
-                            <li class="px-3 py-2 border-bottom mb-1" style="background-color: #F8FAFC; border-color: #E2E8F0 !important;">
-                                <div class="fw-bold text-truncate" style="font-size: 0.84rem; color: #16324F;">
+                            <li class="px-3 py-2 border-bottom mb-1 dropdown-user-header">
+                                <div class="fw-bold text-truncate text-white" style="font-size: 0.84rem;">
                                     @(context.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? context.User.Identity?.Name)
                                 </div>
-                                <div style="font-size: 0.72rem; color: #64748B;">
+                                <div class="text-white-50" style="font-size: 0.72rem;">
                                     @(context.User.FindFirst("EmployeeCode")?.Value ?? "EMP") • @(context.User.FindFirst("DepartmentName")?.Value ?? "Phòng Ban")
                                 </div>
                             </li>
                             <li>
                                 <NavLink class="dropdown-item" href="/change-password">
-                                    <i class="fa-solid fa-key me-2 text-primary"></i>Đổi Mật Khẩu
+                                    <i class="fa-solid fa-key me-2 text-warning"></i>Đổi Mật Khẩu
                                 </NavLink>
                             </li>
                             <li>
                                 <NavLink class="dropdown-item" href="/login">
-                                    <i class="fa-solid fa-users me-2 text-primary"></i>Đổi Tài Khoản
+                                    <i class="fa-solid fa-users me-2 text-info"></i>Đổi Tài Khoản
                                 </NavLink>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <button type="button" class="dropdown-item topbar-logout-item fw-semibold" @onclick="HandleLogout">
-                                    <i class="fa-solid fa-right-from-bracket me-2"></i>Đăng Xuất
+                                    <i class="fa-solid fa-right-from-bracket me-2 text-danger"></i>Đăng Xuất
                                 </button>
                             </li>
                         </ul>
