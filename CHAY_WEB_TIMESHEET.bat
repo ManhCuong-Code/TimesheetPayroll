@@ -15,9 +15,9 @@ echo [1/3] Đang kiểm tra dịch vụ Microsoft SQL Server (SQLEXPRESS)...
 powershell -Command "Get-Service -Name '*SQLEXPRESS*' -ErrorAction SilentlyContinue | Where-Object { $_.Status -ne 'Running' } | Start-Service" >nul 2>&1
 
 echo [2/3] Dọn dẹp tiến trình cũ giải phóng cổng mạng (Port 5050, 5000)...
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":5050" ^| findstr "LISTENING"') do (
-    taskkill /f /pid %%a >nul 2>&1
-)
+powershell -Command "Get-NetTCPConnection -LocalPort 5050, 5000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+taskkill /f /t /im TimesheetPayroll.Web.exe >nul 2>&1
+timeout /t 1 /nobreak >nul
 
 echo [3/3] Đang khởi động máy chủ Web .NET 10...
 echo       Địa chỉ truy cập: http://localhost:5050 (hoặc http://localhost:5000)
