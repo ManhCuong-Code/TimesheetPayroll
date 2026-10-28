@@ -326,17 +326,17 @@ window.FaceRecognitionHelper = (function () {
             const h = canvas.height;
             ctx.clearRect(0, 0, w, h);
 
-            // Vùng mục tiêu trung tâm (Target Box: 58% chiều rộng, 72% chiều cao)
-            const boxW = Math.min(w * 0.58, 290);
-            const boxH = Math.min(h * 0.72, 350);
+            // Vùng mục tiêu trung tâm (Target Box: tỷ lệ khuôn mặt nhân trắc học tự nhiên 1 : 1.25)
+            const boxW = Math.min(w * 0.54, 270);
+            const boxH = Math.min(h * 0.70, 335);
             const boxX = (w - boxW) / 2;
             const boxY = (h - boxH) / 2;
 
             // 1. Phân tích frame
             const livenessData = evaluateFrameLiveness(video, boxX, boxY, boxW, boxH, videoId);
 
-            // 2. Lớp phủ mờ xung quanh ngoài vùng quét
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.50)';
+            // 2. Lớp phủ viền tinh tế (vignette nhẹ), giữ nguyên độ sáng và độ nét của khuôn mặt
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.18)';
             ctx.fillRect(0, 0, w, boxY); // Top
             ctx.fillRect(0, boxY + boxH, w, h - (boxY + boxH)); // Bottom
             ctx.fillRect(0, boxY, boxX, boxH); // Left
@@ -344,23 +344,25 @@ window.FaceRecognitionHelper = (function () {
 
             // 3. Khung mục tiêu: Xanh lục khi đạt, Vàng cam khi đang căn chỉnh, Đỏ khi có lỗi/nhiều mặt
             const isReady = livenessData.isCentered && !livenessData.isMultipleFaces;
-            let strokeColor = '#eab308'; // Vàng cam
+            let strokeColor = '#eab308'; // Vàng cam đang tìm kiếm/căn chỉnh
             if (livenessData.isMultipleFaces) {
-                strokeColor = '#ef4444'; // Đỏ cảnh báo
+                strokeColor = '#ef4444'; // Đỏ cảnh báo nhiều người
             } else if (isReady) {
-                strokeColor = '#22c55e'; // Xanh lục ngọc
+                strokeColor = '#10b981'; // Xanh ngọc lục bảo sẵn sàng nhận diện
             } else if (livenessData.hasFace) {
-                strokeColor = '#3b82f6'; // Xanh dương
+                strokeColor = '#06b6d4'; // Cyan đã bắt được khuôn mặt
             }
 
             ctx.save();
             ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = 3.5;
+            ctx.lineWidth = 3.0;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
             ctx.shadowColor = strokeColor;
-            ctx.shadowBlur = 12;
+            ctx.shadowBlur = 10;
 
-            // Vẽ 4 góc định vị (Corner Brackets)
-            const cornerLen = 32;
+            // Vẽ 4 góc định vị cân đối (Corner Brackets)
+            const cornerLen = 28;
             ctx.beginPath();
             // Góc trên - trái
             ctx.moveTo(boxX, boxY + cornerLen);
@@ -380,17 +382,17 @@ window.FaceRecognitionHelper = (function () {
             ctx.lineTo(boxX + boxW, boxY + boxH - cornerLen);
             ctx.stroke();
 
-            // Khung oval trung tâm nét đứt
+            // Khung oval trung tâm nét đứt thanh mảnh
             ctx.lineWidth = 1.8;
-            ctx.setLineDash([8, 6]);
+            ctx.setLineDash([7, 6]);
             ctx.beginPath();
-            ctx.ellipse(boxX + boxW / 2, boxY + boxH / 2, boxW * 0.46, boxH * 0.46, 0, 0, Math.PI * 2);
+            ctx.ellipse(boxX + boxW / 2, boxY + boxH / 2, boxW * 0.45, boxH * 0.46, 0, 0, Math.PI * 2);
             ctx.stroke();
             ctx.setLineDash([]);
             ctx.restore();
 
-            // 4. Tia laser quét chuyển động (Laser Scanline)
-            scanLineY += 4.0 * scanDir;
+            // 4. Tia laser quét chuyển động nhẹ nhàng (không che khuất mắt mũi)
+            scanLineY += 3.2 * scanDir;
             if (scanLineY > boxH) {
                 scanLineY = boxH;
                 scanDir = -1;
@@ -401,35 +403,43 @@ window.FaceRecognitionHelper = (function () {
 
             const currentScanY = boxY + scanLineY;
             const grad = ctx.createLinearGradient(boxX, currentScanY, boxX + boxW, currentScanY);
-            grad.addColorStop(0, 'rgba(34, 197, 94, 0.0)');
-            grad.addColorStop(0.5, isReady ? 'rgba(34, 197, 94, 0.90)' : (livenessData.isMultipleFaces ? 'rgba(239, 68, 68, 0.90)' : 'rgba(59, 130, 246, 0.90)'));
-            grad.addColorStop(1, 'rgba(34, 197, 94, 0.0)');
+            grad.addColorStop(0, 'rgba(16, 185, 129, 0.0)');
+            grad.addColorStop(0.5, isReady ? 'rgba(16, 185, 129, 0.70)' : (livenessData.isMultipleFaces ? 'rgba(239, 68, 68, 0.70)' : 'rgba(6, 182, 212, 0.70)'));
+            grad.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
 
             ctx.save();
             ctx.strokeStyle = grad;
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 2.0;
             ctx.shadowColor = strokeColor;
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 8;
             ctx.beginPath();
-            ctx.moveTo(boxX + 12, currentScanY);
-            ctx.lineTo(boxX + boxW - 12, currentScanY);
+            ctx.moveTo(boxX + 16, currentScanY);
+            ctx.lineTo(boxX + boxW - 16, currentScanY);
             ctx.stroke();
             ctx.restore();
 
-            // 5. Pill badge trạng thái phía trên khung hình
+            // 5. Pill badge trạng thái phía trên khung hình (luôn hiển thị xuôi chiều, sắc nét)
             ctx.save();
-            ctx.font = 'bold 13px "Be Vietnam Pro", "Plus Jakarta Sans", Arial, sans-serif';
+            ctx.font = '600 13px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
             ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
 
             const statusText = livenessData.statusText;
             const textWidth = ctx.measureText(statusText).width;
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
-            ctx.beginPath();
-            ctx.roundRect(w / 2 - textWidth / 2 - 16, Math.max(10, boxY - 38), textWidth + 32, 30, 15);
-            ctx.fill();
+            const pillW = textWidth + 30;
+            const pillH = 30;
+            const pillY = Math.max(10, boxY - 38);
 
-            ctx.fillStyle = strokeColor;
-            ctx.fillText(statusText, w / 2, Math.max(30, boxY - 19));
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.roundRect(w / 2 - pillW / 2, pillY, pillW, pillH, 15);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(statusText, w / 2, pillY + pillH / 2);
             ctx.restore();
 
             // 6. Báo cáo về Blazor định kỳ nếu có delegate

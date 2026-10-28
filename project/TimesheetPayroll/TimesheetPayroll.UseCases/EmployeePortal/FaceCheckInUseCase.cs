@@ -32,6 +32,7 @@ public class FacePunchRequest
 public class FacePunchResult
 {
     public bool IsSuccess { get; set; }
+    public string? StateCode { get; set; } // "SUCCESS", "NOT_RECOGNIZED", "NO_SHIFT", "SHIFT_COMPLETED", "SAVE_ERROR", "DEBOUNCE", "LIVENESS_FAIL", "INACTIVE_ACCOUNT", "NO_PROFILES"
     public string Message { get; set; } = string.Empty;
     public Employee? Employee { get; set; }
     public string? PunchType { get; set; } // CHECK_IN hoặc CHECK_OUT
@@ -103,6 +104,7 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             return new FacePunchResult
             {
                 IsSuccess = false,
+                StateCode = "NO_DESCRIPTOR",
                 Message = "Không nhận được dữ liệu mẫu khuôn mặt từ camera. Vui lòng căn chỉnh thẳng khung hình và thử lại."
             };
         }
@@ -123,6 +125,7 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             return new FacePunchResult
             {
                 IsSuccess = false,
+                StateCode = "LIVENESS_FAIL",
                 Message = "Cảnh báo chống giả mạo: Hệ thống chưa phát hiện đủ cử động tính sống tự nhiên (chớp mắt hoặc thở nhẹ). Vui lòng nhìn thẳng và giữ yên."
             };
         }
@@ -134,28 +137,16 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             return new FacePunchResult
             {
                 IsSuccess = false,
+                StateCode = "NO_PROFILES",
                 Message = "Hệ thống chưa có hồ sơ khuôn mặt nào được đăng ký hợp lệ bởi Quản trị viên."
             };
         }
 
-        EmployeeFaceProfile? bestMatch = null;
-        double distance = 1.0;
-        double confidence = 0.0;
-
-        // Nếu có cờ giả lập thử nghiệm (Sandbox Demo không camera)
-        if (request.SimulatedEmployeeId.HasValue)
-        {
-            bestMatch = activeProfiles.FirstOrDefault(p => p.EmployeeId == request.SimulatedEmployeeId.Value);
-            distance = 0.12;
-            confidence = 96.5;
-        }
-        else
-        {
-            var matchResult = _biometricService.FindBestMatch(request.Descriptor, activeProfiles, maxDistanceThreshold: 0.55);
-            bestMatch = matchResult.MatchedProfile;
-            distance = matchResult.Distance;
-            confidence = matchResult.Confidence;
-        }
+        // Chỉ đối sánh thực sự dựa trên thuật toán sinh trắc học 128-D L2-Normalized (Ngưỡng tiêu chuẩn 0.58)
+        var matchResult = _biometricService.FindBestMatch(request.Descriptor, activeProfiles, maxDistanceThreshold: 0.58);
+        var bestMatch = matchResult.MatchedProfile;
+        double distance = matchResult.Distance;
+        double confidence = matchResult.Confidence;
 
         if (bestMatch == null)
         {
@@ -166,15 +157,16 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
                 PerformedBy = request.PerformedBy,
                 DeviceInfo = request.DeviceInfo,
                 IsSuccess = false,
-                FailureReason = $"Không tìm thấy nhân viên khớp (Khoảng cách tốt nhất = {distance:F3} > ngưỡng 0.55)"
+                FailureReason = $"Không tìm thấy nhân viên khớp (Khoảng cách tốt nhất = {distance:F3} > ngưỡng 0.58)"
             });
 
             return new FacePunchResult
             {
                 IsSuccess = false,
+                StateCode = "NOT_RECOGNIZED",
                 Distance = distance,
                 Confidence = confidence,
-                Message = "Không thể nhận diện danh tính. Khuôn mặt không khớp với hồ sơ nhân viên nào đã đăng ký trong hệ thống."
+                Message = "Không thể nhận diện danh tính. Khuôn mặt không khớp với bất kỳ hồ sơ nhân viên nào đã đăng ký trong hệ thống."
             };
         }
 
@@ -196,6 +188,9 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             return new FacePunchResult
             {
                 IsSuccess = false,
+                StateCode = "INACTIVE_ACCOUNT",
+                Distance = distance,
+                Confidence = confidence,
                 Message = "Tài khoản nhân sự này hiện không ở trạng thái làm việc tích cực (ACTIVE)."
             };
         }
@@ -208,6 +203,7 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             return new FacePunchResult
             {
                 IsSuccess = false,
+                StateCode = "DEBOUNCE",
                 Employee = employee,
                 Confidence = confidence,
                 Distance = distance,
@@ -235,6 +231,7 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             return new FacePunchResult
             {
                 IsSuccess = true,
+                StateCode = "SHIFT_COMPLETED",
                 Employee = employee,
                 Confidence = confidence,
                 Distance = distance,
@@ -261,12 +258,15 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             return new FacePunchResult
             {
                 IsSuccess = false,
+                StateCode = "NO_SHIFT",
                 Employee = employee,
                 Confidence = confidence,
                 Distance = distance,
                 ResolutionStatus = resolution.ResolutionStatus,
                 IsCompleted = false,
-                Message = resolution.Message
+                Message = string.IsNullOrWhiteSpace(resolution.Message)
+                    ? $"Đã nhận diện thành công nhân viên {employee.FullName}. Tuy nhiên hệ thống chưa tìm thấy ca làm việc nào được phân công phù hợp trong khung giờ này."
+                    : resolution.Message
             };
         }
 
@@ -302,6 +302,7 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
             return new FacePunchResult
             {
                 IsSuccess = false,
+                StateCode = "SAVE_ERROR",
                 Employee = employee,
                 Confidence = confidence,
                 Distance = distance,
@@ -322,6 +323,7 @@ public class FaceCheckInUseCase : IFaceCheckInUseCase
         return new FacePunchResult
         {
             IsSuccess = true,
+            StateCode = "SUCCESS",
             Employee = employee,
             PunchType = dbResult.PunchType,
             PunchTime = dbResult.PunchTime,

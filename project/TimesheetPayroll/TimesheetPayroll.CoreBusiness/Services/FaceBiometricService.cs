@@ -94,12 +94,20 @@ public class FaceBiometricService : IFaceBiometricService
     public double DistanceToConfidence(double distance)
     {
         // Khi distance = 0 => 100% (Hoàn hảo)
-        // Khi distance = 0.40 => ~85% (Rất cao)
-        // Khi distance = 0.58 => ~70% (Đạt ngưỡng xác minh)
+        // Khi distance = 0.40 => ~79% (Rất cao)
+        // Khi distance = 0.58 => 70% (Đạt ngưỡng xác minh tiêu chuẩn)
         // Khi distance >= 0.85 => 0% (Không khớp)
         if (distance <= 0) return 100.0;
         if (distance >= 0.85) return 0.0;
-        double conf = (1.0 - (distance / 0.85)) * 100.0;
+        double conf;
+        if (distance <= 0.58)
+        {
+            conf = 100.0 - (distance / 0.58) * 30.0;
+        }
+        else
+        {
+            conf = 70.0 * (1.0 - (distance - 0.58) / (0.85 - 0.58));
+        }
         return Math.Round(Math.Clamp(conf, 0.0, 100.0), 1);
     }
 
