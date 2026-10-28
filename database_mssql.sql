@@ -1,4 +1,4 @@
--- ============================================================================
+﻿-- ============================================================================
 -- HRMS PRO - TIMESHEET & PAYROLL ENTERPRISE DATABASE SYSTEM
 -- CƠ SỞ DỮ LIỆU DOANH NGHIỆP: BangChamCongDB (MICROSOFT SQL SERVER)
 -- HỆ THỐNG QUẢN LÝ NHÂN SỰ – CHẤM CÔNG – TÍNH LƯƠNG
@@ -339,6 +339,8 @@ CREATE INDEX idx_attendance_requests_status ON attendance_requests(approval_stat
 CREATE INDEX idx_payslips_period_emp ON payslips(period_id, employee_id);
 CREATE INDEX idx_payslips_employee ON payslips(employee_id);
 CREATE INDEX idx_payslip_lines_payslip ON payslip_lines(payslip_id);
+CREATE INDEX idx_face_profiles_active_emp ON employee_face_profiles(is_active, employee_id);
+CREATE INDEX idx_face_audit_logs_created_at ON face_audit_logs(created_at DESC) INCLUDE (employee_id, action_type, similarity_score, performed_by, device_info, is_success, failure_reason);
 GO
 
 -- ============================================================================

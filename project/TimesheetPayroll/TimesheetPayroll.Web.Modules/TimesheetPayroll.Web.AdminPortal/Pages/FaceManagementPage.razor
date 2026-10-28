@@ -635,9 +635,9 @@
                                 </div>
                             </div>
 
+                            <!-- BƯỚC 1: CHỌN NHÂN VIÊN CẦN ĐĂNG KÝ -->
                             @if (wizardStep < 5)
                             {
-                                <!-- BƯỚC 1: CHỌN NHÂN VIÊN CẦN ĐĂNG KÝ -->
                                 <div class="mb-3 p-3 bg-white rounded-3 border shadow-sm">
                                     <label class="form-label small fw-bold text-dark d-flex justify-content-between align-items-center mb-1">
                                         <span><i class="fa-solid fa-user-check me-1 text-primary"></i>Nhân viên tiếp nhận đăng ký sinh trắc:</span>
@@ -648,7 +648,7 @@
                                             </span>
                                         }
                                     </label>
-                                    <select class="form-select fw-semibold" @bind="modalSelectedEmployeeId" disabled="@(isModalCameraActive || isBusyModal)">
+                                    <select class="form-select fw-semibold" @bind="modalSelectedEmployeeId" disabled="@isBusyModal">
                                         @foreach (var emp in allEmployees)
                                         {
                                             var profile = faceProfiles.FirstOrDefault(p => p.EmployeeId == emp.Id);
@@ -659,27 +659,30 @@
                                         }
                                     </select>
                                 </div>
+                            }
 
-                                <!-- BƯỚC 2: CAMERA VIEWPORT & HUD CĂN CHỈNH -->
-                                <div class="enroll-camera-box mb-3">
-                                    <video id="adminEnrollVideo" autoplay playsinline muted 
-                                           style="display: @(isModalCameraActive ? "block" : "none");"></video>
-                                    <canvas id="adminEnrollCanvas" 
-                                            style="display: @(isModalCameraActive ? "block" : "none");"></canvas>
+                            <!-- BƯỚC 2: CAMERA VIEWPORT & HUD CĂN CHỈNH (Giữ phần tử DOM không bị hủy ở bước 5 để tái sử dụng luồng phần cứng tức thì) -->
+                            <div class="enroll-camera-box mb-3" style="display: @(wizardStep < 5 ? "flex" : "none");">
+                                <video id="adminEnrollVideo" autoplay playsinline muted 
+                                       style="display: @(isModalCameraActive ? "block" : "none");"></video>
+                                <canvas id="adminEnrollCanvas" 
+                                        style="display: @(isModalCameraActive ? "block" : "none");"></canvas>
 
-                                    @if (!isModalCameraActive)
-                                    {
-                                        <div class="text-center p-4">
-                                            <i class="fa-solid fa-camera fs-1 text-secondary mb-2 d-block"></i>
-                                            <div class="text-white fw-semibold mb-1">Camera chưa kích hoạt</div>
-                                            <div class="text-white-50 small mb-3">Nhấn nút bên dưới để mở camera thu thập vector đặc trưng 128-D.</div>
-                                            <button type="button" class="btn btn-primary btn-sm px-4 shadow" @onclick="StartAdminCameraAsync" disabled="@isBusyModal">
-                                                <i class="fa-solid fa-video me-1"></i>Kích Hoạt Camera
-                                            </button>
-                                        </div>
-                                    }
-                                </div>
+                                @if (!isModalCameraActive)
+                                {
+                                    <div class="text-center p-4">
+                                        <i class="fa-solid fa-camera fs-1 text-secondary mb-2 d-block"></i>
+                                        <div class="text-white fw-semibold mb-1">Camera chưa kích hoạt</div>
+                                        <div class="text-white-50 small mb-3">Nhấn nút bên dưới để mở camera thu thập vector đặc trưng 128-D.</div>
+                                        <button type="button" class="btn btn-primary btn-sm px-4 shadow" @onclick="StartAdminCameraAsync" disabled="@isBusyModal">
+                                            <i class="fa-solid fa-video me-1"></i>Kích Hoạt Camera
+                                        </button>
+                                    </div>
+                                }
+                            </div>
 
+                            @if (wizardStep < 5)
+                            {
                                 @if (!string.IsNullOrEmpty(modalError))
                                 {
                                     <div class="alert alert-danger py-2 px-3 small mb-3 rounded-3 shadow-sm">
@@ -698,7 +701,7 @@
                                                     @(wizardStep == 3 ? "Giai đoạn 3/5: Đang trích xuất vector đặc trưng 128-D..." : "Giai đoạn 4/5: Đang ghi nhận vào cơ sở dữ liệu SQL Server...")
                                                 </div>
                                                 <div class="text-muted small">
-                                                    @(wizardStep == 3 ? "Thực hiện thuật toán trích xuất đa ô 4x4, Zero-centering và L2-Normalization." : "Lưu trữ vector an toàn và ghi vết nhật ký kiểm toán sinh trắc học.")
+                                                    @(wizardStep == 3 ? "Kiểm tra chất lượng ảnh, căn chỉnh tâm khuôn mặt, trích xuất đa ô 4x4 và L2-Normalization." : "Lưu trữ vector 128-D và ghi vết kiểm toán trong 1 giao dịch SQL Server duy nhất.")
                                                 </div>
                                             </div>
                                         </div>
@@ -721,26 +724,26 @@
                             }
                             else
                             {
-                                <!-- BƯỚC 5: XÁC NHẬN KẾT QUẢ THÀNH CÔNG -->
-                                <div class="text-center py-3">
-                                    <div class="bg-success-subtle text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 72px; height: 72px;">
-                                        <i class="fa-solid fa-circle-check fs-1"></i>
+                                <!-- BƯỚC 5: XÁC NHẬN KẾT QUẢ THÀNH CÔNG & TELEMETRY TỪNG GIAI ĐOẠN -->
+                                <div class="text-center py-2">
+                                    <div class="bg-success-subtle text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 64px; height: 64px;">
+                                        <i class="fa-solid fa-circle-check fs-2"></i>
                                     </div>
                                     <h4 class="fw-bold text-success mb-1">ĐĂNG KÝ SINH TRẮC HỌC THÀNH CÔNG!</h4>
                                     <p class="text-muted small mb-3">
-                                        Hồ sơ khuôn mặt của nhân viên đã được trích xuất vector 128-D và lưu trữ an toàn trong cơ sở dữ liệu.
+                                        Hồ sơ khuôn mặt của nhân viên đã được chuẩn hóa 128-D và lưu trữ nguyên tử trong SQL Server.
                                     </p>
 
-                                    <!-- THÔNG TIN TÓM TẮT -->
-                                    <div class="card border-0 bg-white shadow-sm rounded-3 p-3 text-start mb-3 mx-auto" style="max-width: 520px;">
+                                    <!-- THÔNG TIN TÓM TẮT & ĐO LƯỜNG HIỆU NĂNG -->
+                                    <div class="card border-0 bg-white shadow-sm rounded-3 p-3 text-start mb-2 mx-auto" style="max-width: 560px;">
                                         <div class="d-flex align-items-center gap-3 pb-3 border-bottom mb-3">
                                             @if (!string.IsNullOrEmpty(enrolledPhotoBase64))
                                             {
-                                                <img src="@enrolledPhotoBase64" class="rounded-3 border shadow-sm" style="width: 76px; height: 76px; object-fit: cover;" alt="Khuôn mặt" />
+                                                <img src="@enrolledPhotoBase64" class="rounded-3 border shadow-sm" style="width: 72px; height: 72px; object-fit: cover;" alt="Khuôn mặt" />
                                             }
                                             else
                                             {
-                                                <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center fw-bold fs-3" style="width: 76px; height: 76px;">
+                                                <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center fw-bold fs-3" style="width: 72px; height: 72px;">
                                                     @(enrolledEmployeeName?.FirstOrDefault() ?? 'U')
                                                 </div>
                                             }
@@ -751,7 +754,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="row g-2 small">
+                                        <div class="row g-2 small mb-2 pb-2 border-bottom">
                                             <div class="col-6">
                                                 <span class="text-muted d-block">Trạng thái hồ sơ:</span>
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle">
@@ -759,18 +762,56 @@
                                                 </span>
                                             </div>
                                             <div class="col-6">
-                                                <span class="text-muted d-block">Độ dài vector:</span>
-                                                <span class="badge bg-light text-dark border fw-bold">128 Chiều (L2 Normalized)</span>
-                                            </div>
-                                            <div class="col-6">
-                                                <span class="text-muted d-block">Thời gian trích xuất:</span>
-                                                <span class="fw-semibold text-primary">@extractDurationMs ms</span>
-                                            </div>
-                                            <div class="col-6">
-                                                <span class="text-muted d-block">Thời gian ghi CSDL:</span>
-                                                <span class="fw-semibold text-success">@dbSaveDurationMs ms</span>
+                                                <span class="text-muted d-block">Chuẩn hóa đặc trưng:</span>
+                                                <span class="badge bg-light text-dark border fw-bold">128-D Unit Sphere (||V|| = 1.0)</span>
                                             </div>
                                         </div>
+
+                                        @if (lastTelemetry != null)
+                                        {
+                                            <div class="small">
+                                                <div class="fw-bold text-dark mb-2 d-flex justify-content-between align-items-center">
+                                                    <span><i class="fa-solid fa-gauge-high text-primary me-1"></i>Thời Gian Xử Lý Thực Tế Theo Giai Đoạn:</span>
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                                        Tổng: @lastTelemetry.TotalEnrollmentMs.ToString("0.##") ms
+                                                    </span>
+                                                </div>
+                                                <div class="row g-1 text-muted" style="font-size: 0.78rem;">
+                                                    <div class="col-6 d-flex justify-content-between pe-2">
+                                                        <span>1. Camera Init @(lastTelemetry.ReusedCameraStream ? "(Tái sử dụng)" : ""):</span>
+                                                        <strong class="text-dark font-monospace">@lastTelemetry.CameraInitMs.ToString("0.##") ms</strong>
+                                                    </div>
+                                                    <div class="col-6 d-flex justify-content-between ps-2">
+                                                        <span>2. Phát hiện & Chất lượng:</span>
+                                                        <strong class="text-dark font-monospace">@lastTelemetry.FaceDetectionMs.ToString("0.##") ms</strong>
+                                                    </div>
+                                                    <div class="col-6 d-flex justify-content-between pe-2">
+                                                        <span>3. Căn chỉnh mặt (Alignment):</span>
+                                                        <strong class="text-dark font-monospace">@lastTelemetry.FaceAlignmentMs.ToString("0.##") ms</strong>
+                                                    </div>
+                                                    <div class="col-6 d-flex justify-content-between ps-2">
+                                                        <span>4. Tiền xử lý (160×160):</span>
+                                                        <strong class="text-dark font-monospace">@lastTelemetry.PreprocessingMs.ToString("0.##") ms</strong>
+                                                    </div>
+                                                    <div class="col-6 d-flex justify-content-between pe-2">
+                                                        <span>5. Trích xuất 128-D:</span>
+                                                        <strong class="text-primary font-monospace">@lastTelemetry.EmbeddingInferenceMs.ToString("0.##") ms</strong>
+                                                    </div>
+                                                    <div class="col-6 d-flex justify-content-between ps-2">
+                                                        <span>6. Kiểm tra chuẩn hóa L2:</span>
+                                                        <strong class="text-dark font-monospace">@lastTelemetry.EmbeddingValidationMs.ToString("0.##") ms</strong>
+                                                    </div>
+                                                    <div class="col-6 d-flex justify-content-between pe-2">
+                                                        <span>7. Truy vấn SQL Server:</span>
+                                                        <strong class="text-dark font-monospace">@lastTelemetry.SqlQueryMs.ToString("0.##") ms</strong>
+                                                    </div>
+                                                    <div class="col-6 d-flex justify-content-between ps-2">
+                                                        <span>8. Ghi CSDL & Audit Log:</span>
+                                                        <strong class="text-success font-monospace">@lastTelemetry.DbWriteMs.ToString("0.##") ms</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
                                     </div>
                                 </div>
                             }
@@ -968,7 +1009,6 @@
                 user?.Username ?? "admin", 
                 user?.Role);
 
-            // Cập nhật in-place tránh reload lại toàn bộ danh sách
             selectedProfileForEdit.Notes = editModalNotes;
             selectedProfileForEdit.LivenessThreshold = editModalThreshold;
             selectedProfileForEdit.UpdatedAt = DateTime.Now;
@@ -1113,8 +1153,9 @@
     private string modalEnrollNote = string.Empty;
     private string modalError = string.Empty;
 
-    private int extractDurationMs = 0;
-    private long dbSaveDurationMs = 0;
+    private double lastCameraInitMs = 0;
+    private bool lastCameraReused = false;
+    private FaceEnrollmentTelemetryDto? lastTelemetry = null;
     private string? enrolledPhotoBase64 = null;
     private string? enrolledEmployeeName = null;
     private string? enrolledEmployeeCode = null;
@@ -1171,7 +1212,6 @@
 
             if (role == "ROLE_ADMIN")
             {
-                // Chạy song song cả hai truy vấn, giảm 50% thời gian chờ
                 var profilesTask = FaceManagementUseCases.GetAllProfilesAsync(role);
                 var auditLogsTask = FaceManagementUseCases.GetAuditLogsAsync(role, 100);
 
@@ -1180,7 +1220,6 @@
                 faceProfiles = (await profilesTask).ToList();
                 auditLogs = (await auditLogsTask).ToList();
 
-                // Loại bỏ N+1 query: Ánh xạ danh sách nhân viên từ chính faceProfiles (đã chứa đủ mọi nhân sự active)
                 allEmployees = faceProfiles.Select(p => new Employee
                 {
                     Id = p.EmployeeId,
@@ -1206,8 +1245,7 @@
     {
         modalError = string.Empty;
         wizardStep = 1;
-        extractDurationMs = 0;
-        dbSaveDurationMs = 0;
+        lastTelemetry = null;
         enrolledPhotoBase64 = null;
 
         if (profile != null)
@@ -1224,41 +1262,39 @@
         }
 
         showEnrollModal = true;
-        await Task.Delay(100);
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
         await StartAdminCameraAsync();
     }
 
     private async Task CloseEnrollModal()
     {
-        if (isModalCameraActive)
+        try
         {
-            try
-            {
-                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.stopCamera", "adminEnrollVideo");
-            }
-            catch { }
-            isModalCameraActive = false;
+            await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.stopCamera", "adminEnrollVideo");
         }
+        catch { }
+        isModalCameraActive = false;
         showEnrollModal = false;
         wizardStep = 1;
     }
 
-    private void ResetWizardForNextEmployee()
+    private async Task ResetWizardForNextEmployee()
     {
-        wizardStep = 1;
-        extractDurationMs = 0;
-        dbSaveDurationMs = 0;
+        wizardStep = 2;
+        lastTelemetry = null;
         enrolledPhotoBase64 = null;
         modalError = string.Empty;
 
-        // Chọn nhân viên tiếp theo chưa đăng ký
         var nextUnenrolled = faceProfiles.FirstOrDefault(p => !p.HasFaceEnrolled);
         if (nextUnenrolled != null)
         {
             modalSelectedEmployeeId = nextUnenrolled.EmployeeId;
             modalEnrollNote = $"Đăng ký khuôn mặt mới cho nhân viên [{nextUnenrolled.EmployeeCode}] {nextUnenrolled.FullName}";
         }
-        _ = StartAdminCameraAsync();
+
+        await InvokeAsync(StateHasChanged);
+        await StartAdminCameraAsync();
     }
 
     private async Task StartAdminCameraAsync()
@@ -1267,19 +1303,23 @@
         modalError = string.Empty;
         try
         {
-            var res = await JSRuntime.InvokeAsync<CameraInitResult>("FaceRecognitionHelper.startCamera", "adminEnrollVideo", "adminEnrollCanvas", null);
+            var res = await JSRuntime.InvokeAsync<FaceCameraInitResult>("FaceRecognitionHelper.startCamera", "adminEnrollVideo", "adminEnrollCanvas", null);
             if (res.Success)
             {
                 isModalCameraActive = true;
+                lastCameraInitMs = res.CameraInitMs;
+                lastCameraReused = res.ReusedStream;
                 wizardStep = 2; // Đã sẵn sàng căn chỉnh
             }
             else
             {
+                isModalCameraActive = false;
                 modalError = res.Error ?? "Không thể kết nối camera.";
             }
         }
         catch (Exception ex)
         {
+            isModalCameraActive = false;
             modalError = $"Lỗi camera: {ex.Message}";
         }
         finally
@@ -1288,7 +1328,7 @@
         }
     }
 
-    // QUY TRÌNH 5 GIAI ĐOẠN ĐĂNG KÝ KHUÔN MẶT CHỐNG DOUBLE-SUBMIT & ĐO THỜI GIAN CHÍNH XÁC
+    // QUY TRÌNH 5 GIAI ĐOẠN ĐĂNG KÝ KHUÔN MẶT CHỐNG DOUBLE-SUBMIT & ĐO THỜI GIAN TỪNG BƯỚC
     private async Task CaptureAndEnrollAsync()
     {
         if (isBusyModal || !isModalCameraActive) return;
@@ -1296,11 +1336,15 @@
         isBusyModal = true;
         modalError = string.Empty;
         wizardStep = 3; // Giai đoạn 3: Trích xuất đặc trưng 128-D
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
 
         try
         {
-            var captureRes = await JSRuntime.InvokeAsync<FaceCaptureResult>("FaceRecognitionHelper.captureFaceDescriptor", "adminEnrollVideo");
+            var captureRes = await JSRuntime.InvokeAsync<FaceCaptureResult>(
+                "FaceRecognitionHelper.captureFaceDescriptor",
+                "adminEnrollVideo",
+                new { mode = "enroll" });
+
             if (!captureRes.Success || captureRes.Descriptor == null || captureRes.Descriptor.Length == 0)
             {
                 modalError = captureRes.Error ?? "Chưa phát hiện được khuôn mặt hợp lệ trong khung quét. Vui lòng căn chỉnh lại.";
@@ -1309,33 +1353,36 @@
                 return;
             }
 
-            extractDurationMs = captureRes.ExtractDurationMs > 0 ? captureRes.ExtractDurationMs : 14;
             enrolledPhotoBase64 = captureRes.PhotoBase64;
 
-            wizardStep = 4; // Giai đoạn 4: Ghi CSDL SQL Server
-            StateHasChanged();
+            wizardStep = 4; // Giai đoạn 4: Ghi CSDL SQL Server trong 1 giao dịch nguyên tử
+            await InvokeAsync(StateHasChanged);
 
-            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var clientTelemetry = new FaceEnrollmentTelemetryDto
+            {
+                CameraInitMs = lastCameraInitMs,
+                ReusedCameraStream = lastCameraReused,
+                FaceDetectionMs = captureRes.FaceDetectionMs,
+                FaceAlignmentMs = captureRes.FaceAlignmentMs,
+                PreprocessingMs = captureRes.PreprocessingMs,
+                EmbeddingInferenceMs = captureRes.EmbeddingInferenceMs
+            };
+
             var user = UserSession.CurrentUser;
-            await FaceManagementUseCases.RegisterFaceProfileAsync(
+            lastTelemetry = await FaceManagementUseCases.RegisterFaceProfileWithMetricsAsync(
                 modalSelectedEmployeeId, 
                 captureRes.Descriptor, 
                 modalEnrollNote, 
                 user?.Username ?? "admin", 
-                user?.Role);
-            sw.Stop();
-            dbSaveDurationMs = sw.ElapsedMilliseconds;
+                user?.Role,
+                clientTelemetry);
 
-            // Dừng camera an toàn
-            if (isModalCameraActive)
+            // Tạm dừng vòng lặp vẽ HUD nhưng giữ nguyên luồng phần cứng camera để nếu nhấn "Đăng Ký Nhân Viên Khác" sẽ mở lại tức thì (< 2ms)
+            try
             {
-                try
-                {
-                    await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.stopCamera", "adminEnrollVideo");
-                }
-                catch { }
-                isModalCameraActive = false;
+                await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.pauseHud", "adminEnrollVideo");
             }
+            catch { }
 
             // Cập nhật thông tin in-place trong danh sách bộ nhớ
             var targetEmp = faceProfiles.FirstOrDefault(p => p.EmployeeId == modalSelectedEmployeeId);
@@ -1370,7 +1417,7 @@
 
             await JSRuntime.InvokeVoidAsync("FaceRecognitionHelper.playChime", "success");
             wizardStep = 5; // Giai đoạn 5: Hoàn tất & xác nhận kết quả
-            statusMessage = $"Đăng ký khuôn mặt thành công cho nhân viên [{enrolledEmployeeCode}] {enrolledEmployeeName}.";
+            statusMessage = $"Đăng ký khuôn mặt thành công cho nhân viên [{enrolledEmployeeCode}] {enrolledEmployeeName} (Tổng thời gian xử lý: {lastTelemetry.TotalEnrollmentMs:0.##} ms).";
             statusType = "success";
         }
         catch (Exception ex)
@@ -1382,7 +1429,7 @@
         finally
         {
             isBusyModal = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -1405,7 +1452,7 @@
         _searchCts?.Cancel();
         _searchCts?.Dispose();
 
-        if (isModalCameraActive)
+        if (isModalCameraActive || showEnrollModal)
         {
             try
             {
@@ -1413,22 +1460,5 @@
             }
             catch { }
         }
-    }
-
-    public class CameraInitResult
-    {
-        public bool Success { get; set; }
-        public string? Error { get; set; }
-    }
-
-    public class FaceCaptureResult
-    {
-        public bool Success { get; set; }
-        public string? Error { get; set; }
-        public float[]? Descriptor { get; set; }
-        public double LivenessScore { get; set; }
-        public bool QualityOk { get; set; }
-        public string? PhotoBase64 { get; set; }
-        public int ExtractDurationMs { get; set; }
     }
 }

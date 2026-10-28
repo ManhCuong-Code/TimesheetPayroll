@@ -1,5 +1,8 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.Json;
 using TimesheetPayroll.CoreBusiness.Models;
+using TimesheetPayroll.CoreBusiness.Services;
 using TimesheetPayroll.UseCases.PluginInterfaces.DataStore;
 
 namespace TimesheetPayroll.UseCases.AdminPortal;
@@ -8,6 +11,13 @@ public interface IFaceManagementUseCases
 {
     Task<IEnumerable<EmployeeFaceProfile>> GetAllProfilesAsync(string? callerRole);
     Task RegisterFaceProfileAsync(long employeeId, float[] descriptor, string? notes, string callerUsername, string? callerRole);
+    Task<FaceEnrollmentTelemetryDto> RegisterFaceProfileWithMetricsAsync(
+        long employeeId,
+        float[] descriptor,
+        string? notes,
+        string callerUsername,
+        string? callerRole,
+        FaceEnrollmentTelemetryDto? clientTelemetry = null);
     Task ToggleFaceProfileLockAsync(long employeeId, bool isActive, string callerUsername, string? callerRole);
     Task RevokeFaceProfileAsync(long employeeId, string callerUsername, string? callerRole);
     Task UpdateProfileMetadataAsync(long employeeId, string? notes, decimal livenessThreshold, string callerUsername, string? callerRole);
@@ -16,18 +26,23 @@ public interface IFaceManagementUseCases
 
 public class FaceManagementUseCases : IFaceManagementUseCases
 {
+    private static readonly ConcurrentDictionary<long, SemaphoreSlim> _enrollmentLocks = new();
+
     private readonly IFaceProfileRepository _faceProfileRepo;
     private readonly IFaceAuditLogRepository _faceAuditRepo;
     private readonly IEmployeeRepository _employeeRepo;
+    private readonly IFaceBiometricService _biometricService;
 
     public FaceManagementUseCases(
         IFaceProfileRepository faceProfileRepo,
         IFaceAuditLogRepository faceAuditRepo,
-        IEmployeeRepository employeeRepo)
+        IEmployeeRepository employeeRepo,
+        IFaceBiometricService? biometricService = null)
     {
         _faceProfileRepo = faceProfileRepo;
         _faceAuditRepo = faceAuditRepo;
         _employeeRepo = employeeRepo;
+        _biometricService = biometricService ?? new FaceBiometricService();
     }
 
     private void EnsureAdmin(string? callerRole)
@@ -46,44 +61,94 @@ public class FaceManagementUseCases : IFaceManagementUseCases
 
     public async Task RegisterFaceProfileAsync(long employeeId, float[] descriptor, string? notes, string callerUsername, string? callerRole)
     {
+        await RegisterFaceProfileWithMetricsAsync(employeeId, descriptor, notes, callerUsername, callerRole, null);
+    }
+
+    public async Task<FaceEnrollmentTelemetryDto> RegisterFaceProfileWithMetricsAsync(
+        long employeeId,
+        float[] descriptor,
+        string? notes,
+        string callerUsername,
+        string? callerRole,
+        FaceEnrollmentTelemetryDto? clientTelemetry = null)
+    {
         EnsureAdmin(callerRole);
 
-        if (descriptor == null || descriptor.Length < 64)
+        var totalSw = Stopwatch.StartNew();
+        var telemetry = clientTelemetry ?? new FaceEnrollmentTelemetryDto();
+
+        var empLock = _enrollmentLocks.GetOrAdd(employeeId, _ => new SemaphoreSlim(1, 1));
+        if (!await empLock.WaitAsync(TimeSpan.FromSeconds(10)))
         {
-            throw new ArgumentException("Mẫu đặc trưng khuôn mặt không hợp lệ hoặc không đủ số chiều tiêu chuẩn.", nameof(descriptor));
+            throw new InvalidOperationException($"Hệ thống đang xử lý yêu cầu đăng ký khuôn mặt cho nhân viên ID #{employeeId}. Vui lòng không gửi trùng lặp.");
         }
 
-        var employee = await _employeeRepo.GetEmployeeByIdAsync(employeeId);
-        if (employee == null)
+        try
         {
-            throw new KeyNotFoundException($"Không tìm thấy nhân viên có mã ID = {employeeId}.");
+            // 1. Kiểm tra tính hợp lệ và chuẩn hóa L2 vector 128-D (Embedding Validation)
+            var valSw = Stopwatch.StartNew();
+            if (!_biometricService.ValidateAndNormalizeDescriptor(descriptor, out var normalizedVector, out var validationError))
+            {
+                throw new ArgumentException(validationError ?? "Mẫu đặc trưng khuôn mặt 128-D không hợp lệ.", nameof(descriptor));
+            }
+
+            // Làm tròn 6 chữ số thập phân để tối ưu kích thước chuỗi JSON lưu trong SQL Server
+            var roundedVector = new float[128];
+            for (int i = 0; i < 128; i++)
+            {
+                roundedVector[i] = MathF.Round(normalizedVector[i], 6);
+            }
+            string descriptorJson = JsonSerializer.Serialize(roundedVector);
+            valSw.Stop();
+            telemetry.EmbeddingValidationMs = Math.Round(valSw.Elapsed.TotalMilliseconds, 2);
+
+            // 2. Lưu hồ sơ khuôn mặt + ghi nhật ký kiểm toán trong 1 kết nối & 1 giao dịch SQL duy nhất
+            var profile = new EmployeeFaceProfile
+            {
+                EmployeeId = employeeId,
+                FaceDescriptorJson = descriptorJson,
+                RegisteredBy = callerUsername,
+                IsActive = true,
+                LivenessThreshold = 0.70m,
+                Notes = string.IsNullOrWhiteSpace(notes)
+                    ? $"Đăng ký bởi Quản trị viên {callerUsername} ngày {DateTime.Now:dd/MM/yyyy HH:mm}"
+                    : notes.Trim()
+            };
+
+            var auditLog = new FaceAuditLog
+            {
+                EmployeeId = employeeId,
+                ActionType = "REGISTER",
+                SimilarityScore = 1.0m,
+                PerformedBy = callerUsername,
+                DeviceInfo = "Admin Portal Biometric Enrollment",
+                IsSuccess = true,
+                FailureReason = null
+            };
+
+            var dbRes = await _faceProfileRepo.SaveProfileWithAuditAsync(profile, auditLog);
+            if (!dbRes.EmployeeExists)
+            {
+                throw new KeyNotFoundException($"Không tìm thấy nhân viên có mã ID = {employeeId}.");
+            }
+
+            telemetry.SqlQueryMs = dbRes.SqlQueryMs;
+            telemetry.DbWriteMs = dbRes.DbWriteMs;
+            telemetry.ReusedExistingEmbedding = dbRes.SkippedIdenticalWrite;
+
+            // Xóa cache vector cũ của nhân viên này để lần nhận diện kế tiếp nạp ngay vector mới
+            _biometricService.InvalidateCache(employeeId);
+
+            totalSw.Stop();
+            double clientCaptureTotal = telemetry.FaceDetectionMs + telemetry.FaceAlignmentMs + telemetry.PreprocessingMs + telemetry.EmbeddingInferenceMs;
+            telemetry.TotalEnrollmentMs = Math.Round(clientCaptureTotal + totalSw.Elapsed.TotalMilliseconds, 2);
+
+            return telemetry;
         }
-
-        string descriptorJson = JsonSerializer.Serialize(descriptor);
-
-        var profile = new EmployeeFaceProfile
+        finally
         {
-            EmployeeId = employeeId,
-            FaceDescriptorJson = descriptorJson,
-            RegisteredBy = callerUsername,
-            IsActive = true,
-            LivenessThreshold = 0.70m,
-            Notes = notes ?? $"Đăng ký bởi Quản trị viên {callerUsername} ngày {DateTime.Now:dd/MM/yyyy HH:mm}"
-        };
-
-        await _faceProfileRepo.SaveProfileAsync(profile);
-
-        // Ghi log kiểm toán
-        await _faceAuditRepo.LogActionAsync(new FaceAuditLog
-        {
-            EmployeeId = employeeId,
-            ActionType = "REGISTER",
-            SimilarityScore = 1.0m,
-            PerformedBy = callerUsername,
-            DeviceInfo = "Admin Portal Biometric Enrollment",
-            IsSuccess = true,
-            FailureReason = null
-        });
+            empLock.Release();
+        }
     }
 
     public async Task ToggleFaceProfileLockAsync(long employeeId, bool isActive, string callerUsername, string? callerRole)
@@ -91,6 +156,7 @@ public class FaceManagementUseCases : IFaceManagementUseCases
         EnsureAdmin(callerRole);
 
         await _faceProfileRepo.ToggleStatusAsync(employeeId, isActive);
+        _biometricService.InvalidateCache(employeeId);
 
         await _faceAuditRepo.LogActionAsync(new FaceAuditLog
         {
@@ -109,6 +175,7 @@ public class FaceManagementUseCases : IFaceManagementUseCases
         EnsureAdmin(callerRole);
 
         await _faceProfileRepo.DeleteProfileAsync(employeeId);
+        _biometricService.InvalidateCache(employeeId);
 
         await _faceAuditRepo.LogActionAsync(new FaceAuditLog
         {
@@ -127,6 +194,7 @@ public class FaceManagementUseCases : IFaceManagementUseCases
         EnsureAdmin(callerRole);
 
         await _faceProfileRepo.UpdateProfileMetadataAsync(employeeId, notes, livenessThreshold);
+        _biometricService.InvalidateCache(employeeId);
 
         await _faceAuditRepo.LogActionAsync(new FaceAuditLog
         {

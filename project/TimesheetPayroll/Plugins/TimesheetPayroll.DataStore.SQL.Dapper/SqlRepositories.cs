@@ -1,4 +1,6 @@
 using System.Data;
+using System.Data.Common;
+using System.Diagnostics;
 using Dapper;
 using TimesheetPayroll.CoreBusiness.Models;
 using TimesheetPayroll.UseCases.PluginInterfaces.DataStore;
@@ -1242,7 +1244,30 @@ public class UserAccountRepository : IUserAccountRepository
 public class FaceProfileRepository : IFaceProfileRepository
 {
     private readonly IDataAccess _db;
+    private static List<EmployeeFaceProfile>? _cachedActiveProfiles;
+    private static long _cacheTimestampTicks;
+    private static readonly object _cacheSync = new();
+    private const double ActiveProfilesCacheTtlSeconds = 5.0;
+
     public FaceProfileRepository(IDataAccess db) => _db = db;
+
+    private static void InvalidateActiveProfilesCache()
+    {
+        lock (_cacheSync)
+        {
+            _cachedActiveProfiles = null;
+            _cacheTimestampTicks = 0;
+        }
+    }
+
+    private sealed class EmployeeFaceEnrollmentLookupRow
+    {
+        public long EmployeeId { get; set; }
+        public long? ProfileId { get; set; }
+        public string? ExistingDescriptorJson { get; set; }
+        public bool? IsProfileActive { get; set; }
+        public string? ExistingNotes { get; set; }
+    }
 
     public async Task<EmployeeFaceProfile?> GetByEmployeeIdAsync(long employeeId)
     {
@@ -1264,6 +1289,15 @@ public class FaceProfileRepository : IFaceProfileRepository
 
     public async Task<IEnumerable<EmployeeFaceProfile>> GetAllActiveProfilesAsync()
     {
+        lock (_cacheSync)
+        {
+            if (_cachedActiveProfiles != null &&
+                Stopwatch.GetElapsedTime(_cacheTimestampTicks).TotalSeconds < ActiveProfilesCacheTtlSeconds)
+            {
+                return _cachedActiveProfiles;
+            }
+        }
+
         using var conn = _db.CreateConnection();
         const string sql = @"
             SELECT 
@@ -1277,7 +1311,15 @@ public class FaceProfileRepository : IFaceProfileRepository
             JOIN employees e ON f.employee_id = e.id
             LEFT JOIN departments d ON e.department_id = d.id
             WHERE f.is_active = 1 AND e.status = 'ACTIVE';";
-        return await conn.QueryAsync<EmployeeFaceProfile>(sql);
+        var result = (await conn.QueryAsync<EmployeeFaceProfile>(sql)).AsList();
+
+        lock (_cacheSync)
+        {
+            _cachedActiveProfiles = result;
+            _cacheTimestampTicks = Stopwatch.GetTimestamp();
+        }
+
+        return result;
     }
 
     public async Task<IEnumerable<EmployeeFaceProfile>> GetAllProfilesWithEmployeeDetailsAsync()
@@ -1321,6 +1363,157 @@ public class FaceProfileRepository : IFaceProfileRepository
                 INSERT (employee_id, face_descriptor_json, registered_at, registered_by, is_active, liveness_threshold, notes, updated_at)
                 VALUES (@EmployeeId, @FaceDescriptorJson, GETDATE(), @RegisteredBy, 1, @LivenessThreshold, @Notes, GETDATE());";
         await conn.ExecuteAsync(sql, profile);
+        InvalidateActiveProfilesCache();
+    }
+
+    public async Task<FaceDbSaveResult> SaveProfileWithAuditAsync(EmployeeFaceProfile profile, FaceAuditLog auditLog)
+    {
+        using var conn = _db.CreateConnection();
+        if (conn is DbConnection dbConn)
+        {
+            await dbConn.OpenAsync();
+        }
+        else if (conn.State != ConnectionState.Open)
+        {
+            conn.Open();
+        }
+
+        // 1. Giai đoạn kiểm tra nhân viên và trạng thái hồ sơ hiện tại trên cùng kết nối (Async I/O)
+        var queryStart = Stopwatch.GetTimestamp();
+        const string checkSql = @"
+            SELECT 
+                e.id AS EmployeeId,
+                f.id AS ProfileId,
+                f.face_descriptor_json AS ExistingDescriptorJson,
+                f.is_active AS IsProfileActive,
+                f.notes AS ExistingNotes
+            FROM dbo.employees e
+            LEFT JOIN dbo.employee_face_profiles f ON e.id = f.employee_id
+            WHERE e.id = @EmployeeId;";
+
+        var existing = await conn.QueryFirstOrDefaultAsync<EmployeeFaceEnrollmentLookupRow>(
+            new CommandDefinition(checkSql, new { profile.EmployeeId }, commandTimeout: 10));
+        double sqlQueryMs = Stopwatch.GetElapsedTime(queryStart).TotalMilliseconds;
+
+        if (existing == null)
+        {
+            return new FaceDbSaveResult
+            {
+                EmployeeExists = false,
+                SqlQueryMs = Math.Round(sqlQueryMs, 2),
+                DbWriteMs = 0
+            };
+        }
+
+        bool hasProfileRow = existing.ProfileId.HasValue && existing.ProfileId.Value > 0;
+        bool wasAlreadyEnrolled = hasProfileRow &&
+                                  !string.IsNullOrEmpty(existing.ExistingDescriptorJson) &&
+                                  existing.ExistingDescriptorJson != "[]";
+
+        // Tránh ghi đè cột NVARCHAR(MAX) không cần thiết nếu vector và ghi chú hoàn toàn trùng khớp với bản ghi đang active
+        bool skippedIdenticalWrite = wasAlreadyEnrolled &&
+                                     existing.IsProfileActive == true &&
+                                     string.Equals(existing.ExistingDescriptorJson, profile.FaceDescriptorJson, StringComparison.Ordinal) &&
+                                     string.Equals(existing.ExistingNotes, profile.Notes, StringComparison.Ordinal);
+
+        // 2. Giai đoạn ghi dữ liệu & lưu vết kiểm toán trong 1 Transaction nguyên tử
+        var writeStart = Stopwatch.GetTimestamp();
+        using var tx = conn.BeginTransaction();
+        try
+        {
+            string effectiveActionType = wasAlreadyEnrolled ? "RE_ENROLL" : auditLog.ActionType;
+
+            if (skippedIdenticalWrite)
+            {
+                const string auditOnlySql = @"
+                    INSERT INTO dbo.face_audit_logs (employee_id, action_type, similarity_score, performed_by, device_info, is_success, failure_reason, created_at)
+                    VALUES (@EmployeeId, @ActionType, @SimilarityScore, @PerformedBy, @DeviceInfo, @IsSuccess, @FailureReason, GETDATE());";
+
+                await conn.ExecuteAsync(new CommandDefinition(auditOnlySql, new
+                {
+                    auditLog.EmployeeId,
+                    ActionType = effectiveActionType,
+                    auditLog.SimilarityScore,
+                    auditLog.PerformedBy,
+                    auditLog.DeviceInfo,
+                    auditLog.IsSuccess,
+                    auditLog.FailureReason
+                }, transaction: tx, commandTimeout: 10));
+            }
+            else if (hasProfileRow)
+            {
+                const string updateAndAuditSql = @"
+                    UPDATE dbo.employee_face_profiles
+                    SET face_descriptor_json = @FaceDescriptorJson,
+                        registered_by = @RegisteredBy,
+                        is_active = 1,
+                        liveness_threshold = @LivenessThreshold,
+                        notes = @Notes,
+                        updated_at = GETDATE()
+                    WHERE employee_id = @EmployeeId;
+
+                    INSERT INTO dbo.face_audit_logs (employee_id, action_type, similarity_score, performed_by, device_info, is_success, failure_reason, created_at)
+                    VALUES (@EmployeeId, @ActionType, @SimilarityScore, @PerformedBy, @DeviceInfo, @IsSuccess, @FailureReason, GETDATE());";
+
+                await conn.ExecuteAsync(new CommandDefinition(updateAndAuditSql, new
+                {
+                    profile.EmployeeId,
+                    profile.FaceDescriptorJson,
+                    profile.RegisteredBy,
+                    profile.LivenessThreshold,
+                    profile.Notes,
+                    ActionType = effectiveActionType,
+                    auditLog.SimilarityScore,
+                    auditLog.PerformedBy,
+                    auditLog.DeviceInfo,
+                    auditLog.IsSuccess,
+                    auditLog.FailureReason
+                }, transaction: tx, commandTimeout: 10));
+            }
+            else
+            {
+                const string insertAndAuditSql = @"
+                    INSERT INTO dbo.employee_face_profiles (employee_id, face_descriptor_json, registered_at, registered_by, is_active, liveness_threshold, notes, updated_at)
+                    VALUES (@EmployeeId, @FaceDescriptorJson, GETDATE(), @RegisteredBy, 1, @LivenessThreshold, @Notes, GETDATE());
+
+                    INSERT INTO dbo.face_audit_logs (employee_id, action_type, similarity_score, performed_by, device_info, is_success, failure_reason, created_at)
+                    VALUES (@EmployeeId, @ActionType, @SimilarityScore, @PerformedBy, @DeviceInfo, @IsSuccess, @FailureReason, GETDATE());";
+
+                await conn.ExecuteAsync(new CommandDefinition(insertAndAuditSql, new
+                {
+                    profile.EmployeeId,
+                    profile.FaceDescriptorJson,
+                    profile.RegisteredBy,
+                    profile.LivenessThreshold,
+                    profile.Notes,
+                    ActionType = effectiveActionType,
+                    auditLog.SimilarityScore,
+                    auditLog.PerformedBy,
+                    auditLog.DeviceInfo,
+                    auditLog.IsSuccess,
+                    auditLog.FailureReason
+                }, transaction: tx, commandTimeout: 10));
+            }
+
+            tx.Commit();
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
+
+        double dbWriteMs = Stopwatch.GetElapsedTime(writeStart).TotalMilliseconds;
+        InvalidateActiveProfilesCache();
+
+        return new FaceDbSaveResult
+        {
+            EmployeeExists = true,
+            WasAlreadyEnrolled = wasAlreadyEnrolled,
+            SkippedIdenticalWrite = skippedIdenticalWrite,
+            SqlQueryMs = Math.Round(sqlQueryMs, 2),
+            DbWriteMs = Math.Round(dbWriteMs, 2)
+        };
     }
 
     public async Task DeleteProfileAsync(long employeeId)
@@ -1328,6 +1521,7 @@ public class FaceProfileRepository : IFaceProfileRepository
         using var conn = _db.CreateConnection();
         const string sql = "DELETE FROM employee_face_profiles WHERE employee_id = @EmployeeId;";
         await conn.ExecuteAsync(sql, new { EmployeeId = employeeId });
+        InvalidateActiveProfilesCache();
     }
 
     public async Task ToggleStatusAsync(long employeeId, bool isActive)
@@ -1338,6 +1532,7 @@ public class FaceProfileRepository : IFaceProfileRepository
             SET is_active = @IsActive, updated_at = GETDATE()
             WHERE employee_id = @EmployeeId;";
         await conn.ExecuteAsync(sql, new { EmployeeId = employeeId, IsActive = isActive });
+        InvalidateActiveProfilesCache();
     }
 
     public async Task UpdateProfileMetadataAsync(long employeeId, string? notes, decimal livenessThreshold)
@@ -1348,6 +1543,7 @@ public class FaceProfileRepository : IFaceProfileRepository
             SET notes = @Notes, liveness_threshold = @LivenessThreshold, updated_at = GETDATE()
             WHERE employee_id = @EmployeeId;";
         await conn.ExecuteAsync(sql, new { EmployeeId = employeeId, Notes = notes, LivenessThreshold = livenessThreshold });
+        InvalidateActiveProfilesCache();
     }
 }
 
@@ -1621,6 +1817,3 @@ public class ShiftAssignmentRepository : IShiftAssignmentRepository
         return true;
     }
 }
-
-
-

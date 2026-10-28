@@ -269,6 +269,7 @@ public interface IFaceProfileRepository
     Task<IEnumerable<EmployeeFaceProfile>> GetAllActiveProfilesAsync();
     Task<IEnumerable<EmployeeFaceProfile>> GetAllProfilesWithEmployeeDetailsAsync();
     Task SaveProfileAsync(EmployeeFaceProfile profile);
+    Task<FaceDbSaveResult> SaveProfileWithAuditAsync(EmployeeFaceProfile profile, FaceAuditLog auditLog);
     Task DeleteProfileAsync(long employeeId);
     Task ToggleStatusAsync(long employeeId, bool isActive);
     Task UpdateProfileMetadataAsync(long employeeId, string? notes, decimal livenessThreshold);
@@ -325,6 +326,3 @@ public interface IShiftAssignmentRepository
     Task<IEnumerable<dynamic>> GetMonthlyAttendanceSummaryViaSpAsync(int month, int year, long? employeeId = null);
     Task<bool> ResetTodayPunchForTestAsync(long employeeId, DateTime workDate);
 }
-
-
-

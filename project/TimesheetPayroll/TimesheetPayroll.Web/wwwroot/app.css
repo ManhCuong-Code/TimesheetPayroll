@@ -229,25 +229,6 @@ code, kbd, pre, samp, .font-mono {
     border-radius: 9999px;
 }
 
-/* NAV LINKS */
-.navbar-nav .nav-link {
-    font-weight: 600;
-    font-size: 0.925rem;
-    padding: 0.5rem 1rem !important;
-    border-radius: var(--hrm-radius-md);
-    transition: all 0.15s ease;
-}
-
-.navbar-nav .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.08);
-    color: #ffffff !important;
-}
-
-.navbar-nav .nav-link.active {
-    background-color: rgba(37, 99, 235, 0.25);
-    color: #60a5fa !important;
-}
-
 /* SCROLLBAR */
 ::-webkit-scrollbar {
     width: 8px;
@@ -674,32 +655,32 @@ code, kbd, pre, samp, .font-mono {
 }
 
 /* ==========================================================================
-   ENTERPRISE TOPBAR NAVIGATION - SOLID DEEP NAVY (TÁCH BIỆT RÕ RÀNG VỚI NỘI DUNG)
-   Màu nền sẫm đậm đà #172554, không pha màu mè, các mục trên thanh Topbar được tinh gọn
+   ENTERPRISE HRM TOP BAR - MODERN ENTERPRISE UI (SOLID DEEP NAVY #142B4A)
+   Clean, Minimal, Premium, 100% Solid Background, Zero Glassmorphism
    ========================================================================== */
 :root {
-    --topbar-bg: #172554;               /* Xanh navy đậm, tách biệt hoàn toàn với nội dung */
-    --topbar-bg-hover: #263B73;         /* Xanh navy sáng khi hover */
-    --topbar-active: #263B73;           /* Nền mục đang chọn */
-    --topbar-accent: #60A5FA;           /* Xanh dương điểm nhấn và vạch active */
-    --topbar-text: #FFFFFF;             /* Chữ chính trắng tinh khôi */
-    --topbar-text-muted: #CBD5E1;       /* Chữ phụ, icon phụ xám xanh nhạt */
-    --topbar-border: rgba(255, 255, 255, 0.1); /* Viền mỏng phân tách */
-    --topbar-height: 56px;              /* Chiều cao chuẩn 56px */
-    
-    --dropdown-bg: #FFFFFF;             /* Nền dropdown trắng thanh lịch */
-    --dropdown-text: #1E293B;           /* Chữ dropdown xám than */
-    --dropdown-border: #E2E8F0;         /* Viền dropdown nhẹ nhàng */
-    --dropdown-hover-bg: #F1F5F9;       /* Hover dropdown xám sáng */
-    --dropdown-hover-text: #2563EB;
-    --dropdown-active-bg: #EFF6FF;      /* Active dropdown xanh nhạt */
-    --dropdown-active-text: #2563EB;
-    
-    --content-bg: #F8FAFC;              /* Nền nội dung phía dưới */
-    --card-bg: #FFFFFF;                 /* Nền thẻ nội dung */
+    --hrm-topbar-bg: #142B4A;
+    --hrm-topbar-hover-bg: #1E3A5F;
+    --hrm-topbar-active-bg: #2F6FED;
+    --hrm-topbar-divider-color: #24426B;
+    --hrm-topbar-border-bottom: #D8E1EC;
+    --hrm-topbar-text: #FFFFFF;
+    --hrm-topbar-text-muted: #B8C7DC;
+    --hrm-topbar-height: 68px;
+
+    --hrm-dropdown-bg: #FFFFFF;
+    --hrm-dropdown-text: #1E293B;
+    --hrm-dropdown-border: #E2E8F0;
+    --hrm-dropdown-hover-bg: #F1F5F9;
+    --hrm-dropdown-hover-text: #2F6FED;
+    --hrm-dropdown-active-bg: #EFF6FF;
+    --hrm-dropdown-active-text: #2F6FED;
+
+    --content-bg: #F3F6FA;
+    --card-bg: #FFFFFF;
 }
 
-/* NỀN NỘI DUNG CHÍNH */
+/* NỀN NỘI DUNG CHÍNH TÁCH BIỆT VỚI TOP BAR */
 body, .page, main {
     background-color: var(--content-bg) !important;
 }
@@ -711,226 +692,463 @@ body, .page, main {
 .card {
     background-color: var(--card-bg);
     border: 1px solid #E2E8F0;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05);
 }
 
-/* THANH TOPBAR MÀU SẪM ĐẬM ĐÀ, TÁCH BIỆT NỘI DUNG PHÍA DƯỚI */
-.topbar-nav {
-    background-color: var(--topbar-bg) !important;
-    border-bottom: 1px solid var(--topbar-border) !important;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
-    min-height: 56px;
-    height: auto;
-    padding-top: 0.3rem;
-    padding-bottom: 0.3rem;
-    z-index: 1040;
+/* KHU VỰC TỔNG THỂ TOP BAR */
+.hrm-topbar {
+    background-color: #142B4A !important;
+    border-bottom: 1px solid #D8E1EC !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08) !important;
+    position: sticky;
+    top: 0;
+    z-index: 1050;
+    width: 100%;
 }
 
-.topbar-brand {
-    text-decoration: none;
-    letter-spacing: -0.01em;
+.hrm-topbar-nav {
+    background-color: #142B4A !important;
+    min-height: 68px;
+    padding: 0 1.25rem;
 }
 
-.topbar-brand:hover {
-    text-decoration: none;
-    opacity: 0.95;
+.hrm-topbar-container {
+    display: flex;
+    align-items: center;
+    min-height: 68px;
+    padding: 0;
 }
 
-.topbar-brand .brand-icon-box {
-    background-color: #2563EB !important;
-    color: #FFFFFF !important;
-    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
-    border-radius: 8px;
+/* 1. KHU VỰC BRAND HEADER */
+.hrm-topbar-left {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
 }
 
-.topbar-brand .brand-title {
-    font-weight: 700;
-    color: #FFFFFF;
-    font-size: 0.95rem;
-    letter-spacing: 0.02em;
-}
-
-/* NÚT TOGGLER TRÊN MOBILE */
-.topbar-toggler {
-    border: 1px solid rgba(255, 255, 255, 0.25) !important;
-    border-radius: 0.375rem;
-    color: #FFFFFF !important;
-    padding: 0.3rem 0.5rem;
-}
-
-.topbar-toggler:focus {
-    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.4);
-}
-
-/* LIÊN KẾT ĐIỀU HƯỚNG TINH GỌN TRÊN TOPBAR */
-.topbar-nav .nav-link {
-    color: var(--topbar-text) !important;
-    font-size: 0.88rem;
-    font-weight: 500;
-    padding: 0.42rem 0.75rem !important;
-    border-radius: 0.375rem;
-    transition: all 0.16s ease;
+.hrm-brand {
     display: inline-flex;
     align-items: center;
+    gap: 12px;
+    text-decoration: none !important;
+    padding: 4px 0;
+    margin-right: 0;
+}
+
+.hrm-brand-logo {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 9px;
+    background-color: #2F6FED;
+    color: #FFFFFF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    border: 1px solid #4782F2;
+}
+
+.hrm-brand-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.hrm-brand-title {
+    color: #FFFFFF;
+    font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
     white-space: nowrap;
 }
 
-.topbar-nav .nav-link:hover,
-.topbar-nav .nav-link:focus {
-    color: var(--topbar-text) !important;
-    background-color: var(--topbar-bg-hover) !important;
-}
-
-/* MỤC ĐANG ĐƯỢC CHỌN (ACTIVE) */
-.topbar-nav .nav-link.active {
-    color: var(--topbar-text) !important;
-    background-color: var(--topbar-active) !important;
+.hrm-brand-subtitle {
+    color: #9FB3C8;
+    font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
+    font-size: 10px;
     font-weight: 600;
-    box-shadow: inset 0 -2px 0 var(--topbar-accent) !important;
+    line-height: 1.2;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+    white-space: nowrap;
 }
 
-.topbar-nav .dropdown-toggle::after {
-    margin-left: 0.35em;
-    vertical-align: 0.15em;
-    border-top-color: rgba(255, 255, 255, 0.7);
+/* ĐƯỜNG PHÂN CÁCH BRAND & MENU ĐIỀU HƯỚNG */
+.hrm-topbar-divider {
+    width: 1px;
+    height: 28px;
+    background-color: #26436C;
+    margin: 0 20px;
+    flex-shrink: 0;
 }
 
-/* MENU DROPDOWN: NỀN TRẮNG, CHỮ TỐI, BÓNG ĐỔ NHẸ, BO GÓC 0.5rem */
-.topbar-nav .dropdown-menu {
-    background-color: var(--dropdown-bg) !important;
-    color: var(--dropdown-text) !important;
-    border: 1px solid var(--dropdown-border) !important;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.05) !important;
-    padding: 0.35rem;
-    margin-top: 0.35rem;
-    z-index: 1070;
-    min-width: 215px;
+/* 2. KHU VỰC MENU ĐIỀU HƯỚNG */
+.hrm-nav-list {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.topbar-nav .dropdown-item {
-    color: var(--dropdown-text) !important;
-    font-size: 0.86rem;
-    font-weight: 500;
-    padding: 0.48rem 0.75rem;
-    border-radius: 0.375rem;
-    transition: all 0.15s ease;
+.hrm-topbar .nav-item {
     display: flex;
     align-items: center;
 }
 
-.topbar-nav .dropdown-item i {
-    font-size: 0.92rem;
-    width: 1.25rem;
+.hrm-topbar .hrm-nav-link {
+    color: #E2E8F0 !important;
+    background-color: #142B4A;
+    font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    line-height: 1.4;
+    padding: 9px 14px !important;
+    border-radius: 8px !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background-color 180ms ease, color 180ms ease;
+}
+
+.hrm-topbar .hrm-nav-link:hover,
+.hrm-topbar .hrm-nav-link:focus {
+    background-color: #1E3A5F !important;
+    color: #FFFFFF !important;
+}
+
+.hrm-topbar .hrm-nav-link.active {
+    background-color: #2F6FED !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+}
+
+.hrm-nav-icon {
+    font-size: 14px;
+    width: 16px;
     text-align: center;
-    margin-right: 0.5rem;
-    color: #2563EB !important;
-    transition: color 0.15s ease;
+    color: #B8C7DC;
+    transition: color 180ms ease;
 }
 
-.topbar-nav .dropdown-item:hover,
-.topbar-nav .dropdown-item:focus {
-    background-color: var(--dropdown-hover-bg) !important;
-    color: var(--dropdown-hover-text) !important;
+.hrm-topbar .hrm-nav-link:hover .hrm-nav-icon,
+.hrm-topbar .hrm-nav-link:focus .hrm-nav-icon,
+.hrm-topbar .hrm-nav-link.active .hrm-nav-icon {
+    color: #FFFFFF !important;
 }
 
-.topbar-nav .dropdown-item:hover i {
-    color: #1D4ED8 !important;
+/* Ẩn mũi tên mặc định của Bootstrap để dùng icon chevron đồng bộ */
+.hrm-topbar .dropdown-toggle::after {
+    display: none !important;
 }
 
-.topbar-nav .dropdown-item.active {
-    background-color: var(--dropdown-active-bg) !important;
-    color: var(--dropdown-active-text) !important;
+.hrm-nav-caret {
+    font-size: 11px;
+    margin-left: 2px;
+    color: #9FB3C8;
+    transition: transform 180ms ease, color 180ms ease;
+}
+
+.hrm-topbar .hrm-nav-link:hover .hrm-nav-caret,
+.hrm-topbar .hrm-nav-link.active .hrm-nav-caret {
+    color: #FFFFFF;
+}
+
+/* 3. KHU VỰC TÀI KHOẢN NGƯỜI DÙNG */
+.hrm-topbar-account {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.hrm-account-btn {
+    background-color: #1B365C;
+    border: 1px solid #2A4B7C;
+    border-radius: 9999px;
+    padding: 4px 12px 4px 4px;
+    color: #FFFFFF;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    cursor: pointer;
+    transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.hrm-account-btn:hover,
+.hrm-account-btn:focus {
+    background-color: #234370;
+    border-color: #3B629B;
+    color: #FFFFFF;
+    outline: none;
+}
+
+.hrm-account-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 50%;
+    background-color: #2F6FED;
+    color: #FFFFFF;
+    font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hrm-account-name {
+    color: #FFFFFF;
+    font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
+    font-size: 13.5px;
+    font-weight: 500;
+    max-width: 150px;
+}
+
+.hrm-account-caret {
+    font-size: 11px;
+    color: #B8C7DC;
+    margin-right: 2px;
+}
+
+.hrm-login-btn {
+    background-color: #2F6FED;
+    color: #FFFFFF !important;
+    font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    transition: background-color 180ms ease;
+}
+
+.hrm-login-btn:hover {
+    background-color: #255ED0;
+    color: #FFFFFF !important;
+}
+
+/* 4. MENU DROPDOWN (NỀN TRẮNG ĐẶC, BO GÓC 10PX, SHADOW NHẸ) */
+.hrm-topbar .hrm-dropdown-menu {
+    background-color: #FFFFFF !important;
+    color: #1E293B !important;
+    border: 1px solid #D8E1EC !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12) !important;
+    padding: 6px;
+    margin-top: 8px !important;
+    min-width: 225px;
+    z-index: 1080;
+}
+
+.hrm-topbar .hrm-user-dropdown {
+    min-width: 245px;
+}
+
+.hrm-user-dropdown-header {
+    background-color: #F8FAFC;
+    border-bottom: 1px solid #E2E8F0;
+    border-radius: 6px 6px 0 0;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+}
+
+.hrm-user-fullname {
+    color: #0F172A;
+    font-size: 14px;
     font-weight: 600;
 }
 
-.topbar-nav .dropdown-item.active i {
-    color: var(--dropdown-active-text) !important;
+.hrm-role-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
 }
 
-.topbar-nav .dropdown-divider {
-    border-color: var(--dropdown-border) !important;
-    margin: 0.35rem 0;
+.hrm-user-meta {
+    color: #64748B;
+    font-size: 12px;
+    font-weight: 500;
 }
 
-/* HEADER THÔNG TIN NGƯỜI DÙNG TRONG DROPDOWN */
-.dropdown-user-header {
-    background-color: #F8FAFC !important;
-    border-color: var(--dropdown-border) !important;
-    border-radius: 0.375rem 0.375rem 0 0;
-}
-
-/* NÚT TÀI KHOẢN NGƯỜI DÙNG TINH GỌN TRÊN THANH TOPBAR */
-.topbar-user-btn {
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
-    border-radius: 9999px;
-    padding: 0.25rem 0.65rem 0.25rem 0.3rem;
-    color: #FFFFFF !important;
-    display: inline-flex;
+.hrm-topbar .hrm-dropdown-item {
+    color: #1E293B !important;
+    background-color: #FFFFFF;
+    font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 9px 12px;
+    border-radius: 7px;
+    display: flex;
     align-items: center;
-    transition: all 0.16s ease;
-    cursor: pointer;
+    gap: 10px;
+    transition: background-color 160ms ease, color 160ms ease;
 }
 
-.topbar-user-btn:hover {
-    background-color: var(--topbar-bg-hover) !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
+.hrm-dropdown-icon {
+    font-size: 14px;
+    width: 18px;
+    text-align: center;
+    color: #2F6FED !important;
+    transition: color 160ms ease;
 }
 
-.topbar-user-btn .avatar-circle {
-    background-color: #2563EB !important;
-    color: #FFFFFF !important;
+.hrm-topbar .hrm-dropdown-item:hover,
+.hrm-topbar .hrm-dropdown-item:focus {
+    background-color: #F1F5F9 !important;
+    color: #2F6FED !important;
 }
 
-/* NÚT ĐĂNG XUẤT: Màu đỏ trầm #DC2626 khi hover, không dùng nền đỏ quá nổi bật khi chưa tương tác */
-.topbar-logout-item {
+.hrm-topbar .hrm-dropdown-item.active {
+    background-color: #EFF6FF !important;
+    color: #2F6FED !important;
+    font-weight: 600;
+}
+
+.hrm-topbar .hrm-dropdown-divider {
+    border-color: #E2E8F0 !important;
+    margin: 5px 0;
+}
+
+.hrm-topbar .hrm-logout-item {
     color: #475569 !important;
-    transition: all 0.16s ease;
 }
 
-.topbar-logout-item i {
+.hrm-topbar .hrm-logout-item .hrm-dropdown-icon {
     color: #64748B !important;
-    transition: color 0.16s ease;
 }
 
-.topbar-logout-item:hover,
-.topbar-logout-item:focus {
+.hrm-topbar .hrm-logout-item:hover,
+.hrm-topbar .hrm-logout-item:focus {
     background-color: #FEF2F2 !important;
     color: #DC2626 !important;
 }
 
-.topbar-logout-item:hover i,
-.topbar-logout-item:focus i {
+.hrm-topbar .hrm-logout-item:hover .hrm-dropdown-icon,
+.hrm-topbar .hrm-logout-item:focus .hrm-dropdown-icon {
     color: #DC2626 !important;
 }
 
-/* RESPONSIVE TRÊN MÀN HÌNH NHỎ */
+/* NÚT HAMBURGER TRÊN MOBILE */
+.hrm-topbar-toggler {
+    background-color: #1B365C !important;
+    border: 1px solid #2A4B7C !important;
+    border-radius: 8px !important;
+    color: #FFFFFF !important;
+    width: 38px;
+    height: 38px;
+    padding: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: background-color 180ms ease;
+}
+
+.hrm-topbar-toggler:hover,
+.hrm-topbar-toggler:focus {
+    background-color: #234370 !important;
+    box-shadow: none !important;
+}
+
+/* 5. RESPONSIVE DESIGN (DESKTOP, TABLET, MOBILE) */
+@media (min-width: 992px) and (max-width: 1279.98px) {
+    .hrm-topbar-nav {
+        padding: 0 0.85rem;
+    }
+
+    .hrm-topbar-divider {
+        margin: 0 12px;
+    }
+
+    .hrm-brand-subtitle {
+        display: none !important;
+    }
+
+    .hrm-nav-list {
+        gap: 6px;
+    }
+
+    .hrm-topbar .hrm-nav-link {
+        padding: 8px 10px !important;
+        font-size: 13.5px !important;
+    }
+
+    .hrm-account-name {
+        max-width: 110px;
+    }
+}
+
 @media (max-width: 991.98px) {
-    .topbar-nav .navbar-collapse {
-        background-color: var(--topbar-bg);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 0.5rem;
-        padding: 0.75rem;
-        margin-top: 0.5rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    .hrm-topbar-nav {
+        padding: 0 0.875rem;
+        min-height: 64px;
+    }
+
+    .hrm-topbar-container {
+        min-height: 64px;
+        flex-wrap: wrap;
+    }
+
+    .hrm-brand-title {
+        font-size: 15px;
+    }
+
+    .hrm-navbar-collapse {
+        background-color: #16345B;
+        border: 1px solid #264875;
+        border-radius: 10px;
+        padding: 10px;
+        margin-top: 6px;
+        margin-bottom: 10px;
+        width: 100%;
+    }
+
+    .hrm-nav-list {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        width: 100%;
+    }
+
+    .hrm-topbar .nav-item {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .hrm-topbar .hrm-nav-link {
+        width: 100%;
+        background-color: #16345B;
+        padding: 10px 14px !important;
+    }
+
+    .hrm-nav-caret {
+        margin-left: auto;
+    }
+
+    .hrm-topbar .hrm-navbar-collapse .hrm-dropdown-menu {
+        width: 100%;
+        margin-top: 4px !important;
+        margin-bottom: 4px;
+        box-shadow: none !important;
+    }
+
+    .hrm-topbar-account .hrm-user-dropdown {
+        position: absolute !important;
+        right: 0 !important;
+        left: auto !important;
     }
 }
 
 @media (min-width: 992px) {
-    .topbar-nav .dropdown:hover > .dropdown-menu {
+    .hrm-topbar .hrm-nav-list .dropdown:hover > .hrm-dropdown-menu {
         display: block;
-        animation: topbarDropdownFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
     }
 }
-
-@keyframes topbarDropdownFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-6px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}

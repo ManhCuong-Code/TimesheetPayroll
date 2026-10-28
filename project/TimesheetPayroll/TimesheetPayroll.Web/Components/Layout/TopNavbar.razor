@@ -4,214 +4,275 @@
 @inject IUserSessionService UserSession
 @inject NavigationManager NavManager
 
-<nav class="navbar navbar-expand-lg topbar-nav px-3 sticky-top">
-    <div class="container-fluid px-1">
-        <!-- 1. KHU VỰC BÊN TRÁI: LOGO & TÊN TINH GỌN -->
-        <a class="navbar-brand topbar-brand d-flex align-items-center me-3 py-0" href="/">
-            <div class="brand-icon-box text-white rounded-2 me-2 d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px; min-width: 32px;">
-                <i class="fa-solid fa-users-gear" style="font-size: 0.95rem;"></i>
+<header class="hrm-topbar sticky-top">
+    <nav class="navbar navbar-expand-lg hrm-topbar-nav" aria-label="Thanh điều hướng chính">
+        <div class="container-fluid hrm-topbar-container">
+            <!-- KHU VỰC TRÁI TRÊN MOBILE: NÚT MENU HAMBURGER + BRAND HEADER -->
+            <div class="d-flex align-items-center hrm-topbar-left">
+                <button class="navbar-toggler hrm-topbar-toggler d-lg-none me-2"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#navbarMain"
+                        aria-controls="navbarMain"
+                        aria-expanded="false"
+                        aria-label="Mở menu điều hướng">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
+                <!-- KHU VỰC 1: BRAND HEADER -->
+                <a class="navbar-brand hrm-brand" href="/">
+                    <div class="hrm-brand-logo" aria-hidden="true">
+                        <i class="fa-solid fa-users-gear"></i>
+                    </div>
+                    <div class="hrm-brand-text">
+                        <span class="hrm-brand-title">QUẢN LÝ NHÂN SỰ</span>
+                        <span class="hrm-brand-subtitle d-none d-sm-block">HUMAN RESOURCE MANAGEMENT</span>
+                    </div>
+                </a>
             </div>
-            <span class="brand-title fw-bold text-white fs-6">QUẢN LÝ NHÂN SỰ</span>
-        </a>
 
-        <!-- NÚT HAMBURGER TRÊN THIẾT BỊ DI ĐỘNG -->
-        <button class="navbar-toggler py-1 px-2 topbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon" style="font-size: 0.85rem; filter: invert(1);"></span>
-        </button>
+            <!-- ĐƯỜNG PHÂN CÁCH TRÊN DESKTOP -->
+            <div class="hrm-topbar-divider d-none d-lg-block" aria-hidden="true"></div>
 
-        <!-- NỘI DUNG MENU ĐIỀU HƯỚNG TINH GỌN -->
-        <div class="collapse navbar-collapse" id="navbarMain">
-            <!-- 2. KHU VỰC ĐIỀU HƯỚNG CHÍNH: CÁC MỤC TINH GỌN -->
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-items-lg-center gap-1">
-                <!-- TRANG CHỦ -->
-                <li class="nav-item">
-                    <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
-                        Trang Chủ
-                    </NavLink>
-                </li>
-
-                <!-- CHẤM CÔNG (DROPDOWN) -->
+            <!-- KHU VỰC 3: TÀI KHOẢN NGƯỜI DÙNG (BÊN PHẢI TRÊN CẢ DESKTOP & MOBILE) -->
+            <div class="hrm-topbar-account order-lg-3 ms-auto ms-lg-0">
                 <AuthorizeView>
                     <Authorized>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle @(IsActive("/face-checkin", "/my-timesheet") ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Chấm Công
-                            </a>
-                            <ul class="dropdown-menu">
+                        <div class="dropdown">
+                            <button class="hrm-account-btn dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    title="Tài khoản người dùng">
+                                <span class="hrm-account-avatar">
+                                    @GetAvatarInitial(context.User)
+                                </span>
+                                <span class="hrm-account-name d-none d-sm-inline-block text-truncate">
+                                    @GetDisplayName(context.User)
+                                </span>
+                                <i class="fa-solid fa-chevron-down hrm-account-caret" aria-hidden="true"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end hrm-dropdown-menu hrm-user-dropdown">
+                                <li class="hrm-user-dropdown-header">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                                        <span class="hrm-user-fullname text-truncate">
+                                            @(context.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? context.User.Identity?.Name)
+                                        </span>
+                                        <span class="badge @GetRoleBadgeClass(context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value) hrm-role-badge">
+                                            @GetRoleDisplayName(context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)
+                                        </span>
+                                    </div>
+                                    <div class="hrm-user-meta">
+                                        @(context.User.FindFirst("EmployeeCode")?.Value ?? "EMP") • @(context.User.FindFirst("DepartmentName")?.Value ?? "Phòng Ban")
+                                    </div>
+                                </li>
                                 <li>
-                                    <NavLink class="dropdown-item" href="/face-checkin">
-                                        <i class="fa-solid fa-camera me-2 text-primary"></i>Chấm Công Khuôn Mặt
+                                    <NavLink class="dropdown-item hrm-dropdown-item" href="/change-password">
+                                        <i class="fa-solid fa-key hrm-dropdown-icon"></i>
+                                        <span>Đổi Mật Khẩu</span>
                                     </NavLink>
                                 </li>
                                 <li>
-                                    <NavLink class="dropdown-item" href="/my-timesheet">
-                                        <i class="fa-solid fa-calendar-days me-2 text-primary"></i>Lịch Chấm Công Của Tôi
+                                    <NavLink class="dropdown-item hrm-dropdown-item" href="/login">
+                                        <i class="fa-solid fa-user-check hrm-dropdown-icon"></i>
+                                        <span>Đổi Tài Khoản</span>
                                     </NavLink>
+                                </li>
+                                <li><hr class="dropdown-divider hrm-dropdown-divider" /></li>
+                                <li>
+                                    <button type="button" class="dropdown-item hrm-dropdown-item hrm-logout-item" @onclick="HandleLogout">
+                                        <i class="fa-solid fa-right-from-bracket hrm-dropdown-icon"></i>
+                                        <span>Đăng Xuất</span>
+                                    </button>
                                 </li>
                             </ul>
-                        </li>
+                        </div>
                     </Authorized>
                     <NotAuthorized>
-                        <li class="nav-item">
-                            <NavLink class="nav-link" href="/face-checkin">
-                                Chấm Công
-                            </NavLink>
-                        </li>
+                        <a href="/login" class="hrm-login-btn">
+                            <i class="fa-solid fa-right-to-bracket me-2"></i>
+                            <span>Đăng Nhập</span>
+                        </a>
                     </NotAuthorized>
                 </AuthorizeView>
+            </div>
 
-                <!-- YÊU CẦU (DROPDOWN) -->
-                <AuthorizeView>
-                    <Authorized>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle @(IsActive("/leave-request", "/my-attendance-requests") ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Yêu Cầu
-                            </a>
-                            <ul class="dropdown-menu">
-                                <li>
-                                    <NavLink class="dropdown-item" href="/leave-request">
-                                        <i class="fa-solid fa-calendar-check me-2 text-primary"></i>Đăng Ký Nghỉ Phép
-                                    </NavLink>
-                                </li>
-                                <li>
-                                    <NavLink class="dropdown-item" href="/my-attendance-requests">
-                                        <i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>Yêu Cầu Chấm Công
-                                    </NavLink>
-                                </li>
-                            </ul>
-                        </li>
+            <!-- KHU VỰC 2: MENU ĐIỀU HƯỚNG CHÍNH -->
+            <div class="collapse navbar-collapse order-lg-2 hrm-navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav hrm-nav-list me-auto mb-0">
+                    <!-- TRANG CHỦ -->
+                    <li class="nav-item">
+                        <NavLink class="nav-link hrm-nav-link" href="/" Match="NavLinkMatch.All">
+                            <i class="fa-solid fa-house hrm-nav-icon" aria-hidden="true"></i>
+                            <span>Trang Chủ</span>
+                        </NavLink>
+                    </li>
 
-                        <!-- PHIẾU LƯƠNG -->
-                        <li class="nav-item">
-                            <NavLink class="nav-link" href="/my-payslip">
-                                Phiếu Lương
-                            </NavLink>
-                        </li>
-                    </Authorized>
-                </AuthorizeView>
-
-                <!-- QUẢN LÝ (DROPDOWN - QUẢN LÝ / KẾ TOÁN / ADMIN) -->
-                <AuthorizeView Roles="ROLE_MANAGER, ROLE_HR_ACCOUNTANT, ROLE_ADMIN">
-                    <Authorized>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle @(IsActive("/admin/attendance-approval", "/admin/leave-approval", "/admin/shifts", "/admin/payroll-calculation") ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Quản Lý
-                            </a>
-                            <ul class="dropdown-menu">
-                                <AuthorizeView Roles="ROLE_MANAGER, ROLE_ADMIN" Context="mgrContext">
-                                    <Authorized>
-                                        <li>
-                                            <NavLink class="dropdown-item" href="/admin/attendance-approval">
-                                                <i class="fa-solid fa-user-clock me-2 text-primary"></i>Duyệt Chấm Công
-                                            </NavLink>
-                                        </li>
-                                    </Authorized>
-                                </AuthorizeView>
-                                <li>
-                                    <NavLink class="dropdown-item" href="/admin/leave-approval">
-                                        <i class="fa-solid fa-calendar-check me-2 text-primary"></i>Duyệt Nghỉ Phép
-                                    </NavLink>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <NavLink class="dropdown-item" href="/admin/shifts">
-                                        <i class="fa-solid fa-business-time me-2 text-primary"></i>Ca Làm Việc
-                                    </NavLink>
-                                </li>
-                                <AuthorizeView Roles="ROLE_HR_ACCOUNTANT, ROLE_ADMIN" Context="accContext">
-                                    <Authorized>
-                                        <li>
-                                            <NavLink class="dropdown-item" href="/admin/payroll-calculation">
-                                                <i class="fa-solid fa-calculator me-2 text-primary"></i>Bảng Công / Tính Lương
-                                            </NavLink>
-                                        </li>
-                                    </Authorized>
-                                </AuthorizeView>
-                            </ul>
-                        </li>
-                    </Authorized>
-                </AuthorizeView>
-
-                <!-- QUẢN TRỊ (DROPDOWN - CHỈ ROLE_ADMIN) -->
-                <AuthorizeView Roles="ROLE_ADMIN">
-                    <Authorized>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle @(IsActive("/admin/face-management", "/admin/user-management") ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Quản Trị
-                            </a>
-                            <ul class="dropdown-menu">
-                                <li>
-                                    <NavLink class="dropdown-item" href="/admin/face-management">
-                                        <i class="fa-solid fa-camera-rotate me-2 text-primary"></i>Quản Lý Khuôn Mặt
-                                    </NavLink>
-                                </li>
-                                <li>
-                                    <NavLink class="dropdown-item" href="/admin/user-management">
-                                        <i class="fa-solid fa-users-gear me-2 text-primary"></i>Quản Trị Tài Khoản
-                                    </NavLink>
-                                </li>
-                            </ul>
-                        </li>
-                    </Authorized>
-                </AuthorizeView>
-            </ul>
-
-            <!-- 3. KHU VỰC BÊN PHẢI: HỒ SƠ NGƯỜI DÙNG TINH GỌN -->
-            <AuthorizeView>
-                <Authorized>
-                    <div class="dropdown mt-2 mt-lg-0 ms-lg-2">
-                        <button class="topbar-user-btn dropdown-toggle border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <div class="avatar-circle rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px; font-size: 0.75rem; font-weight: 700;">
-                                @GetAvatarInitial(context.User)
-                            </div>
-                            <span class="fw-medium text-truncate me-1 text-white" style="max-width: 120px; font-size: 0.85rem;">
-                                @GetShortDisplayName(context.User)
-                            </span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow">
-                            <li class="px-3 py-2 border-bottom mb-1 dropdown-user-header">
-                                <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <span class="fw-bold text-dark text-truncate" style="font-size: 0.86rem;">
-                                        @(context.User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? context.User.Identity?.Name)
-                                    </span>
-                                    <span class="badge @GetRoleBadgeClass(context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value) py-1 px-1.5 ms-2" style="font-size: 0.65rem;">
-                                        @GetRoleDisplayName(context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value)
-                                    </span>
-                                </div>
-                                <div class="text-muted" style="font-size: 0.72rem;">
-                                    @(context.User.FindFirst("EmployeeCode")?.Value ?? "EMP") • @(context.User.FindFirst("DepartmentName")?.Value ?? "Phòng Ban")
-                                </div>
+                    <!-- CHẤM CÔNG -->
+                    <AuthorizeView>
+                        <Authorized>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle hrm-nav-link @(IsActive("/face-checkin", "/my-timesheet") ? "active" : "")"
+                                   href="#"
+                                   role="button"
+                                   data-bs-toggle="dropdown"
+                                   aria-expanded="false">
+                                    <i class="fa-solid fa-calendar-check hrm-nav-icon" aria-hidden="true"></i>
+                                    <span>Chấm Công</span>
+                                    <i class="fa-solid fa-chevron-down hrm-nav-caret" aria-hidden="true"></i>
+                                </a>
+                                <ul class="dropdown-menu hrm-dropdown-menu">
+                                    <li>
+                                        <NavLink class="dropdown-item hrm-dropdown-item" href="/face-checkin">
+                                            <i class="fa-solid fa-camera hrm-dropdown-icon"></i>
+                                            <span>Chấm Công Khuôn Mặt</span>
+                                        </NavLink>
+                                    </li>
+                                    <li>
+                                        <NavLink class="dropdown-item hrm-dropdown-item" href="/my-timesheet">
+                                            <i class="fa-solid fa-calendar-days hrm-dropdown-icon"></i>
+                                            <span>Lịch Chấm Công Của Tôi</span>
+                                        </NavLink>
+                                    </li>
+                                </ul>
                             </li>
-                            <li>
-                                <NavLink class="dropdown-item" href="/change-password">
-                                    <i class="fa-solid fa-key me-2 text-warning"></i>Đổi Mật Khẩu
+                        </Authorized>
+                        <NotAuthorized>
+                            <li class="nav-item">
+                                <NavLink class="nav-link hrm-nav-link" href="/face-checkin">
+                                    <i class="fa-solid fa-calendar-check hrm-nav-icon" aria-hidden="true"></i>
+                                    <span>Chấm Công</span>
                                 </NavLink>
                             </li>
-                            <li>
-                                <NavLink class="dropdown-item" href="/login">
-                                    <i class="fa-solid fa-users me-2 text-info"></i>Đổi Tài Khoản
+                        </NotAuthorized>
+                    </AuthorizeView>
+
+                    <!-- YÊU CẦU & PHIẾU LƯƠNG -->
+                    <AuthorizeView>
+                        <Authorized>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle hrm-nav-link @(IsActive("/leave-request", "/my-attendance-requests") ? "active" : "")"
+                                   href="#"
+                                   role="button"
+                                   data-bs-toggle="dropdown"
+                                   aria-expanded="false">
+                                    <i class="fa-solid fa-file-signature hrm-nav-icon" aria-hidden="true"></i>
+                                    <span>Yêu Cầu</span>
+                                    <i class="fa-solid fa-chevron-down hrm-nav-caret" aria-hidden="true"></i>
+                                </a>
+                                <ul class="dropdown-menu hrm-dropdown-menu">
+                                    <li>
+                                        <NavLink class="dropdown-item hrm-dropdown-item" href="/leave-request">
+                                            <i class="fa-solid fa-calendar-plus hrm-dropdown-icon"></i>
+                                            <span>Đăng Ký Nghỉ Phép</span>
+                                        </NavLink>
+                                    </li>
+                                    <li>
+                                        <NavLink class="dropdown-item hrm-dropdown-item" href="/my-attendance-requests">
+                                            <i class="fa-solid fa-clock-rotate-left hrm-dropdown-icon"></i>
+                                            <span>Yêu Cầu Chấm Công</span>
+                                        </NavLink>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- PHIẾU LƯƠNG -->
+                            <li class="nav-item">
+                                <NavLink class="nav-link hrm-nav-link" href="/my-payslip">
+                                    <i class="fa-solid fa-file-invoice-dollar hrm-nav-icon" aria-hidden="true"></i>
+                                    <span>Phiếu Lương</span>
                                 </NavLink>
                             </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <button type="button" class="dropdown-item topbar-logout-item fw-semibold" @onclick="HandleLogout">
-                                    <i class="fa-solid fa-right-from-bracket me-2 text-danger"></i>Đăng Xuất
-                                </button>
+                        </Authorized>
+                    </AuthorizeView>
+
+                    <!-- QUẢN LÝ (QUẢN LÝ / KẾ TOÁN / ADMIN) -->
+                    <AuthorizeView Roles="ROLE_MANAGER, ROLE_HR_ACCOUNTANT, ROLE_ADMIN">
+                        <Authorized>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle hrm-nav-link @(IsActive("/admin/attendance-approval", "/admin/leave-approval", "/admin/shifts", "/admin/payroll-calculation") ? "active" : "")"
+                                   href="#"
+                                   role="button"
+                                   data-bs-toggle="dropdown"
+                                   aria-expanded="false">
+                                    <i class="fa-solid fa-briefcase hrm-nav-icon" aria-hidden="true"></i>
+                                    <span>Quản Lý</span>
+                                    <i class="fa-solid fa-chevron-down hrm-nav-caret" aria-hidden="true"></i>
+                                </a>
+                                <ul class="dropdown-menu hrm-dropdown-menu">
+                                    <AuthorizeView Roles="ROLE_MANAGER, ROLE_ADMIN" Context="mgrContext">
+                                        <Authorized>
+                                            <li>
+                                                <NavLink class="dropdown-item hrm-dropdown-item" href="/admin/attendance-approval">
+                                                    <i class="fa-solid fa-user-clock hrm-dropdown-icon"></i>
+                                                    <span>Duyệt Chấm Công</span>
+                                                </NavLink>
+                                            </li>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                    <li>
+                                        <NavLink class="dropdown-item hrm-dropdown-item" href="/admin/leave-approval">
+                                            <i class="fa-solid fa-calendar-check hrm-dropdown-icon"></i>
+                                            <span>Duyệt Nghỉ Phép</span>
+                                        </NavLink>
+                                    </li>
+                                    <li><hr class="dropdown-divider hrm-dropdown-divider" /></li>
+                                    <li>
+                                        <NavLink class="dropdown-item hrm-dropdown-item" href="/admin/shifts">
+                                            <i class="fa-solid fa-business-time hrm-dropdown-icon"></i>
+                                            <span>Ca Làm Việc</span>
+                                        </NavLink>
+                                    </li>
+                                    <AuthorizeView Roles="ROLE_HR_ACCOUNTANT, ROLE_ADMIN" Context="accContext">
+                                        <Authorized>
+                                            <li>
+                                                <NavLink class="dropdown-item hrm-dropdown-item" href="/admin/payroll-calculation">
+                                                    <i class="fa-solid fa-calculator hrm-dropdown-icon"></i>
+                                                    <span>Bảng Công / Tính Lương</span>
+                                                </NavLink>
+                                            </li>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                </ul>
                             </li>
-                        </ul>
-                    </div>
-                </Authorized>
-                <NotAuthorized>
-                    <div class="d-flex align-items-center mt-2 mt-lg-0">
-                        <a href="/login" class="btn btn-primary btn-sm px-3 py-1 fw-semibold d-inline-flex align-items-center" style="font-size: 0.82rem;">
-                            <i class="fa-solid fa-right-to-bracket me-1.5"></i>Đăng Nhập
-                        </a>
-                    </div>
-                </NotAuthorized>
-            </AuthorizeView>
+                        </Authorized>
+                    </AuthorizeView>
+
+                    <!-- QUẢN TRỊ (CHỈ ROLE_ADMIN) -->
+                    <AuthorizeView Roles="ROLE_ADMIN">
+                        <Authorized>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle hrm-nav-link @(IsActive("/admin/face-management", "/admin/user-management") ? "active" : "")"
+                                   href="#"
+                                   role="button"
+                                   data-bs-toggle="dropdown"
+                                   aria-expanded="false">
+                                    <i class="fa-solid fa-shield-halved hrm-nav-icon" aria-hidden="true"></i>
+                                    <span>Quản Trị</span>
+                                    <i class="fa-solid fa-chevron-down hrm-nav-caret" aria-hidden="true"></i>
+                                </a>
+                                <ul class="dropdown-menu hrm-dropdown-menu">
+                                    <li>
+                                        <NavLink class="dropdown-item hrm-dropdown-item" href="/admin/face-management">
+                                            <i class="fa-solid fa-camera-rotate hrm-dropdown-icon"></i>
+                                            <span>Quản Lý Khuôn Mặt</span>
+                                        </NavLink>
+                                    </li>
+                                    <li>
+                                        <NavLink class="dropdown-item hrm-dropdown-item" href="/admin/user-management">
+                                            <i class="fa-solid fa-users-gear hrm-dropdown-icon"></i>
+                                            <span>Quản Trị Tài Khoản</span>
+                                        </NavLink>
+                                    </li>
+                                </ul>
+                            </li>
+                        </Authorized>
+                    </AuthorizeView>
+                </ul>
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
+</header>
 
 @code {
     protected override void OnInitialized()
@@ -261,17 +322,12 @@
         return "U";
     }
 
-    private string GetShortDisplayName(System.Security.Claims.ClaimsPrincipal user)
+    private string GetDisplayName(System.Security.Claims.ClaimsPrincipal user)
     {
         var name = user.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value 
             ?? user.Identity?.Name 
             ?? "Người dùng";
-        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length > 1)
-        {
-            return parts[^1];
-        }
-        return name;
+        return name.Trim();
     }
 
     private string GetRoleBadgeClass(string? role) => role switch

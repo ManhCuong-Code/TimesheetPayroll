@@ -1,14 +1,70 @@
 // ==============================================================================
-// HRMS PRO - BIOMETRIC FACE RECOGNITION & LIVENESS DETECTION ENGINE
-// Hỗ trợ truy cập Camera, HUD Canvas Overlay, Liveness Check & Trích xuất Vector 128-D
+// HRMS PRO - BIOMETRIC FACE RECOGNITION, QUALITY GATE & 128-D EMBEDDING ENGINE
+// Tối ưu hóa Camera Reuse, 8 FPS Detection / 60 FPS HUD, Zero-GC Pre-allocated Buffers,
+// Căn chỉnh tâm khuôn mặt (Centroid Alignment) & Trích xuất Vector 128-D L2-Normalized
 // ==============================================================================
 
 window.FaceRecognitionHelper = (function () {
     const activeStreams = {};
     const animationFrames = {};
     const previousFrames = {};
+    const currentGrayBuffers = {};
     const livenessHistories = {};
+    const lastDetectionResults = {};
+    const lastDetectionTimestamps = {};
+    const lastVideoTimestamps = {};
+    const inFlightEvaluations = {};
+    const inFlightCaptures = {};
+    const hudPausedFlags = {};
+    const cachedFrameEmbeddings = {};
+
+    // Chu kỳ xử lý phát hiện khuôn mặt & kiểm tra chất lượng: 8 FPS (125ms/frame)
+    // Tách biệt hoàn toàn với vòng lặp vẽ giao diện HUD 60 FPS (requestAnimationFrame)
+    const DETECTION_INTERVAL_MS = 125;
+
+    // Pre-allocated Offscreen Canvases & TypedArrays (Singleton trong suốt vòng đời trang)
+    let _livenessCanvas = null;
+    let _livenessCtx = null;
+    let _descriptorCanvas = null;
+    let _descriptorCtx = null;
+    let _photoCanvas = null;
+    let _photoCtx = null;
+    const _rawDescriptor128 = new Float32Array(128);
+    const _centeredDescriptor128 = new Float32Array(128);
+
     let audioCtx = null;
+
+    function ensureLivenessCanvas() {
+        if (!_livenessCanvas) {
+            _livenessCanvas = document.createElement('canvas');
+            _livenessCanvas.width = 120;
+            _livenessCanvas.height = 140;
+            _livenessCtx = _livenessCanvas.getContext('2d', { willReadFrequently: true });
+        }
+        return _livenessCtx;
+    }
+
+    function ensureDescriptorCanvas() {
+        if (!_descriptorCanvas) {
+            _descriptorCanvas = document.createElement('canvas');
+            _descriptorCanvas.width = 160;
+            _descriptorCanvas.height = 160;
+            _descriptorCtx = _descriptorCanvas.getContext('2d', { willReadFrequently: true });
+        }
+        return _descriptorCtx;
+    }
+
+    function ensurePhotoCanvas(width, height) {
+        if (!_photoCanvas) {
+            _photoCanvas = document.createElement('canvas');
+            _photoCtx = _photoCanvas.getContext('2d');
+        }
+        if (_photoCanvas.width !== width || _photoCanvas.height !== height) {
+            _photoCanvas.width = width;
+            _photoCanvas.height = height;
+        }
+        return _photoCtx;
+    }
 
     function getAudioContext() {
         if (!audioCtx) {
@@ -31,7 +87,6 @@ window.FaceRecognitionHelper = (function () {
 
             const now = ctx.currentTime;
             if (type === 'success') {
-                // Hợp âm C - E - G tươi vui
                 [523.25, 659.25, 783.99].forEach((freq, index) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
@@ -46,7 +101,6 @@ window.FaceRecognitionHelper = (function () {
                     osc.stop(now + index * 0.08 + 0.36);
                 });
             } else if (type === 'error') {
-                // Tiếng cảnh báo hai nốt trầm
                 [330, 260].forEach((freq, index) => {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
@@ -60,7 +114,6 @@ window.FaceRecognitionHelper = (function () {
                     osc.stop(now + index * 0.14 + 0.22);
                 });
             } else if (type === 'scan') {
-                // Tiếng tíc nhẹ khi nhận diện
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.type = 'sine';
@@ -72,9 +125,7 @@ window.FaceRecognitionHelper = (function () {
                 osc.start(now);
                 osc.stop(now + 0.07);
             }
-        } catch (e) {
-            console.warn("Không thể phát âm thanh phản hồi:", e);
-        }
+        } catch (e) { }
     }
 
     // Dọn dẹp toàn bộ camera khi đóng trang hoặc chuyển hướng
@@ -84,11 +135,29 @@ window.FaceRecognitionHelper = (function () {
         });
     }
 
-    // Đăng ký dọn dẹp camera khi đóng tab / reload trang
     window.addEventListener('beforeunload', stopAllCameras);
     window.addEventListener('pagehide', stopAllCameras);
 
-    // Tắt camera an toàn và giải phóng tài nguyên
+    // Tạm dừng vòng lặp HUD nhưng giữ nguyên luồng phần cứng Webcam để tái sử dụng tức thì
+    function pauseHud(videoId) {
+        hudPausedFlags[videoId] = true;
+        if (animationFrames[videoId]) {
+            cancelAnimationFrame(animationFrames[videoId]);
+            delete animationFrames[videoId];
+        }
+        return true;
+    }
+
+    // Tiếp tục vòng lặp HUD trên luồng Webcam đang mở sẵn
+    function resumeHud(videoId, canvasId, dotNetHelper) {
+        hudPausedFlags[videoId] = false;
+        if (canvasId) {
+            startHudLoop(videoId, canvasId, dotNetHelper);
+        }
+        return true;
+    }
+
+    // Tắt camera an toàn và giải phóng tài nguyên phần cứng khi đóng modal hoặc rời trang
     function stopCamera(videoId) {
         if (animationFrames[videoId]) {
             cancelAnimationFrame(animationFrames[videoId]);
@@ -110,14 +179,53 @@ window.FaceRecognitionHelper = (function () {
         }
 
         delete previousFrames[videoId];
+        delete currentGrayBuffers[videoId];
         delete livenessHistories[videoId];
+        delete lastDetectionResults[videoId];
+        delete lastDetectionTimestamps[videoId];
+        delete lastVideoTimestamps[videoId];
+        delete inFlightEvaluations[videoId];
+        delete inFlightCaptures[videoId];
+        delete hudPausedFlags[videoId];
+        delete cachedFrameEmbeddings[videoId];
         return true;
     }
 
-    // Khởi tạo camera và HUD Canvas
+    function isStreamLive(stream) {
+        if (!stream || typeof stream.getVideoTracks !== 'function') return false;
+        const tracks = stream.getVideoTracks();
+        return tracks.length > 0 && tracks[0].readyState === 'live';
+    }
+
+    // Khởi tạo camera một lần và tái sử dụng xuyên suốt phiên đăng ký
     async function startCamera(videoId, canvasId, dotNetHelper) {
+        const initStart = performance.now();
         try {
-            // Dọn dẹp stream cũ nếu đã tồn tại để tránh rò rỉ track
+            const video = document.getElementById(videoId);
+
+            // TÁI SỬ DỤNG STREAM ĐANG HOẠT ĐỘNG (Tránh khởi tạo lại phần cứng webcam mỗi lần chuyển bước)
+            const existingStream = activeStreams[videoId];
+            if (video && existingStream && isStreamLive(existingStream)) {
+                if (video.srcObject !== existingStream) {
+                    video.srcObject = existingStream;
+                }
+                if (video.paused) {
+                    try { await video.play(); } catch (e) { }
+                }
+                hudPausedFlags[videoId] = false;
+                if (canvasId) {
+                    startHudLoop(videoId, canvasId, dotNetHelper);
+                }
+                return {
+                    success: true,
+                    width: video.videoWidth || 640,
+                    height: video.videoHeight || 480,
+                    reusedStream: true,
+                    cameraInitMs: Math.round((performance.now() - initStart) * 100) / 100
+                };
+            }
+
+            // Dọn dẹp stream cũ nếu đã ngắt kết nối
             stopCamera(videoId);
 
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -128,56 +236,57 @@ window.FaceRecognitionHelper = (function () {
                 return { success: false, error: "Trình duyệt của bạn không hỗ trợ API truy cập Camera (navigator.mediaDevices.getUserMedia)." };
             }
 
+            // Độ phân giải 640x480 tối ưu cho phát hiện khuôn mặt & trích xuất 160x160
             const constraints = {
                 video: {
                     width: { ideal: 640 },
                     height: { ideal: 480 },
+                    frameRate: { ideal: 30, max: 30 },
                     facingMode: "user"
                 },
                 audio: false
             };
 
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            const video = document.getElementById(videoId);
-            if (!video) {
+            const targetVideo = document.getElementById(videoId);
+            if (!targetVideo) {
                 stream.getTracks().forEach(t => t.stop());
                 return { success: false, error: `Không tìm thấy phần tử video #${videoId} trên giao diện.` };
             }
 
-            video.srcObject = stream;
+            targetVideo.srcObject = stream;
             activeStreams[videoId] = stream;
             livenessHistories[videoId] = [];
+            hudPausedFlags[videoId] = false;
 
-            // Chờ video sẵn sàng nạp kích thước
             await new Promise((resolve) => {
-                if (video.readyState >= 1 && video.videoWidth > 0) {
-                    video.play().then(resolve).catch(resolve);
+                if (targetVideo.readyState >= 1 && targetVideo.videoWidth > 0) {
+                    targetVideo.play().then(resolve).catch(resolve);
                     return;
                 }
                 const onLoaded = () => {
-                    video.removeEventListener('loadedmetadata', onLoaded);
-                    video.play().then(resolve).catch(resolve);
+                    targetVideo.removeEventListener('loadedmetadata', onLoaded);
+                    targetVideo.play().then(resolve).catch(resolve);
                 };
-                video.addEventListener('loadedmetadata', onLoaded);
-                // Fallback timeout sau 3 giây
+                targetVideo.addEventListener('loadedmetadata', onLoaded);
                 setTimeout(() => {
-                    video.removeEventListener('loadedmetadata', onLoaded);
-                    video.play().then(resolve).catch(resolve);
-                }, 3000);
+                    targetVideo.removeEventListener('loadedmetadata', onLoaded);
+                    targetVideo.play().then(resolve).catch(resolve);
+                }, 2500);
             });
 
-            // Khởi chạy vòng lặp vẽ HUD trên Canvas nếu có canvasId
             if (canvasId) {
                 startHudLoop(videoId, canvasId, dotNetHelper);
             }
 
             return {
                 success: true,
-                width: video.videoWidth || 640,
-                height: video.videoHeight || 480
+                width: targetVideo.videoWidth || 640,
+                height: targetVideo.videoHeight || 480,
+                reusedStream: false,
+                cameraInitMs: Math.round((performance.now() - initStart) * 100) / 100
             };
         } catch (err) {
-            console.error("Lỗi khi mở camera:", err);
             let msg = "Không thể mở camera. Vui lòng kiểm tra quyền cấp phép camera trên trình duyệt.";
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
                 msg = "Bạn đã từ chối quyền truy cập camera. Vui lòng bấm vào biểu tượng ổ khóa hoặc cài đặt cạnh thanh địa chỉ để cấp quyền Camera cho trang web.";
@@ -188,130 +297,221 @@ window.FaceRecognitionHelper = (function () {
             } else if (err.name === 'OverconstrainedError') {
                 msg = "Độ phân giải camera yêu cầu không được thiết bị hỗ trợ.";
             }
-            return { success: false, error: msg };
+            return {
+                success: false,
+                error: msg,
+                cameraInitMs: Math.round((performance.now() - initStart) * 100) / 100
+            };
         }
     }
 
-    // Phân tích frame ảnh tìm khuôn mặt & kiểm tra tính sống (Liveness & Multiple Faces Detection)
-    function evaluateFrameLiveness(video, x, y, w, h, videoId) {
-        const offCanvas = document.createElement('canvas');
-        offCanvas.width = 120;
-        offCanvas.height = 140;
-        const offCtx = offCanvas.getContext('2d');
-        // Vẽ khung hình được cắt từ video
-        offCtx.drawImage(video, x, y, w, h, 0, 0, 120, 140);
+    // Phân tích frame ảnh tìm khuôn mặt, kiểm tra chất lượng đầu vào & tính sống (Zero-GC Allocation)
+    function evaluateFrameLiveness(video, x, y, w, h, videoId, forceEvaluate = false) {
+        const now = performance.now();
 
-        const imgData = offCtx.getImageData(0, 0, 120, 140);
-        const data = imgData.data;
+        // Nếu chưa tới chu kỳ 8 FPS (125ms) hoặc frame video chưa đổi, trả về kết quả cache gần nhất
+        if (!forceEvaluate && lastDetectionResults[videoId]) {
+            const elapsed = now - (lastDetectionTimestamps[videoId] || 0);
+            const sameVideoTime = (video.currentTime === lastVideoTimestamps[videoId]);
+            if (elapsed < DETECTION_INTERVAL_MS || sameVideoTime || inFlightEvaluations[videoId]) {
+                return lastDetectionResults[videoId];
+            }
+        }
 
-        let totalBrightness = 0;
-        let skinPixels = 0;
-        let leftSkinPixels = 0;
-        let rightSkinPixels = 0;
-        let motionDiff = 0;
+        inFlightEvaluations[videoId] = true;
+        try {
+            const offCtx = ensureLivenessCanvas();
+            offCtx.drawImage(video, x, y, w, h, 0, 0, 120, 140);
 
-        const prev = previousFrames[videoId];
-        const currentGray = new Uint8Array(120 * 140);
+            const imgData = offCtx.getImageData(0, 0, 120, 140);
+            const data = imgData.data;
 
-        for (let i = 0; i < data.length; i += 4) {
-            const pixelIdx = i / 4;
-            const px = pixelIdx % 120;
-            const r = data[i];
-            const g = data[i + 1];
-            const b = data[i + 2];
-            const gray = (r * 299 + g * 587 + b * 114) / 1000;
-            currentGray[pixelIdx] = gray;
-            totalBrightness += gray;
-
-            // Heuristic nhận diện sắc tố da (Skin Tone in RGB space)
-            const isSkin = (r > 60 && g > 40 && b > 20 && (r - g) > 10 && r > b);
-            if (isSkin) {
-                skinPixels++;
-                if (px < 45) leftSkinPixels++;
-                if (px > 75) rightSkinPixels++;
+            const totalPixels = 120 * 140;
+            let prev = previousFrames[videoId];
+            let currentGray = currentGrayBuffers[videoId];
+            if (!currentGray) {
+                currentGray = new Uint8Array(totalPixels);
+                currentGrayBuffers[videoId] = currentGray;
             }
 
-            if (prev) {
-                const diff = Math.abs(gray - prev[pixelIdx]);
-                if (diff > 12) {
-                    motionDiff += diff;
+            let totalBrightness = 0;
+            let skinPixels = 0;
+            let leftSkinPixels = 0;
+            let rightSkinPixels = 0;
+            let centerSkinPixels = 0;
+            let skinSumX = 0;
+            let skinSumY = 0;
+            let motionDiff = 0;
+            let edgeSharpnessSum = 0;
+
+            for (let i = 0, pixelIdx = 0; i < data.length; i += 4, pixelIdx++) {
+                const px = pixelIdx % 120;
+                const py = (pixelIdx / 120) | 0;
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const gray = (r * 299 + g * 587 + b * 114) / 1000;
+                currentGray[pixelIdx] = gray;
+                totalBrightness += gray;
+
+                // Độ sắc nét cục bộ (Gradient ngang chống ảnh mờ/rung)
+                if (px > 20 && px < 100 && py > 20 && py < 120 && pixelIdx > 0) {
+                    edgeSharpnessSum += Math.abs(gray - currentGray[pixelIdx - 1]);
+                }
+
+                // Nhận diện vùng sắc tố da người trong không gian RGB
+                const isSkin = (r > 60 && g > 40 && b > 20 && (r - g) > 10 && r > b);
+                if (isSkin) {
+                    skinPixels++;
+                    skinSumX += px;
+                    skinSumY += py;
+                    if (px < 42) leftSkinPixels++;
+                    if (px > 78) rightSkinPixels++;
+                    if (px >= 24 && px <= 96 && py >= 20 && py <= 122) centerSkinPixels++;
+                }
+
+                if (prev) {
+                    const diff = Math.abs(gray - prev[pixelIdx]);
+                    if (diff > 12) {
+                        motionDiff += diff;
+                    }
                 }
             }
-        }
 
-        previousFrames[videoId] = currentGray;
-
-        const totalPixels = 120 * 140;
-        const avgBrightness = totalBrightness / totalPixels;
-        const skinRatio = skinPixels / totalPixels;
-
-        // Phát hiện nếu có nhiều khuôn mặt ở 2 rìa đối xứng
-        const isMultipleFaces = (leftSkinPixels / totalPixels > 0.15) && (rightSkinPixels / totalPixels > 0.15) && (skinRatio > 0.35);
-
-        // Đánh giá khuôn mặt có ở trung tâm khung quét hay không
-        const hasFace = skinRatio > 0.16 && avgBrightness > 30 && avgBrightness < 240;
-        const isCentered = hasFace && !isMultipleFaces && skinRatio > 0.25;
-
-        // Tính toán chỉ số chuyển động tự nhiên (Liveness Motion Variance)
-        const rawMotion = motionDiff / (totalPixels * 255);
-        let history = livenessHistories[videoId] || [];
-        history.push(rawMotion);
-        if (history.length > 15) history.shift();
-        livenessHistories[videoId] = history;
-
-        let motionVariance = 0;
-        const avgMotion = history.reduce((a, b) => a + b, 0) / (history.length || 1);
-        for (let m of history) {
-            motionVariance += Math.pow(m - avgMotion, 2);
-        }
-        motionVariance = Math.sqrt(motionVariance / (history.length || 1));
-
-        // Điểm số tính sống: sắc tố tự nhiên + cử động vi mô (nhấp mắt, thở nhẹ)
-        let liveness = 0.5;
-        if (hasFace) {
-            liveness += 0.25;
-            if (motionVariance > 0.0003 && motionVariance < 0.09) {
-                liveness += 0.20; // Có chuyển động vi mô tự nhiên
+            // Sao lưu sang buffer previousFrames mà không cấp phát mảng mới mỗi frame
+            if (!prev) {
+                previousFrames[videoId] = new Uint8Array(currentGray);
+            } else {
+                prev.set(currentGray);
             }
-            if (avgMotion > 0.001 && avgMotion < 0.06) {
-                liveness += 0.10;
+
+            const avgBrightness = totalBrightness / totalPixels;
+            const skinRatio = skinPixels / totalPixels;
+            const centerSkinRatio = centerSkinPixels / (72 * 102);
+            const avgSharpness = edgeSharpnessSum / (80 * 100);
+
+            // Tâm trọng lực khuôn mặt để căn chỉnh (Face Centroid Alignment)
+            const centroidX = skinPixels > 0 ? (skinSumX / skinPixels) : 60;
+            const centroidY = skinPixels > 0 ? (skinSumY / skinPixels) : 70;
+            const centroidOffsetX = (centroidX - 60) / 120; // Tỷ lệ lệch ngang [-0.5, 0.5]
+            const centroidOffsetY = (centroidY - 70) / 140; // Tỷ lệ lệch dọc [-0.5, 0.5]
+
+            // Kiểm tra phát hiện nhiều khuôn mặt ở 2 rìa khung hình
+            const isMultipleFaces = (leftSkinPixels / totalPixels > 0.15) && (rightSkinPixels / totalPixels > 0.15) && (skinRatio > 0.36);
+
+            // Kiểm tra ánh sáng
+            const isTooDark = avgBrightness < 36;
+            const isTooBright = avgBrightness > 238;
+            const lightingOk = !isTooDark && !isTooBright;
+
+            // Kiểm tra sự hiện diện & vị trí trung tâm của khuôn mặt
+            const hasFace = skinRatio > 0.14 && avgBrightness > 25 && avgBrightness < 245;
+            const isPositionCentered = Math.abs(centroidOffsetX) <= 0.18 && Math.abs(centroidOffsetY) <= 0.18;
+            const isFaceSizeValid = skinRatio >= 0.20 && centerSkinRatio >= 0.22;
+            const isCentered = hasFace && !isMultipleFaces && isPositionCentered && isFaceSizeValid;
+
+            // Tính toán chỉ số chuyển động tự nhiên & độ ổn định khung hình
+            const rawMotion = motionDiff / (totalPixels * 255);
+            let history = livenessHistories[videoId] || [];
+            history.push(rawMotion);
+            if (history.length > 12) history.shift();
+            livenessHistories[videoId] = history;
+
+            let motionVariance = 0;
+            const avgMotion = history.reduce((a, b) => a + b, 0) / (history.length || 1);
+            for (let m of history) {
+                motionVariance += Math.pow(m - avgMotion, 2);
             }
-        }
-        liveness = Math.min(0.99, Math.max(0.1, liveness));
+            motionVariance = Math.sqrt(motionVariance / (history.length || 1));
 
-        let statusText = "Vui lòng đưa khuôn mặt vào giữa khung hình";
-        if (isMultipleFaces) {
-            statusText = "Có nhiều khuôn mặt trong khung hình. Vui lòng chỉ để một người.";
-        } else if (isCentered && liveness >= 0.70) {
-            statusText = `✓ Khuôn mặt đạt chuẩn • Độ sống ${(liveness * 100).toFixed(0)}%`;
-        } else if (hasFace) {
-            statusText = "Đang căn chỉnh khuôn mặt vào giữa khung hình...";
-        } else {
-            statusText = "Chưa phát hiện khuôn mặt trong khung quét";
-        }
+            // Kiểm tra khuôn mặt có đang bị rung/nhòe chuyển động mạnh không
+            const isStable = rawMotion < 0.085 && avgSharpness >= 2.2;
 
-        return {
-            hasFace: hasFace,
-            isCentered: isCentered,
-            isMultipleFaces: isMultipleFaces,
-            livenessScore: liveness,
-            qualityOk: avgBrightness >= 35 && avgBrightness <= 230,
-            statusText: statusText
-        };
+            // Điểm số tính sống (Liveness Score)
+            let liveness = 0.50;
+            if (hasFace) {
+                liveness += 0.25;
+                if (motionVariance > 0.0002 && motionVariance < 0.09) {
+                    liveness += 0.18;
+                }
+                if (avgMotion > 0.0008 && avgMotion < 0.065) {
+                    liveness += 0.10;
+                }
+            }
+            liveness = Math.min(0.99, Math.max(0.10, liveness));
+
+            // Thông báo trạng thái rõ ràng cho người dùng theo đúng ưu tiên kiểm tra chất lượng
+            let statusText = "Đưa khuôn mặt vào giữa khung hình";
+            let qualityCode = "OK";
+
+            if (isMultipleFaces) {
+                statusText = "Phát hiện nhiều khuôn mặt, vui lòng chỉ để một người trong khung hình";
+                qualityCode = "MULTIPLE_FACES";
+            } else if (isTooDark) {
+                statusText = "Vui lòng tăng ánh sáng";
+                qualityCode = "LOW_LIGHT";
+            } else if (isTooBright) {
+                statusText = "Ánh sáng quá chói, vui lòng tránh ngược sáng";
+                qualityCode = "OVEREXPOSED";
+            } else if (!hasFace) {
+                statusText = "Không phát hiện được khuôn mặt";
+                qualityCode = "NO_FACE";
+            } else if (!isCentered) {
+                statusText = "Đưa khuôn mặt vào giữa khung hình";
+                qualityCode = "OFF_CENTER";
+            } else if (!isStable) {
+                statusText = "Giữ khuôn mặt ổn định";
+                qualityCode = "UNSTABLE";
+            } else {
+                statusText = `✓ Khuôn mặt đạt chuẩn • Độ sống ${(liveness * 100).toFixed(0)}%`;
+                qualityCode = "READY";
+            }
+
+            const result = {
+                hasFace: hasFace,
+                isCentered: isCentered,
+                isMultipleFaces: isMultipleFaces,
+                isStable: isStable,
+                lightingOk: lightingOk,
+                livenessScore: liveness,
+                qualityOk: hasFace && !isMultipleFaces && lightingOk && isStable,
+                qualityCode: qualityCode,
+                statusText: statusText,
+                centroidOffsetX: centroidOffsetX,
+                centroidOffsetY: centroidOffsetY,
+                avgBrightness: avgBrightness,
+                sharpness: avgSharpness
+            };
+
+            lastDetectionResults[videoId] = result;
+            lastDetectionTimestamps[videoId] = now;
+            lastVideoTimestamps[videoId] = video.currentTime;
+            return result;
+        } finally {
+            inFlightEvaluations[videoId] = false;
+        }
     }
 
-    // Vòng lặp vẽ HUD Canvas công nghệ cao
+    // Vòng lặp vẽ HUD Canvas 60 FPS mượt mà, tách biệt với chu kỳ AI 8 FPS
     function startHudLoop(videoId, canvasId, dotNetHelper) {
         const video = document.getElementById(videoId);
         const canvas = document.getElementById(canvasId);
         if (!video || !canvas) return;
 
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (animationFrames[videoId]) {
+            cancelAnimationFrame(animationFrames[videoId]);
+        }
+
+        const ctx = canvas.getContext('2d');
         let scanLineY = 0;
         let scanDir = 1;
         let lastReportTime = 0;
 
         function renderFrame(timestamp) {
+            if (hudPausedFlags[videoId]) {
+                return;
+            }
+
             if (!video.videoWidth || !video.videoHeight || video.paused || video.ended) {
                 animationFrames[videoId] = requestAnimationFrame(renderFrame);
                 return;
@@ -326,31 +526,30 @@ window.FaceRecognitionHelper = (function () {
             const h = canvas.height;
             ctx.clearRect(0, 0, w, h);
 
-            // Vùng mục tiêu trung tâm (Target Box: tỷ lệ khuôn mặt nhân trắc học tự nhiên 1 : 1.25)
             const boxW = Math.min(w * 0.54, 270);
             const boxH = Math.min(h * 0.70, 335);
             const boxX = (w - boxW) / 2;
             const boxY = (h - boxH) / 2;
 
-            // 1. Phân tích frame
-            const livenessData = evaluateFrameLiveness(video, boxX, boxY, boxW, boxH, videoId);
+            // 1. Lấy kết quả phát hiện khuôn mặt (Throttled ở 8 FPS, không gây nghẽn UI)
+            const livenessData = evaluateFrameLiveness(video, boxX, boxY, boxW, boxH, videoId, false);
 
-            // 2. Lớp phủ viền tinh tế (vignette nhẹ), giữ nguyên độ sáng và độ nét của khuôn mặt
+            // 2. Lớp phủ viền tinh tế
             ctx.fillStyle = 'rgba(15, 23, 42, 0.18)';
-            ctx.fillRect(0, 0, w, boxY); // Top
-            ctx.fillRect(0, boxY + boxH, w, h - (boxY + boxH)); // Bottom
-            ctx.fillRect(0, boxY, boxX, boxH); // Left
-            ctx.fillRect(boxX + boxW, boxY, w - (boxX + boxW), boxH); // Right
+            ctx.fillRect(0, 0, w, boxY);
+            ctx.fillRect(0, boxY + boxH, w, h - (boxY + boxH));
+            ctx.fillRect(0, boxY, boxX, boxH);
+            ctx.fillRect(boxX + boxW, boxY, w - (boxX + boxW), boxH);
 
-            // 3. Khung mục tiêu: Xanh lục khi đạt, Vàng cam khi đang căn chỉnh, Đỏ khi có lỗi/nhiều mặt
-            const isReady = livenessData.isCentered && !livenessData.isMultipleFaces;
-            let strokeColor = '#eab308'; // Vàng cam đang tìm kiếm/căn chỉnh
-            if (livenessData.isMultipleFaces) {
-                strokeColor = '#ef4444'; // Đỏ cảnh báo nhiều người
+            // 3. Khung định vị trạng thái trực quan
+            const isReady = livenessData.isCentered && !livenessData.isMultipleFaces && livenessData.lightingOk && livenessData.isStable;
+            let strokeColor = '#eab308';
+            if (livenessData.isMultipleFaces || !livenessData.lightingOk) {
+                strokeColor = '#ef4444';
             } else if (isReady) {
-                strokeColor = '#10b981'; // Xanh ngọc lục bảo sẵn sàng nhận diện
+                strokeColor = '#10b981';
             } else if (livenessData.hasFace) {
-                strokeColor = '#06b6d4'; // Cyan đã bắt được khuôn mặt
+                strokeColor = '#06b6d4';
             }
 
             ctx.save();
@@ -358,31 +557,26 @@ window.FaceRecognitionHelper = (function () {
             ctx.lineWidth = 3.0;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            ctx.shadowColor = strokeColor;
-            ctx.shadowBlur = 10;
 
-            // Vẽ 4 góc định vị cân đối (Corner Brackets)
             const cornerLen = 28;
             ctx.beginPath();
-            // Góc trên - trái
             ctx.moveTo(boxX, boxY + cornerLen);
             ctx.lineTo(boxX, boxY);
             ctx.lineTo(boxX + cornerLen, boxY);
-            // Góc trên - phải
+
             ctx.moveTo(boxX + boxW - cornerLen, boxY);
             ctx.lineTo(boxX + boxW, boxY);
             ctx.lineTo(boxX + boxW, boxY + cornerLen);
-            // Góc dưới - trái
+
             ctx.moveTo(boxX, boxY + boxH - cornerLen);
             ctx.lineTo(boxX, boxY + boxH);
             ctx.lineTo(boxX + cornerLen, boxY + boxH);
-            // Góc dưới - phải
+
             ctx.moveTo(boxX + boxW - cornerLen, boxY + boxH);
             ctx.lineTo(boxX + boxW, boxY + boxH);
             ctx.lineTo(boxX + boxW, boxY + boxH - cornerLen);
             ctx.stroke();
 
-            // Khung oval trung tâm nét đứt thanh mảnh
             ctx.lineWidth = 1.8;
             ctx.setLineDash([7, 6]);
             ctx.beginPath();
@@ -391,8 +585,8 @@ window.FaceRecognitionHelper = (function () {
             ctx.setLineDash([]);
             ctx.restore();
 
-            // 4. Tia laser quét chuyển động nhẹ nhàng (không che khuất mắt mũi)
-            scanLineY += 3.2 * scanDir;
+            // 4. Đường quét sinh trắc học
+            scanLineY += 3.0 * scanDir;
             if (scanLineY > boxH) {
                 scanLineY = boxH;
                 scanDir = -1;
@@ -410,17 +604,15 @@ window.FaceRecognitionHelper = (function () {
             ctx.save();
             ctx.strokeStyle = grad;
             ctx.lineWidth = 2.0;
-            ctx.shadowColor = strokeColor;
-            ctx.shadowBlur = 8;
             ctx.beginPath();
             ctx.moveTo(boxX + 16, currentScanY);
             ctx.lineTo(boxX + boxW - 16, currentScanY);
             ctx.stroke();
             ctx.restore();
 
-            // 5. Pill badge trạng thái phía trên khung hình (luôn hiển thị xuôi chiều, sắc nét)
+            // 5. Nhãn hướng dẫn trạng thái tiếng Việt trên HUD
             ctx.save();
-            ctx.font = '600 13px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+            ctx.font = '600 13px "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
@@ -430,7 +622,7 @@ window.FaceRecognitionHelper = (function () {
             const pillH = 30;
             const pillY = Math.max(10, boxY - 38);
 
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = 1.2;
             ctx.beginPath();
@@ -442,8 +634,8 @@ window.FaceRecognitionHelper = (function () {
             ctx.fillText(statusText, w / 2, pillY + pillH / 2);
             ctx.restore();
 
-            // 6. Báo cáo về Blazor định kỳ nếu có delegate
-            if (dotNetHelper && timestamp - lastReportTime > 300) {
+            // 6. Báo cáo trạng thái định kỳ (400ms) nếu component đăng ký callback
+            if (dotNetHelper && timestamp - lastReportTime > 400) {
                 lastReportTime = timestamp;
                 try {
                     dotNetHelper.invokeMethodAsync('OnFaceDetectedCallback', {
@@ -451,7 +643,8 @@ window.FaceRecognitionHelper = (function () {
                         isCentered: isReady,
                         isMultipleFaces: livenessData.isMultipleFaces,
                         livenessScore: livenessData.livenessScore,
-                        qualityOk: livenessData.qualityOk
+                        qualityOk: livenessData.qualityOk,
+                        statusText: livenessData.statusText
                     });
                 } catch (e) { }
             }
@@ -462,77 +655,145 @@ window.FaceRecognitionHelper = (function () {
         animationFrames[videoId] = requestAnimationFrame(renderFrame);
     }
 
-    let _cachedDescriptorCanvas = null;
-    let _cachedPhotoCanvas = null;
-
     // Trích xuất vector đặc trưng sinh trắc học 128 chiều Zero-Centered và L2-Normalized
-    async function captureFaceDescriptor(videoId) {
-        const startTime = performance.now();
+    // Bao gồm: Kiểm tra chất lượng ảnh đầu vào, Căn chỉnh khuôn mặt (Face Alignment), Tiền xử lý 160x160 & Đo thời gian từng bước
+    async function captureFaceDescriptor(videoId, options) {
+        const totalStart = performance.now();
+        const opts = options || {};
+        const mode = opts.mode || 'checkin'; // 'enroll' hoặc 'checkin'
+
+        // Chống chạy đồng thời nhiều tác vụ trích xuất trên cùng một camera
+        if (inFlightCaptures[videoId]) {
+            return {
+                success: false,
+                error: "Hệ thống đang xử lý khung hình trước đó, vui lòng giữ yên trong giây lát."
+            };
+        }
+
         const video = document.getElementById(videoId);
-        if (!video || !video.videoWidth) {
-            return { success: false, error: "Camera chưa sẵn sàng hoặc không đọc được khung hình." };
+        if (!video || !video.videoWidth || !video.videoHeight) {
+            return {
+                success: false,
+                error: "Camera chưa sẵn sàng hoặc không đọc được khung hình."
+            };
         }
 
-        const w = video.videoWidth;
-        const h = video.videoHeight;
-        const boxW = Math.min(w * 0.58, 290);
-        const boxH = Math.min(h * 0.72, 350);
-        const boxX = (w - boxW) / 2;
-        const boxY = (h - boxH) / 2;
+        inFlightCaptures[videoId] = true;
+        try {
+            const w = video.videoWidth;
+            const h = video.videoHeight;
+            const baseBoxW = Math.min(w * 0.58, 290);
+            const baseBoxH = Math.min(h * 0.72, 350);
+            const baseBoxX = (w - baseBoxW) / 2;
+            const baseBoxY = (h - baseBoxH) / 2;
 
-        if (!_cachedDescriptorCanvas) {
-            _cachedDescriptorCanvas = document.createElement('canvas');
-            _cachedDescriptorCanvas.width = 160;
-            _cachedDescriptorCanvas.height = 160;
-        }
-        const ctx = _cachedDescriptorCanvas.getContext('2d', { willReadFrequently: true });
-        ctx.drawImage(video, boxX, boxY, boxW, boxH, 0, 0, 160, 160);
+            // BƯỚC 1: PHÁT HIỆN KHUÔN MẶT & KIỂM TRA CHẤT LƯỢNG ĐẦU VÀO (Face Detection & Quality Gate)
+            const tDetectStart = performance.now();
+            const qualityData = evaluateFrameLiveness(video, baseBoxX, baseBoxY, baseBoxW, baseBoxH, videoId, true);
+            const faceDetectionMs = Math.round((performance.now() - tDetectStart) * 100) / 100;
 
-        const imgData = ctx.getImageData(0, 0, 160, 160);
-        const data = imgData.data;
+            if (qualityData.isMultipleFaces) {
+                return {
+                    success: false,
+                    error: "Phát hiện nhiều khuôn mặt, vui lòng chỉ để một người trong khung hình.",
+                    faceDetectionMs: faceDetectionMs
+                };
+            }
+            if (!qualityData.lightingOk) {
+                return {
+                    success: false,
+                    error: qualityData.statusText,
+                    faceDetectionMs: faceDetectionMs
+                };
+            }
+            if (!qualityData.hasFace) {
+                return {
+                    success: false,
+                    error: "Không phát hiện được khuôn mặt. Vui lòng nhìn thẳng vào giữa khung hình.",
+                    faceDetectionMs: faceDetectionMs
+                };
+            }
+            if (!qualityData.isStable) {
+                return {
+                    success: false,
+                    error: "Giữ khuôn mặt ổn định trong khung hình để trích xuất đặc trưng chính xác.",
+                    faceDetectionMs: faceDetectionMs
+                };
+            }
 
-        // Trích xuất đặc trưng đa phân giải 16 ô (4x4) x 8 moment không gian
-        const rawDescriptor = new Float32Array(128);
-        const gridSize = 4;
-        const cellW = 160 / gridSize;
-        const cellH = 160 / gridSize;
+            // Nếu khung hình video chưa thay đổi và đã có kết quả hợp lệ vừa trích xuất (< 300ms), tái sử dụng ngay
+            const cached = cachedFrameEmbeddings[videoId];
+            if (cached && cached.videoTime === video.currentTime && (performance.now() - cached.timestamp) < 300) {
+                return {
+                    success: true,
+                    descriptor: cached.descriptor,
+                    livenessScore: qualityData.livenessScore,
+                    qualityOk: true,
+                    photoBase64: cached.photoBase64,
+                    faceDetectionMs: faceDetectionMs,
+                    faceAlignmentMs: cached.faceAlignmentMs,
+                    preprocessingMs: cached.preprocessingMs,
+                    embeddingInferenceMs: cached.embeddingInferenceMs,
+                    extractDurationMs: Math.max(1, Math.round(performance.now() - totalStart))
+                };
+            }
 
-        let descIdx = 0;
-        let sumTotal = 0;
+            // BƯỚC 2: CĂN CHỈNH KHUÔN MẶT (Face Alignment theo tâm trọng lực sắc tố da)
+            const tAlignStart = performance.now();
+            const shiftX = (qualityData.centroidOffsetX || 0) * baseBoxW * 0.35;
+            const shiftY = (qualityData.centroidOffsetY || 0) * baseBoxH * 0.35;
+            const alignedBoxX = Math.max(0, Math.min(w - baseBoxW, baseBoxX + shiftX));
+            const alignedBoxY = Math.max(0, Math.min(h - baseBoxH, baseBoxY + shiftY));
+            const faceAlignmentMs = Math.round((performance.now() - tAlignStart) * 100) / 100;
 
-        for (let gy = 0; gy < gridSize; gy++) {
-            for (let gx = 0; gx < gridSize; gx++) {
-                let rSum = 0, gSum = 0, bSum = 0;
-                let hEdgeSum = 0, vEdgeSum = 0;
-                let count = 0;
+            // BƯỚC 3: TIỀN XỬ LÝ ẢNH ĐẦU VÀO 160x160 (Image Preprocessing)
+            const tPrepStart = performance.now();
+            const ctx = ensureDescriptorCanvas();
+            ctx.drawImage(video, alignedBoxX, alignedBoxY, baseBoxW, baseBoxH, 0, 0, 160, 160);
+            const imgData = ctx.getImageData(0, 0, 160, 160);
+            const data = imgData.data;
+            const preprocessingMs = Math.round((performance.now() - tPrepStart) * 100) / 100;
 
-                const startX = Math.floor(gx * cellW);
-                const startY = Math.floor(gy * cellH);
+            // BƯỚC 4: TRÍCH XUẤT VECTOR ĐẶC TRƯNG 128-D ZERO-CENTERED & L2-NORMALIZED (Embedding Inference)
+            // Giữ nguyên 100% ý nghĩa toán học 4x4 ô x 8 moment không gian = 128 chiều
+            const tInferStart = performance.now();
+            const gridSize = 4;
+            const cellW = 40; // 160 / 4
+            const cellH = 40; // 160 / 4
 
-                for (let y = startY; y < startY + cellH; y++) {
-                    for (let x = startX; x < startX + cellW; x++) {
-                        const idx = (y * 160 + x) * 4;
-                        const r = data[idx];
-                        const g = data[idx + 1];
-                        const b = data[idx + 2];
-                        rSum += r;
-                        gSum += g;
-                        bSum += b;
+            let descIdx = 0;
+            let sumTotal = 0;
 
-                        // Gradient cạnh (Edges)
-                        if (x < 159) {
-                            const nextIdx = (y * 160 + (x + 1)) * 4;
-                            hEdgeSum += Math.abs(data[nextIdx] - r);
+            for (let gy = 0; gy < gridSize; gy++) {
+                const startY = gy * cellH;
+                const endY = startY + cellH;
+                for (let gx = 0; gx < gridSize; gx++) {
+                    const startX = gx * cellW;
+                    const endX = startX + cellW;
+
+                    let rSum = 0, gSum = 0, bSum = 0;
+                    let hEdgeSum = 0, vEdgeSum = 0;
+                    const count = 1600; // 40 * 40
+
+                    for (let y = startY; y < endY; y++) {
+                        const rowOffset = y * 160;
+                        const hasNextRow = y < 159;
+                        for (let x = startX; x < endX; x++) {
+                            const idx = (rowOffset + x) << 2;
+                            const r = data[idx];
+                            rSum += r;
+                            gSum += data[idx + 1];
+                            bSum += data[idx + 2];
+
+                            if (x < 159) {
+                                hEdgeSum += Math.abs(data[idx + 4] - r);
+                            }
+                            if (hasNextRow) {
+                                vEdgeSum += Math.abs(data[idx + 640] - r);
+                            }
                         }
-                        if (y < 159) {
-                            const nextRowIdx = ((y + 1) * 160 + x) * 4;
-                            vEdgeSum += Math.abs(data[nextRowIdx] - r);
-                        }
-                        count++;
                     }
-                }
 
-                if (count > 0 && descIdx < 128) {
                     const rMean = (rSum / count) / 255.0;
                     const gMean = (gSum / count) / 255.0;
                     const bMean = (bSum / count) / 255.0;
@@ -542,77 +803,95 @@ window.FaceRecognitionHelper = (function () {
                     const rgDiff = (rMean - gMean);
                     const gbDiff = (gMean - bMean);
 
-                    rawDescriptor[descIdx++] = rMean;
-                    rawDescriptor[descIdx++] = gMean;
-                    rawDescriptor[descIdx++] = bMean;
-                    rawDescriptor[descIdx++] = hEdge;
-                    rawDescriptor[descIdx++] = vEdge;
-                    rawDescriptor[descIdx++] = edgeMag;
-                    rawDescriptor[descIdx++] = rgDiff;
-                    rawDescriptor[descIdx++] = gbDiff;
+                    _rawDescriptor128[descIdx++] = rMean;
+                    _rawDescriptor128[descIdx++] = gMean;
+                    _rawDescriptor128[descIdx++] = bMean;
+                    _rawDescriptor128[descIdx++] = hEdge;
+                    _rawDescriptor128[descIdx++] = vEdge;
+                    _rawDescriptor128[descIdx++] = edgeMag;
+                    _rawDescriptor128[descIdx++] = rgDiff;
+                    _rawDescriptor128[descIdx++] = gbDiff;
 
                     sumTotal += (rMean + gMean + bMean + hEdge + vEdge + edgeMag + rgDiff + gbDiff);
                 }
             }
-        }
 
-        // 1. Zero-centering: Trừ trung bình để khử nhiễu ánh sáng toàn cục
-        const mean = sumTotal / 128.0;
-        const centered = new Float32Array(128);
-        let normSq = 0;
-        for (let i = 0; i < 128; i++) {
-            centered[i] = rawDescriptor[i] - mean;
-            normSq += centered[i] * centered[i];
-        }
-
-        // 2. L2-Normalization: Chuẩn hóa về mặt cầu đơn vị 128 chiều (||V|| = 1.0)
-        const norm = Math.sqrt(normSq) || 1.0;
-        const normalized = [];
-        for (let i = 0; i < 128; i++) {
-            normalized.push(Number((centered[i] / norm).toFixed(6)));
-        }
-
-        // Chụp ảnh bằng chứng xác minh (Photo Snapshot JPEG Base64)
-        let photoBase64 = null;
-        try {
-            if (!_cachedPhotoCanvas) {
-                _cachedPhotoCanvas = document.createElement('canvas');
+            // Zero-centering: Khử nhiễu độ sáng môi trường toàn cục
+            const mean = sumTotal / 128.0;
+            let normSq = 0;
+            for (let i = 0; i < 128; i++) {
+                const c = _rawDescriptor128[i] - mean;
+                _centeredDescriptor128[i] = c;
+                normSq += c * c;
             }
-            _cachedPhotoCanvas.width = Math.min(w, 640);
-            _cachedPhotoCanvas.height = Math.min(h, 480);
-            const pCtx = _cachedPhotoCanvas.getContext('2d');
-            pCtx.drawImage(video, 0, 0, _cachedPhotoCanvas.width, _cachedPhotoCanvas.height);
-            photoBase64 = _cachedPhotoCanvas.toDataURL('image/jpeg', 0.85);
-        } catch (e) {
-            console.warn("Lỗi trích xuất ảnh chụp snapshot:", e);
+
+            // L2-Normalization: Chuẩn hóa về mặt cầu đơn vị 128 chiều (||V|| = 1.0)
+            const norm = Math.sqrt(normSq) || 1.0;
+            const normalized = new Array(128);
+            for (let i = 0; i < 128; i++) {
+                normalized[i] = Number((_centeredDescriptor128[i] / norm).toFixed(6));
+            }
+            const embeddingInferenceMs = Math.round((performance.now() - tInferStart) * 100) / 100;
+
+            // BƯỚC 5: TẠO ẢNH XÁC MINH NÉN GỌN (Tối ưu băng thông SignalR)
+            // Chế độ 'enroll' chỉ cần thumbnail 120x120 (~3KB) để hiển thị xác nhận trên UI, không lưu ảnh thô vào DB
+            // Chế độ 'checkin' dùng 320x240 (~12KB) thay vì 640x480 (~80KB) để truyền qua SignalR nhanh gấp 6 lần
+            let photoBase64 = null;
+            try {
+                if (mode === 'enroll') {
+                    const pCtx = ensurePhotoCanvas(120, 120);
+                    pCtx.drawImage(video, alignedBoxX, alignedBoxY, baseBoxW, baseBoxH, 0, 0, 120, 120);
+                    photoBase64 = _photoCanvas.toDataURL('image/jpeg', 0.72);
+                } else {
+                    const snapW = Math.min(w, 320);
+                    const snapH = Math.min(h, 240);
+                    const pCtx = ensurePhotoCanvas(snapW, snapH);
+                    pCtx.drawImage(video, 0, 0, snapW, snapH);
+                    photoBase64 = _photoCanvas.toDataURL('image/jpeg', 0.80);
+                }
+            } catch (e) { }
+
+            playChime('scan');
+            const totalDurationMs = Math.max(1, Math.round(performance.now() - totalStart));
+
+            cachedFrameEmbeddings[videoId] = {
+                videoTime: video.currentTime,
+                timestamp: performance.now(),
+                descriptor: normalized,
+                photoBase64: photoBase64,
+                faceAlignmentMs: faceAlignmentMs,
+                preprocessingMs: preprocessingMs,
+                embeddingInferenceMs: embeddingInferenceMs
+            };
+
+            return {
+                success: true,
+                descriptor: normalized,
+                livenessScore: Number(qualityData.livenessScore.toFixed(2)),
+                qualityOk: true,
+                photoBase64: photoBase64,
+                faceDetectionMs: faceDetectionMs,
+                faceAlignmentMs: faceAlignmentMs,
+                preprocessingMs: preprocessingMs,
+                embeddingInferenceMs: embeddingInferenceMs,
+                extractDurationMs: totalDurationMs
+            };
+        } finally {
+            inFlightCaptures[videoId] = false;
         }
-
-        playChime('scan');
-        const durationMs = Math.round(performance.now() - startTime);
-
-        return {
-            success: true,
-            descriptor: normalized,
-            livenessScore: 0.92,
-            qualityOk: true,
-            photoBase64: photoBase64,
-            extractDurationMs: durationMs
-        };
     }
 
     // Chụp ảnh tức thì từ camera (trả về Base64 JPEG)
-    function capturePhotoBase64(videoId, quality = 0.85) {
+    function capturePhotoBase64(videoId, quality = 0.80) {
         const video = document.getElementById(videoId);
         if (!video || !video.videoWidth) return null;
         try {
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.min(video.videoWidth, 640);
-            canvas.height = Math.min(video.videoHeight, 480);
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            return canvas.toDataURL('image/jpeg', quality);
+            const snapW = Math.min(video.videoWidth, 320);
+            const snapH = Math.min(video.videoHeight, 240);
+            const ctx = ensurePhotoCanvas(snapW, snapH);
+            ctx.drawImage(video, 0, 0, snapW, snapH);
+            return _photoCanvas.toDataURL('image/jpeg', quality);
         } catch (err) {
-            console.error("Lỗi chụp ảnh từ video:", err);
             return null;
         }
     }
@@ -620,6 +899,8 @@ window.FaceRecognitionHelper = (function () {
     return {
         startCamera: startCamera,
         stopCamera: stopCamera,
+        pauseHud: pauseHud,
+        resumeHud: resumeHud,
         stopAllCameras: stopAllCameras,
         captureFaceDescriptor: captureFaceDescriptor,
         capturePhotoBase64: capturePhotoBase64,

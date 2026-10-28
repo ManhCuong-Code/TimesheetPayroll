@@ -4,15 +4,54 @@ public class FaceCameraInitResult
 {
     public bool Success { get; set; }
     public string? Error { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public bool ReusedStream { get; set; }
+    public double CameraInitMs { get; set; }
 }
 
 public class FaceCaptureResult
 {
     public bool Success { get; set; }
     public float[]? Descriptor { get; set; }
+    public double LivenessScore { get; set; } = 0.90;
+    public bool QualityOk { get; set; }
     public double QualityScore { get; set; }
     public bool LivenessPassed { get; set; }
+    public string? PhotoBase64 { get; set; }
     public string? Error { get; set; }
+    public double FaceDetectionMs { get; set; }
+    public double FaceAlignmentMs { get; set; }
+    public double PreprocessingMs { get; set; }
+    public double EmbeddingInferenceMs { get; set; }
+    public int ExtractDurationMs { get; set; }
+}
+
+public class FaceDbSaveResult
+{
+    public bool EmployeeExists { get; set; }
+    public bool WasAlreadyEnrolled { get; set; }
+    public bool SkippedIdenticalWrite { get; set; }
+    public double SqlQueryMs { get; set; }
+    public double DbWriteMs { get; set; }
+}
+
+public class FaceEnrollmentTelemetryDto
+{
+    public long EmployeeId { get; set; }
+    public double CameraInitMs { get; set; }
+    public bool ReusedCameraStream { get; set; }
+    public double FaceDetectionMs { get; set; }
+    public double FaceAlignmentMs { get; set; }
+    public double PreprocessingMs { get; set; }
+    public double EmbeddingInferenceMs { get; set; }
+    public double EmbeddingValidationMs { get; set; }
+    public double SqlQueryMs { get; set; }
+    public double DbWriteMs { get; set; }
+    public double TotalEnrollmentMs { get; set; }
+    public bool WasAlreadyEnrolled { get; set; }
+    public bool SkippedIdenticalWrite { get; set; }
+    public bool ReusedExistingEmbedding { get; set; }
 }
 
 public class FacePunchDbResult
@@ -53,4 +92,3 @@ public class AttendanceStatusDto
     public string? Note { get; set; }
     public string StatusCategory { get; set; } = "NOT_STARTED";
 }
-

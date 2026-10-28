@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using TimesheetPayroll.CoreBusiness.Models;
 
@@ -7,7 +8,7 @@ public interface IFaceBiometricService
 {
     /// <summary>
     /// Tính khoảng cách Euclidean giữa hai vector đặc trưng 128 chiều.
-    /// Giá trị càng nhỏ thể hiện mức độ tương đồng càng cao. (Khớp khi D <= 0.55).
+    /// Giá trị càng nhỏ thể hiện mức độ tương đồng càng cao. (Khớp khi D <= 0.58).
     /// </summary>
     double CalculateDistance(float[] descriptorA, float[] descriptorB);
 
@@ -22,17 +23,34 @@ public interface IFaceBiometricService
     float[]? ParseDescriptorJson(string? json);
 
     /// <summary>
+    /// Kiểm tra tính hợp lệ toán học và chuẩn hóa Zero-Centered + L2-Norm cho vector 128-D.
+    /// </summary>
+    bool ValidateAndNormalizeDescriptor(float[]? descriptor, out float[] normalized, out string? errorMessage);
+
+    /// <summary>
     /// So khớp một vector khuôn mặt đưa vào với danh sách tất cả các hồ sơ đã đăng ký.
-    /// Trả về hồ sơ phù hợp nhất nếu khoảng cách nhỏ hơn ngưỡng threshold (mặc định 0.55).
+    /// Trả về hồ sơ phù hợp nhất nếu khoảng cách nhỏ hơn ngưỡng threshold (mặc định 0.58).
     /// </summary>
     (EmployeeFaceProfile? MatchedProfile, double Distance, double Confidence) FindBestMatch(
         float[] inputDescriptor, 
         IEnumerable<EmployeeFaceProfile> activeProfiles, 
-        double maxDistanceThreshold = 0.55);
+        double maxDistanceThreshold = 0.58);
+
+    /// <summary>
+    /// Làm mới bộ nhớ đệm vector đã chuẩn hóa khi có thay đổi hồ sơ khuôn mặt.
+    /// </summary>
+    void InvalidateCache(long? employeeId = null);
 }
 
 public class FaceBiometricService : IFaceBiometricService
 {
+    public const int ExpectedDimension = 128;
+
+    private sealed record CachedEmbeddingEntry(int JsonHashCode, DateTime UpdatedAt, float[] NormalizedVector);
+
+    // Bộ nhớ đệm thread-safe lưu vector 128-D đã parse & chuẩn hóa L2 theo EmployeeId, tránh parse JSON lặp lại mỗi lần quét
+    private readonly ConcurrentDictionary<long, CachedEmbeddingEntry> _normalizedVectorCache = new();
+
     /// <summary>
     /// Chuẩn hóa vector đặc trưng về dạng Zero-centered và đơn vị L2-Norm.
     /// Giúp so khớp bất biến với độ sáng phòng và tương thích 100% giữa các nguồn trích xuất khác nhau.
@@ -41,30 +59,99 @@ public class FaceBiometricService : IFaceBiometricService
     {
         if (vector == null || vector.Length == 0) return Array.Empty<float>();
 
-        // 1. Tính giá trị trung bình (Mean)
+        int len = vector.Length;
         double sum = 0.0;
-        for (int i = 0; i < vector.Length; i++) sum += vector[i];
-        double mean = sum / vector.Length;
-
-        // 2. Trừ trung bình để đưa tâm về 0 (Zero-centering) và tính L2-norm
-        var centered = new float[vector.Length];
-        double normSq = 0.0;
-        for (int i = 0; i < vector.Length; i++)
+        for (int i = 0; i < len; i++)
         {
-            centered[i] = (float)(vector[i] - mean);
-            normSq += centered[i] * centered[i];
+            sum += vector[i];
+        }
+        double mean = sum / len;
+
+        var centered = new float[len];
+        double normSq = 0.0;
+        for (int i = 0; i < len; i++)
+        {
+            double c = vector[i] - mean;
+            centered[i] = (float)c;
+            normSq += c * c;
         }
 
         double norm = Math.Sqrt(normSq);
-        if (norm < 1e-6) return vector; // Tránh chia cho 0 nếu vector toàn 0
+        if (norm < 1e-6) return vector;
 
-        // 3. Chuẩn hóa về độ dài 1.0 (Unit sphere)
-        for (int i = 0; i < centered.Length; i++)
+        double invNorm = 1.0 / norm;
+        for (int i = 0; i < len; i++)
         {
-            centered[i] = (float)(centered[i] / norm);
+            centered[i] = (float)(centered[i] * invNorm);
         }
 
         return centered;
+    }
+
+    public bool ValidateAndNormalizeDescriptor(float[]? descriptor, out float[] normalized, out string? errorMessage)
+    {
+        normalized = Array.Empty<float>();
+        errorMessage = null;
+
+        if (descriptor == null || descriptor.Length != ExpectedDimension)
+        {
+            errorMessage = $"Vector đặc trưng khuôn mặt phải có đúng {ExpectedDimension} chiều (nhận được {descriptor?.Length ?? 0} chiều).";
+            return false;
+        }
+
+        double sum = 0.0;
+        for (int i = 0; i < ExpectedDimension; i++)
+        {
+            float v = descriptor[i];
+            if (!float.IsFinite(v))
+            {
+                errorMessage = "Vector đặc trưng khuôn mặt chứa giá trị không hợp lệ (NaN hoặc Infinity).";
+                return false;
+            }
+            sum += v;
+        }
+
+        double mean = sum / ExpectedDimension;
+        var result = new float[ExpectedDimension];
+        double normSq = 0.0;
+
+        for (int i = 0; i < ExpectedDimension; i++)
+        {
+            double c = descriptor[i] - mean;
+            normSq += c * c;
+            result[i] = (float)c;
+        }
+
+        double norm = Math.Sqrt(normSq);
+        if (norm < 1e-5)
+        {
+            errorMessage = "Ảnh khuôn mặt không đủ độ tương phản hoặc đồng nhất bất thường (vector phương sai bằng 0). Vui lòng kiểm tra camera và ánh sáng.";
+            return false;
+        }
+
+        double invNorm = 1.0 / norm;
+        for (int i = 0; i < ExpectedDimension; i++)
+        {
+            result[i] = MathF.Round((float)(result[i] * invNorm), 6);
+        }
+
+        normalized = result;
+        return true;
+    }
+
+    private static double ComputeUnitVectorDistance(float[] unitA, float[] unitB)
+    {
+        int len = Math.Min(unitA.Length, unitB.Length);
+        if (len == 0) return 1.0;
+
+        double dotProduct = 0.0;
+        for (int i = 0; i < len; i++)
+        {
+            dotProduct += unitA[i] * unitB[i];
+        }
+
+        dotProduct = Math.Clamp(dotProduct, -1.0, 1.0);
+        return Math.Sqrt(Math.Max(0.0, 2.0 * (1.0 - dotProduct)));
     }
 
     public double CalculateDistance(float[] descriptorA, float[] descriptorB)
@@ -73,30 +160,14 @@ public class FaceBiometricService : IFaceBiometricService
         int len = Math.Min(descriptorA.Length, descriptorB.Length);
         if (len == 0) return 1.0;
 
-        // Chuẩn hóa zero-center cả 2 vector để so sánh chuẩn xác
         var normA = NormalizeVector(descriptorA);
         var normB = NormalizeVector(descriptorB);
 
-        // Tính Cosine Similarity: S = dot(normA, normB)
-        double dotProduct = 0.0;
-        for (int i = 0; i < len; i++)
-        {
-            dotProduct += normA[i] * normB[i];
-        }
-
-        dotProduct = Math.Clamp(dotProduct, -1.0, 1.0);
-
-        // Chuyển Cosine Similarity sang Euclidean Distance chuẩn: D = sqrt(2 * (1 - S))
-        double distance = Math.Sqrt(Math.Max(0.0, 2.0 * (1.0 - dotProduct)));
-        return distance;
+        return ComputeUnitVectorDistance(normA, normB);
     }
 
     public double DistanceToConfidence(double distance)
     {
-        // Khi distance = 0 => 100% (Hoàn hảo)
-        // Khi distance = 0.40 => ~79% (Rất cao)
-        // Khi distance = 0.58 => 70% (Đạt ngưỡng xác minh tiêu chuẩn)
-        // Khi distance >= 0.85 => 0% (Không khớp)
         if (distance <= 0) return 100.0;
         if (distance >= 0.85) return 0.0;
         double conf;
@@ -113,7 +184,7 @@ public class FaceBiometricService : IFaceBiometricService
 
     public float[]? ParseDescriptorJson(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return null;
+        if (string.IsNullOrWhiteSpace(json) || json == "[]" || json == "[ENROLLED]") return null;
         try
         {
             var res = JsonSerializer.Deserialize<float[]>(json);
@@ -129,6 +200,37 @@ public class FaceBiometricService : IFaceBiometricService
         }
     }
 
+    private float[]? GetOrParseNormalizedProfileVector(EmployeeFaceProfile profile)
+    {
+        if (string.IsNullOrWhiteSpace(profile.FaceDescriptorJson) || profile.FaceDescriptorJson == "[]" || profile.FaceDescriptorJson == "[ENROLLED]")
+        {
+            return null;
+        }
+
+        int jsonHash = profile.FaceDescriptorJson.GetHashCode(StringComparison.Ordinal);
+        if (profile.EmployeeId > 0 &&
+            _normalizedVectorCache.TryGetValue(profile.EmployeeId, out var cached) &&
+            cached.JsonHashCode == jsonHash &&
+            cached.UpdatedAt == profile.UpdatedAt)
+        {
+            return cached.NormalizedVector;
+        }
+
+        var parsed = ParseDescriptorJson(profile.FaceDescriptorJson);
+        if (parsed == null || parsed.Length == 0)
+        {
+            return null;
+        }
+
+        var normalized = NormalizeVector(parsed);
+        if (profile.EmployeeId > 0)
+        {
+            _normalizedVectorCache[profile.EmployeeId] = new CachedEmbeddingEntry(jsonHash, profile.UpdatedAt, normalized);
+        }
+
+        return normalized;
+    }
+
     public (EmployeeFaceProfile? MatchedProfile, double Distance, double Confidence) FindBestMatch(
         float[] inputDescriptor, 
         IEnumerable<EmployeeFaceProfile> activeProfiles, 
@@ -139,15 +241,22 @@ public class FaceBiometricService : IFaceBiometricService
             return (null, 1.0, 0.0);
         }
 
+        // Chỉ chuẩn hóa vector đầu vào 1 lần duy nhất thay vì lặp lại N lần theo số nhân viên
+        var normInput = NormalizeVector(inputDescriptor);
+        if (normInput.Length == 0)
+        {
+            return (null, 1.0, 0.0);
+        }
+
         EmployeeFaceProfile? bestMatch = null;
         double minDistance = double.MaxValue;
 
         foreach (var profile in activeProfiles)
         {
-            var profileDescriptor = ParseDescriptorJson(profile.FaceDescriptorJson);
-            if (profileDescriptor == null || profileDescriptor.Length == 0) continue;
+            var normProfile = GetOrParseNormalizedProfileVector(profile);
+            if (normProfile == null || normProfile.Length == 0) continue;
 
-            double dist = CalculateDistance(inputDescriptor, profileDescriptor);
+            double dist = ComputeUnitVectorDistance(normInput, normProfile);
             if (dist < minDistance)
             {
                 minDistance = dist;
@@ -161,5 +270,17 @@ public class FaceBiometricService : IFaceBiometricService
         }
 
         return (null, minDistance == double.MaxValue ? 1.0 : minDistance, DistanceToConfidence(minDistance));
+    }
+
+    public void InvalidateCache(long? employeeId = null)
+    {
+        if (employeeId.HasValue)
+        {
+            _normalizedVectorCache.TryRemove(employeeId.Value, out _);
+        }
+        else
+        {
+            _normalizedVectorCache.Clear();
+        }
     }
 }

@@ -648,7 +648,7 @@
 
         try
         {
-            var res = await JSRuntime.InvokeAsync<CameraInitResult>("FaceRecognitionHelper.startCamera", "faceCheckInVideo", "faceCheckInCanvas", null);
+            var res = await JSRuntime.InvokeAsync<FaceCameraInitResult>("FaceRecognitionHelper.startCamera", "faceCheckInVideo", "faceCheckInCanvas", null);
             if (res.Success)
             {
                 isCameraActive = true;
@@ -751,7 +751,10 @@
 
         try
         {
-            var captureRes = await JSRuntime.InvokeAsync<FaceCaptureResult>("FaceRecognitionHelper.captureFaceDescriptor", "faceCheckInVideo");
+            var captureRes = await JSRuntime.InvokeAsync<FaceCaptureResult>(
+                "FaceRecognitionHelper.captureFaceDescriptor",
+                "faceCheckInVideo",
+                new { mode = "checkin" });
             if (isDisposed) return;
 
             if (!captureRes.Success || captureRes.Descriptor == null || captureRes.Descriptor.Length == 0)
@@ -858,7 +861,10 @@
 
         try
         {
-            var captureRes = await JSRuntime.InvokeAsync<FaceCaptureResult>("FaceRecognitionHelper.captureFaceDescriptor", "faceCheckInVideo");
+            var captureRes = await JSRuntime.InvokeAsync<FaceCaptureResult>(
+                "FaceRecognitionHelper.captureFaceDescriptor",
+                "faceCheckInVideo",
+                new { mode = "enroll" });
             if (!captureRes.Success || captureRes.Descriptor == null || captureRes.Descriptor.Length == 0)
             {
                 testActionMessage = captureRes.Error ?? "Chưa phát hiện được khuôn mặt rõ ràng trong camera. Vui lòng căn chỉnh lại.";
@@ -870,7 +876,7 @@
             var emp = allEmployees.FirstOrDefault(e => e.Id == testSelectedEmployeeId);
             var empName = emp != null ? $"[{emp.EmployeeCode}] {emp.FullName}" : $"ID #{testSelectedEmployeeId}";
 
-            await FaceManagementUseCases.RegisterFaceProfileAsync(
+            await FaceManagementUseCases.RegisterFaceProfileWithMetricsAsync(
                 testSelectedEmployeeId,
                 captureRes.Descriptor,
                 $"Đăng ký trực tiếp tại Kiosk bởi {user?.Username ?? "admin"} lúc {DateTime.Now:dd/MM/yyyy HH:mm:ss}",
@@ -944,23 +950,5 @@
             catch { }
             isCameraActive = false;
         }
-    }
-
-    public class CameraInitResult
-    {
-        public bool Success { get; set; }
-        public string? Error { get; set; }
-        public int Width { get; set; }
-        public int Height { get; set; }
-    }
-
-    public class FaceCaptureResult
-    {
-        public bool Success { get; set; }
-        public string? Error { get; set; }
-        public float[]? Descriptor { get; set; }
-        public double LivenessScore { get; set; } = 0.9;
-        public bool QualityOk { get; set; }
-        public string? PhotoBase64 { get; set; }
     }
 }
