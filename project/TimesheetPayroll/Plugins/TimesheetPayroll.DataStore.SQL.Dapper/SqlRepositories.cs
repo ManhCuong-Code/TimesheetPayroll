@@ -1287,7 +1287,7 @@ public class FaceProfileRepository : IFaceProfileRepository
             SELECT 
                 ISNULL(f.id, 0) AS Id, e.id AS EmployeeId, e.employee_code AS EmployeeCode,
                 e.full_name AS FullName, d.department_name AS DepartmentName,
-                ISNULL(f.face_descriptor_json, '') AS FaceDescriptorJson,
+                CASE WHEN f.face_descriptor_json IS NOT NULL AND LEN(f.face_descriptor_json) > 10 THEN '[ENROLLED]' ELSE '' END AS FaceDescriptorJson,
                 ISNULL(f.registered_at, '2000-01-01') AS RegisteredAt,
                 ISNULL(f.registered_by, '') AS RegisteredBy,
                 ISNULL(f.is_active, 0) AS IsActive,

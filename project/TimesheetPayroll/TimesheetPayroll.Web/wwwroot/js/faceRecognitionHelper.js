@@ -462,8 +462,12 @@ window.FaceRecognitionHelper = (function () {
         animationFrames[videoId] = requestAnimationFrame(renderFrame);
     }
 
+    let _cachedDescriptorCanvas = null;
+    let _cachedPhotoCanvas = null;
+
     // Trích xuất vector đặc trưng sinh trắc học 128 chiều Zero-Centered và L2-Normalized
     async function captureFaceDescriptor(videoId) {
+        const startTime = performance.now();
         const video = document.getElementById(videoId);
         if (!video || !video.videoWidth) {
             return { success: false, error: "Camera chưa sẵn sàng hoặc không đọc được khung hình." };
@@ -476,10 +480,12 @@ window.FaceRecognitionHelper = (function () {
         const boxX = (w - boxW) / 2;
         const boxY = (h - boxH) / 2;
 
-        const offCanvas = document.createElement('canvas');
-        offCanvas.width = 160;
-        offCanvas.height = 160;
-        const ctx = offCanvas.getContext('2d');
+        if (!_cachedDescriptorCanvas) {
+            _cachedDescriptorCanvas = document.createElement('canvas');
+            _cachedDescriptorCanvas.width = 160;
+            _cachedDescriptorCanvas.height = 160;
+        }
+        const ctx = _cachedDescriptorCanvas.getContext('2d', { willReadFrequently: true });
         ctx.drawImage(video, boxX, boxY, boxW, boxH, 0, 0, 160, 160);
 
         const imgData = ctx.getImageData(0, 0, 160, 160);
@@ -569,25 +575,28 @@ window.FaceRecognitionHelper = (function () {
         // Chụp ảnh bằng chứng xác minh (Photo Snapshot JPEG Base64)
         let photoBase64 = null;
         try {
-            const photoCanvas = document.createElement('canvas');
-            photoCanvas.width = Math.min(w, 640);
-            photoCanvas.height = Math.min(h, 480);
-            const pCtx = photoCanvas.getContext('2d');
-            // Lật ảnh chuẩn không bị ngược
-            pCtx.drawImage(video, 0, 0, photoCanvas.width, photoCanvas.height);
-            photoBase64 = photoCanvas.toDataURL('image/jpeg', 0.85);
+            if (!_cachedPhotoCanvas) {
+                _cachedPhotoCanvas = document.createElement('canvas');
+            }
+            _cachedPhotoCanvas.width = Math.min(w, 640);
+            _cachedPhotoCanvas.height = Math.min(h, 480);
+            const pCtx = _cachedPhotoCanvas.getContext('2d');
+            pCtx.drawImage(video, 0, 0, _cachedPhotoCanvas.width, _cachedPhotoCanvas.height);
+            photoBase64 = _cachedPhotoCanvas.toDataURL('image/jpeg', 0.85);
         } catch (e) {
             console.warn("Lỗi trích xuất ảnh chụp snapshot:", e);
         }
 
         playChime('scan');
+        const durationMs = Math.round(performance.now() - startTime);
 
         return {
             success: true,
             descriptor: normalized,
             livenessScore: 0.92,
             qualityOk: true,
-            photoBase64: photoBase64
+            photoBase64: photoBase64,
+            extractDurationMs: durationMs
         };
     }
 

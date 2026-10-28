@@ -25,6 +25,11 @@ public class EmployeeFaceProfile
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
+    /// Kiểm tra nhân viên đã đăng ký vector khuôn mặt hợp lệ hay chưa
+    /// </summary>
+    public bool HasFaceEnrolled => !string.IsNullOrEmpty(FaceDescriptorJson) && FaceDescriptorJson != "[]";
+
+    /// <summary>
     /// Vô hiệu hóa hoặc tạm khóa đăng ký khuôn mặt.
     /// </summary>
     public void Deactivate()

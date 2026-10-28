@@ -7,9 +7,9 @@
    ========================================================================== */
 
 :root {
-    --font-body: 'Be Vietnam Pro', Arial, sans-serif;
-    --font-heading: 'Be Vietnam Pro', Arial, sans-serif;
-    --hrm-font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', 'Inter', Arial, sans-serif;
+    --font-body: 'Be Vietnam Pro', 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    --font-heading: 'Be Vietnam Pro', 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    --hrm-font-sans: 'Be Vietnam Pro', 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
     --bs-body-font-family: var(--font-body);
     --bs-font-sans-serif: var(--font-body);
     --hrm-bg-main: #f8fafc;
@@ -101,8 +101,8 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
     font-weight: 600;
 }
 
-button, input, optgroup, select, textarea, .form-control, .form-select {
-    font-family: inherit;
+button, input, optgroup, select, textarea, .form-control, .form-select, .btn, .modal, .modal-title, .table, .card, .badge, .alert, .dropdown-menu, .nav, .nav-link, .nav-pills {
+    font-family: var(--font-body);
 }
 
 code, kbd, pre, samp, .font-mono {
@@ -513,3 +513,162 @@ code, kbd, pre, samp, .font-mono {
         text-align: center !important;
     }
 }
+
+/* ==========================================================================
+   FACE BIOMETRIC ENROLLMENT WIZARD MODAL (RESPONSIVE & MODERN)
+   ========================================================================== */
+.enroll-modal-dialog {
+    max-width: 800px;
+    width: 95%;
+    margin: 1.5rem auto;
+}
+
+.enroll-modal-content {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 1rem;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+    border: none;
+    overflow: hidden;
+}
+
+.enroll-modal-header {
+    flex-shrink: 0;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #ffffff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.enroll-modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem;
+    background-color: #f8fafc;
+}
+
+.enroll-modal-footer {
+    flex-shrink: 0;
+    padding: 0.875rem 1.25rem;
+    background-color: #ffffff;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* 5-Step Stepper Header */
+.stepper-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+}
+
+.stepper-nav::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 4%;
+    right: 4%;
+    height: 2px;
+    background: #e2e8f0;
+    z-index: 1;
+    transform: translateY(-50%);
+}
+
+.step-item {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: transparent;
+    text-align: center;
+    cursor: default;
+}
+
+.step-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    background: #ffffff;
+    border: 2px solid #cbd5e1;
+    color: #64748b;
+    transition: all 0.25s ease;
+}
+
+.step-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-top: 0.25rem;
+    white-space: nowrap;
+}
+
+.step-item.active .step-circle {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+}
+
+.step-item.active .step-title {
+    color: #1e3a8a;
+    font-weight: 700;
+}
+
+.step-item.completed .step-circle {
+    background: #10b981;
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+.step-item.completed .step-title {
+    color: #047857;
+}
+
+/* Camera Viewport */
+.enroll-camera-box {
+    background: #090d16;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    position: relative;
+    min-height: 280px;
+    max-height: 340px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #1e293b;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.enroll-camera-box video {
+    width: 100%;
+    height: 100%;
+    max-height: 340px;
+    object-fit: cover;
+}
+
+.enroll-camera-box canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Stage Indicator Card */
+.stage-indicator-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
