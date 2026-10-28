@@ -674,27 +674,27 @@ code, kbd, pre, samp, .font-mono {
 }
 
 /* ==========================================================================
-   ENTERPRISE TOPBAR NAVIGATION - MODERN ENTERPRISE DASHBOARD
-   Navy Palette: Deep Navy #172554, Hover #263B73, Accent #60A5FA, White #FFFFFF, Light Blue-Gray #CBD5E1
-   Dropdown: Crisp White #FFFFFF, Slate Text #1E293B, Soft Shadows, Radius 0.5rem
+   ENTERPRISE TOPBAR NAVIGATION - CHARCOAL DARK (GITHUB / VERCEL DARK STYLE)
+   Charcoal Palette: Deep Charcoal Slate #0F172A, Hover #1E293B, Accent Sky #38BDF8, White #FFFFFF, Muted Slate #94A3B8
+   Dropdown: Crisp White #FFFFFF, Slate Text #1E293B, Accent #0284C7, Soft Shadows, Radius 0.5rem
    ========================================================================== */
 :root {
-    --topbar-bg: #172554;               /* Xanh navy đậm */
-    --topbar-bg-hover: #263B73;         /* Xanh navy sáng khi hover menu */
-    --topbar-active: #263B73;           /* Nền mục đang chọn */
-    --topbar-accent: #60A5FA;           /* Xanh dương điểm nhấn và vạch nhấn active */
-    --topbar-text: #FFFFFF;             /* Chữ chính trắng */
-    --topbar-text-muted: #CBD5E1;       /* Chữ phụ, icon phụ xám xanh nhạt */
-    --topbar-border: rgba(255, 255, 255, 0.08); /* Viền dưới Topbar */
+    --topbar-bg: #0F172A;               /* Đen than tối giản Slate 900 */
+    --topbar-bg-hover: #1E293B;         /* Slate 800 khi hover menu */
+    --topbar-active: #1E293B;           /* Nền mục đang chọn */
+    --topbar-accent: #38BDF8;           /* Xanh sáng công nghệ Sky Blue */
+    --topbar-text: #FFFFFF;             /* Chữ chính trắng tinh khôi */
+    --topbar-text-muted: #94A3B8;       /* Chữ phụ, icon phụ xám bạc Slate 400 */
+    --topbar-border: rgba(255, 255, 255, 0.08); /* Viền dưới Topbar mảnh tinh tế */
     --topbar-height: 58px;              /* Chiều cao chuẩn 56-64px */
     
-    --dropdown-bg: #FFFFFF;             /* Nền dropdown trắng */
+    --dropdown-bg: #FFFFFF;             /* Nền dropdown trắng thanh lịch */
     --dropdown-text: #1E293B;           /* Chữ dropdown xám đậm */
     --dropdown-border: #E2E8F0;         /* Viền dropdown nhẹ nhàng */
     --dropdown-hover-bg: #F1F5F9;       /* Hover dropdown xám sáng */
-    --dropdown-hover-text: #1E293B;
-    --dropdown-active-bg: #EFF6FF;      /* Active dropdown xanh nhạt */
-    --dropdown-active-text: #2563EB;
+    --dropdown-hover-text: #0F172A;
+    --dropdown-active-bg: #F0F9FF;      /* Active dropdown xanh sáng nhẹ */
+    --dropdown-active-text: #0284C7;
     
     --content-bg: #F8FAFC;              /* Nền nội dung sáng để tôn Topbar */
     --card-bg: #FFFFFF;                 /* Nền thẻ nội dung */
@@ -715,11 +715,11 @@ body, .page, main {
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
-/* THANH TOPBAR MÀU XANH NAVY ĐẬM */
+/* THANH TOPBAR MÀU ĐEN THAN TỐI GIẢN (CHARCOAL DARK) */
 .topbar-nav {
     background-color: var(--topbar-bg) !important;
     border-bottom: 1px solid var(--topbar-border) !important;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25) !important;
+    box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.35) !important;
     min-height: 58px;
     height: auto;
     padding-top: 0.35rem;
@@ -738,9 +738,9 @@ body, .page, main {
 }
 
 .topbar-brand .brand-icon-box {
-    background-color: #2563EB !important;
+    background: linear-gradient(135deg, #0284C7 0%, #38BDF8 100%) !important;
     color: #FFFFFF !important;
-    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.35);
 }
 
 .topbar-brand .brand-title {
@@ -780,7 +780,7 @@ body, .page, main {
     width: 1.1rem;
     text-align: center;
     margin-right: 0.45rem;
-    transition: color 0.18s ease;
+    transition: all 0.18s ease;
 }
 
 .topbar-nav .nav-link:hover,
@@ -791,7 +791,7 @@ body, .page, main {
 
 .topbar-nav .nav-link:hover i,
 .topbar-nav .nav-link:focus i {
-    color: var(--topbar-text) !important;
+    color: var(--topbar-accent) !important;
 }
 
 /* MỤC ĐANG ĐƯỢC CHỌN (ACTIVE) */
@@ -818,7 +818,7 @@ body, .page, main {
     color: var(--dropdown-text) !important;
     border: 1px solid var(--dropdown-border) !important;
     border-radius: 0.5rem;
-    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 4px 10px -2px rgba(15, 23, 42, 0.05) !important;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.05) !important;
     padding: 0.35rem;
     margin-top: 0.35rem;
     z-index: 1070;
@@ -841,7 +841,7 @@ body, .page, main {
     width: 1.25rem;
     text-align: center;
     margin-right: 0.5rem;
-    color: #2563EB;
+    color: #0284C7 !important;
     transition: color 0.18s ease;
 }
 
@@ -852,7 +852,7 @@ body, .page, main {
 }
 
 .topbar-nav .dropdown-item:hover i {
-    color: #1D4ED8 !important;
+    color: #0369A1 !important;
 }
 
 .topbar-nav .dropdown-item.active {
@@ -890,8 +890,8 @@ body, .page, main {
 
 /* NÚT TÀI KHOẢN NGƯỜI DÙNG TRÊN THANH TOPBAR */
 .topbar-user-btn {
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: 9999px;
     padding: 0.28rem 0.75rem 0.28rem 0.35rem;
     color: var(--topbar-text) !important;
@@ -903,12 +903,12 @@ body, .page, main {
 
 .topbar-user-btn:hover {
     background-color: var(--topbar-bg-hover) !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
     color: var(--topbar-text) !important;
 }
 
 .topbar-user-btn .avatar-circle {
-    background-color: #2563EB !important;
+    background: linear-gradient(135deg, #0284C7 0%, #38BDF8 100%) !important;
     color: #FFFFFF;
 }
 
