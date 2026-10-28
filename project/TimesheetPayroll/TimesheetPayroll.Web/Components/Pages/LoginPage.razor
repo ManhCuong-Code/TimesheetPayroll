@@ -247,15 +247,8 @@
             await UserSession.SignInAsync(user);
             successMessage = $"Đăng nhập thành công! Xin chào {user.FullName ?? user.Username}.";
 
-            // Định tuyến trang theo vai trò
-            if (user.Role == "ROLE_HR_ACCOUNTANT" || user.Role == "ROLE_ADMIN")
-            {
-                NavManager.NavigateTo("/admin/payroll-calculation");
-            }
-            else
-            {
-                NavManager.NavigateTo("/my-timesheet");
-            }
+            // BẮT BUỘC: Sau mỗi lần đăng nhập thành công, luôn chuyển về Trang Chủ (/) cho tất cả vai trò
+            NavManager.NavigateTo("/");
         }
         catch (Exception ex)
         {

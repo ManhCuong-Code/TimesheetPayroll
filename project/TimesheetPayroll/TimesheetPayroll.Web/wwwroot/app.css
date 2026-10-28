@@ -671,4 +671,131 @@ code, kbd, pre, samp, .font-mono {
     border-radius: 0.75rem;
     padding: 1rem 1.25rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================================
+   ENTERPRISE TOPBAR NAVIGATION - COMPACT, SLEEK & SINGLE-ROW DESKTOP
+   ========================================================================== */
+.topbar-nav {
+    background-color: #0f172a !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    min-height: 52px;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+    z-index: 1040;
+}
+
+.topbar-brand {
+    text-decoration: none;
+    letter-spacing: -0.01em;
+}
+
+.topbar-brand:hover {
+    text-decoration: none;
+    opacity: 0.95;
+}
+
+.topbar-nav .nav-link {
+    color: #94a3b8 !important;
+    font-size: 0.84rem;
+    font-weight: 500;
+    padding: 0.4rem 0.65rem !important;
+    border-radius: 0.375rem;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.topbar-nav .nav-link:hover,
+.topbar-nav .nav-link:focus {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.topbar-nav .nav-link.active {
+    color: #ffffff !important;
+    background-color: rgba(37, 99, 235, 0.22);
+    font-weight: 600;
+    box-shadow: inset 0 -2px 0 #3b82f6;
+}
+
+.topbar-nav .dropdown-toggle::after {
+    margin-left: 0.35em;
+    vertical-align: 0.15em;
+    border-top-color: currentColor;
+}
+
+.topbar-nav .dropdown-menu {
+    border-radius: 0.625rem;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35), 0 4px 10px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background-color: #1e293b;
+    padding: 0.35rem;
+    margin-top: 0.35rem;
+    z-index: 1070;
+    min-width: 210px;
+}
+
+.topbar-nav .dropdown-item {
+    color: #cbd5e1;
+    font-size: 0.83rem;
+    font-weight: 500;
+    padding: 0.45rem 0.75rem;
+    border-radius: 0.375rem;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+}
+
+.topbar-nav .dropdown-item:hover,
+.topbar-nav .dropdown-item:focus {
+    background-color: #334155;
+    color: #ffffff;
+}
+
+.topbar-nav .dropdown-item.active {
+    background-color: #2563eb;
+    color: #ffffff;
+}
+
+.topbar-nav .dropdown-divider {
+    border-color: rgba(255, 255, 255, 0.08);
+    margin: 0.25rem 0;
+}
+
+.topbar-user-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    padding: 0.25rem 0.75rem 0.25rem 0.35rem;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.topbar-user-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+@media (min-width: 992px) {
+    .topbar-nav .dropdown:hover > .dropdown-menu {
+        display: block;
+        animation: topbarDropdownFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+}
+
+@keyframes topbarDropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
