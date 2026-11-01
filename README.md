@@ -317,7 +317,7 @@ flowchart TD
     ClickDemo --> Submit[Gửi yêu cầu xác thực tới LoginUseCase]
     InputCreds --> Submit
 
-    Submit --> QueryDB[(Truy vấn CSDL BangChamCongDB: user_accounts)]
+    Submit --> QueryDB[("Truy vấn CSDL BangChamCongDB: user_accounts")]
     QueryDB --> UserExist{Tài khoản tồn tại và đang hoạt động?}
 
     UserExist -- Không --> FailMsg[Hiển thị thông báo: Tên đăng nhập không chính xác hoặc bị khóa]
@@ -917,7 +917,7 @@ flowchart TB
     CalcEngine --> DomainModels
     PluginIntf --> DomainModels
 
-    DapperRepo ..|> PluginIntf
+    DapperRepo -.->|Implements| PluginIntf
     DapperRepo --> SQLDB
     StateStore --> DomainModels
     LlmClient --> ExtLLM
