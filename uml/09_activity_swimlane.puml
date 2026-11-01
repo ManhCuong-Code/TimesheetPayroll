@@ -1,86 +1,124 @@
-﻿@startuml 09_activity_swimlane
+@startuml 09_activity_swimlane
 !theme plain
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
-skinparam defaultFontSize 12
-skinparam roundCorner 8
+skinparam defaultFontSize 20
+skinparam roundCorner 14
+skinparam shadowing false
+skinparam dpi 220
 
-title **SƠ ĐỒ HOẠT ĐỘNG PHÂN LÀN TRÁCH NHIỆM (SWIMLANE ACTIVITY DIAGRAM)**\nQuy trình toàn diện từ Chấm công hàng ngày đến Quyết toán lương cuối tháng
+skinparam titleFontName "Segoe UI"
+skinparam titleFontSize 28
+skinparam titleFontStyle bold
+skinparam titleFontColor #0F172A
 
-|#E0F2FE|Nhân Viên (Employee)|
-|#FEF3C7|Kế Toán / HR (Accountant)|
-|#F0FDF4|Hệ Thống Máy Chủ (System)|
+skinparam swimlane {
+    TitleFontSize 24
+    TitleFontStyle bold
+    TitleFontColor #0F172A
+    BorderColor #64748B
+    BorderThickness 2
+}
 
-|Nhân Viên (Employee)|
+skinparam activity {
+    BackgroundColor #F8FAFC
+    BorderColor #2563EB
+    BorderThickness 2
+    FontColor #0F172A
+    FontSize 19
+    FontName "Segoe UI"
+    FontStyle normal
+    
+    DiamondBackgroundColor #FEF3C7
+    DiamondBorderColor #D97706
+    DiamondBorderThickness 2
+    DiamondFontColor #78350F
+    DiamondFontSize 18
+    DiamondFontStyle bold
+    
+    StartColor #10B981
+    EndColor #EF4444
+    BarColor #1E293B
+    
+    ArrowColor #2563EB
+    ArrowFontColor #1E3A8A
+    ArrowFontSize 16
+    ArrowFontStyle bold
+    ArrowThickness 1.8
+}
+
+title **SƠ ĐỒ HOẠT ĐỘNG PHÂN LÀN TRÁCH NHIỆM (SWIMLANE ACTIVITY DIAGRAM)**\n<size:20><color:#475569>Quy trình toàn diện: Chấm công hàng ngày  ➜  Xét duyệt nghỉ phép  ➜  Tính lương tự động  ➜  Khóa sổ & Quyết toán</color></size>
+
+|#E0F2FE|<b>👤 Nhân Viên (Employee)</b>|
+|#FEF3C7|<b>👔 Kế Toán / HR (Accountant)</b>|
+|#DCFCE7|<b>🖥️ Hệ Thống / Máy Chủ (System)</b>|
+
+|👤 Nhân Viên (Employee)|
 start
-:Chấm công (Check-in/Check-out) hàng ngày;
+:<b>1. Điểm danh Check-in / Check-out</b>\nThực hiện trên Website hoặc ứng dụng di động;
 
-|Hệ Thống Máy Chủ (System)|
-:Ghi nhận thời gian thực vào bảng Timesheet;
-:Tính số giờ làm việc & đối chiếu ca làm việc;
+|🖥️ Hệ Thống / Máy Chủ (System)|
+:<b>2. Ghi nhận thời gian thực</b>\nLưu bản ghi thời gian vào bảng <i>Timesheet</i>;
+:<b>3. Đối chiếu khung giờ ca</b>\nTính số giờ làm việc thực tế & phát hiện đi trễ/về sớm;
 
-|Nhân Viên (Employee)|
-if (Có phát sinh đi trễ / xin nghỉ phép?) then (Có)
-    :Tạo đơn xin nghỉ phép trên hệ thống;
-    |Kế Toán / HR (Accountant)|
-    :Kiểm tra đơn nghỉ phép;
-    if (Hợp lệ?) then (Đồng ý)
-        :Duyệt đơn nghỉ phép;
-        |Hệ Thống Máy Chủ (System)|
-        :Cập nhật trạng thái công phép (có lương/không lương);
-    else (Từ chối)
-        |Kế Toán / HR (Accountant)|
-        :Từ chối đơn & ghi rõ lý do;
-        |Hệ Thống Máy Chủ (System)|
-        :Ghi nhận công vắng không phép;
+|👤 Nhân Viên (Employee)|
+if (<b>Có phát sinh đi trễ hoặc xin nghỉ phép?</b>) then (<b>Có</b>)
+    :<b>4. Tạo đơn xin nghỉ phép trực tuyến</b>\nĐiền lý do, chọn ngày nghỉ & nộp lên hệ thống;
+    |👔 Kế Toán / HR (Accountant)|
+    :<b>5. Kiểm tra & xét duyệt đơn</b>\nĐối chiếu quy định nghỉ phép & ngày phép tồn;
+    if (<b>Đơn hợp lệ?</b>) then (<b>Đồng ý</b>)
+        :<b>6a. Phê duyệt đơn nghỉ phép</b>\nXác nhận chấp thuận đơn nghỉ phép;
+        |🖥️ Hệ Thống / Máy Chủ (System)|
+        :<b>7a. Cập nhật trạng thái công phép</b>\nGhi nhận công phép (hưởng lương hoặc không lương);
+    else (<b>Từ chối</b>)
+        |👔 Kế Toán / HR (Accountant)|
+        :<b>6b. Từ chối đơn & phản hồi</b>\nGhi rõ lý do không duyệt gửi cho nhân viên;
+        |🖥️ Hệ Thống / Máy Chủ (System)|
+        :<b>7b. Ghi nhận công vắng</b>\nXác định vắng không phép (trừ ngày công tính lương);
     endif
-else (Không)
-    |Hệ Thống Máy Chủ (System)|
-    :Ghi nhận công đủ chuẩn (1.0 công);
+else (<b>Không</b>)
+    |🖥️ Hệ Thống / Máy Chủ (System)|
+    :<b>8. Ghi nhận đủ công chuẩn</b>\nLàm đủ ca đạt 1.0 ngày công chuẩn;
 endif
 
-|Kế Toán / HR (Accountant)|
-:Cuối tháng: Kiểm tra và chốt bảng chấm công toàn công ty;
-:Bấm nút "Tính Lương Tự Động" (Batch Calculate);
+|👔 Kế Toán / HR (Accountant)|
+:<b>9. Khóa bảng chấm công cuối tháng</b>\nKiểm tra & chốt toàn bộ bảng công (is_locked = true);
+:<b>10. Kích hoạt tính lương 1-chạm</b>\nNhấn nút <b>'Tính Lương Tự Động'</b> (Batch Calculate);
 
-|Hệ Thống Máy Chủ (System)|
-:Khởi tạo Transaction tài chính;
-:Đọc dữ liệu tổng ngày công từ Timesheet;
-:Đọc thông tin lương cơ bản & phụ cấp từ Hợp đồng;
-:Áp dụng bảng tỷ lệ khấu trừ (BHXH 8%, BHYT 1.5%, BHTN 1%);
-:Tính lương thực lĩnh = (Lương CB * Ngày làm / Chuẩn) + Phụ cấp - Khấu trừ;
-:Ghi vào bảng Payslip & PayslipLine;
+|🖥️ Hệ Thống / Máy Chủ (System)|
+:<b>11. Mở Transaction CSDL an toàn</b>\nĐảm bảo tính nhất quán dữ liệu tài chính (ACID);
+:<b>12. Nạp dữ liệu Hợp đồng, Bảng công & Tỷ lệ trích nộp</b>\nLấy Lương cơ bản, phụ cấp, ngày công & bảo hiểm 10.5%;
+:<b>13. Thực thi động cơ tính toán lương</b>\n• Lương công = Lương CB × (Công thực tế / Công chuẩn)\n• Thu nhập Gross = Lương công + Phụ cấp ăn trưa & xăng xe\n• Trích nộp bảo hiểm: BHXH 8% + BHYT 1.5% + BHTN 1%\n• Thực lĩnh (Net) = Gross - Tổng các khoản bảo hiểm;
+:<b>14. Lưu kết quả tính toán chi tiết</b>\nGhi đồng thời vào bảng <i>Payslip</i> & <i>PayslipLine</i>;
 
-if (Toàn bộ 50 nhân viên tính hợp lệ?) then (Thành công)
-    :Commit Transaction & Cập nhật trạng thái CALCULATED;
-    |Kế Toán / HR (Accountant)|
-    :Xem trước bảng tổng hợp lương;
-    if (Số liệu khớp thực tế?) then (Đồng ý)
-        :Bấm nút "Chốt Kỳ Lương & Xuất File Ngân Hàng";
-        |Hệ Thống Máy Chủ (System)|
-        :Khóa sổ kỳ lương (Status = LOCKED);
-        :Chuyển bảng công & phiếu lương sang chế độ Chỉ đọc;
-        :Sinh file Excel lệnh chuyển khoản ngân hàng;
-        :Gửi thông báo phát hành phiếu lương đến nhân viên;
-        |Nhân Viên (Employee)|
+if (<b>Toàn bộ nhân sự tính toán hợp lệ?</b>) then (<b>Thành công</b>)
+    :<b>15a. Commit Transaction</b>\nCập nhật trạng thái kỳ lương sang <b>CALCULATED</b>;
+    |👔 Kế Toán / HR (Accountant)|
+    :<b>16a. Xem trước & đối soát bảng lương</b>\nKiểm tra số liệu quỹ lương tổng hợp trên màn hình;
+    if (<b>Số liệu khớp chính xác 100%?</b>) then (<b>Đồng ý</b>)
+        :<b>17a. Chốt kỳ lương (Khóa sổ)</b>\nNhấn nút <b>'Chốt Kỳ Lương Khóa Sổ'</b>;
+        |🖥️ Hệ Thống / Máy Chủ (System)|
+        :<b>18a. Khóa sổ vĩnh viễn (LOCKED)</b>\nChuyển toàn bộ dữ liệu kỳ lương sang <b>Chỉ Đọc (Read-Only)</b>;
+        :<b>19a. Kết xuất file ủy nhiệm chi</b>\nSinh file Excel danh sách tài khoản chuyển khoản ngân hàng;
+        :<b>20a. Phát hành phiếu lương cá nhân</b>\nGửi thông báo phiếu lương đến tài khoản từng nhân viên;
+        |👤 Nhân Viên (Employee)|
         fork
-            :Mở ứng dụng xem phiếu lương cá nhân (bảo mật);
+            :<b>21a. Tra cứu phiếu lương của chính mình</b>\nXem chi tiết thu nhập bảo mật chống lộ thông tin (Anti-IDOR);
         fork again
-            :Trò chuyện với AI nếu có thắc mắc về các khoản trừ;
+            :<b>21b. Hỏi đáp Trợ lý Lương AI 24/7</b>\nGiải thích chi tiết công thức, bảo hiểm & đối soát thu nhập;
         end fork
-    else (Cần sửa dữ liệu)
-        |Kế Toán / HR (Accountant)|
-        :Điều chỉnh lại dữ liệu công hoặc phụ cấp;
-        |Hệ Thống Máy Chủ (System)|
-        :Chạy lại chức năng tính lương;
+    else (<b>Cần sửa</b>)
+        |👔 Kế Toán / HR (Accountant)|
+        :<b>17b. Điều chỉnh thông tin đầu vào</b>\nSửa lại dữ liệu chấm công hoặc phụ cấp hợp đồng;
+        |🖥️ Hệ Thống / Máy Chủ (System)|
+        :<b>18b. Chạy lại phép tính lương</b>\nCập nhật lại bảng lương tạm tính;
     endif
-else (Lỗi hệ thống)
-    |Hệ Thống Máy Chủ (System)|
-    :Rollback Transaction hủy bỏ toàn bộ;
-    |Kế Toán / HR (Accountant)|
-    :Nhận cảnh báo lỗi chi tiết để xử lý;
+else (<b>Lỗi dữ liệu</b>)
+    |🖥️ Hệ Thống / Máy Chủ (System)|
+    :<b>15b. Rollback Transaction an toàn</b>\nHủy bỏ toàn bộ thao tác, bảo toàn dữ liệu gốc;
+    |👔 Kế Toán / HR (Accountant)|
+    :<b>16b. Nhận cảnh báo lỗi chi tiết</b>\nKiểm tra nhân sự thiếu hợp đồng hoặc chia cho 0;
 endif
 
 stop
 @enduml
-
